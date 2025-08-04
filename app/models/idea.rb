@@ -1,0 +1,130 @@
+# frozen_string_literal: true
+
+# Captures the "why" - principles, theories, intents, design rationales
+class Idea < ApplicationRecord
+  include HasRights
+  include TimeTrackable
+  include PgSearch::Model
+  
+  # Full-text search
+  pg_search_scope :search_by_content,
+    against: [:label, :abstract, :repr_text],
+    using: {
+      tsearch: { prefix: true, dictionary: "english" },
+      trigram: { threshold: 0.3 }
+    }
+  
+  # Associations
+  has_many :idea_manifests
+  has_many :manifests, through: :idea_manifests
+  
+  has_many :idea_practicals
+  has_many :practicals, through: :idea_practicals
+  
+  has_many :idea_emanations
+  has_many :emanations, through: :idea_emanations
+  
+  has_many :evolutionary_refinements, 
+           class_name: "Evolutionary", 
+           foreign_key: :refined_idea_id
+  
+  # Validations
+  validates :label, presence: true
+  validates :abstract, presence: true
+  validates :repr_text, presence: true, length: { maximum: 500 }
+  validates :inception_date, presence: true
+  
+  # Scopes
+  scope :by_principle_tag, ->(tag) { where("? = ANY(principle_tags)", tag) }
+  scope :with_authorship, ->(author) { where(authorship: author) }
+  scope :canonical, -> { where(is_canonical: true) }
+  
+  # Callbacks
+  before_validation :generate_repr_text, if: :should_regenerate_repr_text?
+  
+  # Neo4j synchronization
+  after_commit :sync_to_graph, on: [:create, :update]
+  after_commit :remove_from_graph, on: :destroy
+  
+  def canonical_name
+    label
+  end
+  
+  def pool_type
+    "idea"
+  end
+  
+  # Graph relationships
+  def embodies_manifests
+    manifests.publishable
+  end
+  
+  def codifies_practicals
+    practicals.publishable
+  end
+  
+  def influences_emanations
+    emanations.publishable
+  end
+  
+  def refined_by_evolutions
+    evolutionary_refinements.publishable
+  end
+  
+  # Path generation helpers
+  def to_path_node
+    "Idea(#{canonical_name})"
+  end
+  
+  def outgoing_relations
+    relations = []
+    
+    manifests.each do |manifest|
+      relations << {
+        verb: "embodies",
+        target: manifest,
+        path: "#{to_path_node} → embodies → #{manifest.to_path_node}"
+      }
+    end
+    
+    practicals.each do |practical|
+      relations << {
+        verb: "codifies",
+        target: practical,
+        path: "#{to_path_node} → codifies → #{practical.to_path_node}"
+      }
+    end
+    
+    emanations.each do |emanation|
+      relations << {
+        verb: "influences",
+        target: emanation,
+        path: "#{to_path_node} → influences → #{emanation.to_path_node}"
+      }
+    end
+    
+    relations
+  end
+  
+  private
+  
+  def generate_repr_text
+    # Generate short, rights-clean, canonical representation
+    principle = principle_tags&.first || "principle"
+    year = inception_date&.year || "undated"
+    
+    self.repr_text = "#{label} (#{principle}, #{year})"
+  end
+  
+  def should_regenerate_repr_text?
+    label_changed? || principle_tags_changed? || inception_date_changed? || repr_text.blank?
+  end
+  
+  def sync_to_graph
+    Graph::SyncJob.perform_later(self)
+  end
+  
+  def remove_from_graph
+    Graph::RemoveJob.perform_later(self.class.name, id)
+  end
+end
