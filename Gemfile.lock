@@ -606,6 +606,7 @@ DEPENDENCIES
   puma (>= 5.0)
   pundit
   rails (~> 8.0.2)
+  rainbow
   redis (~> 5.0)
   rspec-rails
   rubocop-rails-omakase
