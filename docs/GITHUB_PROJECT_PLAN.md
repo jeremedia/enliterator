@@ -13,17 +13,28 @@ This document outlines the complete GitHub project structure for implementing En
 - Base service module structure created
 - OpenAI client configured with Responses API v0.16.0
 - CLAUDE.md updated with Responses API requirements
-- Example MCP service demonstrating structured outputs
+- All Ten Pool Canon models implemented with migrations
+- ProvenanceAndRights system fully functional
+- Pipeline job infrastructure (PipelineRun tracking)
+- Stage 2: Rights & Provenance Triage complete
+  - Rights::TriageJob and InferenceService
+  - IngestBatch/IngestItem models
+  - Quarantine system for low-confidence items
+  - Consent detection and license inference
 
-🚧 **In Progress**:
-- Database migrations for core models
-
-📋 **Upcoming**:
-- Ten Pool Canon model implementation
-- Zero-touch pipeline stages
+🚧 **Next Up**:
+- Stage 3: Lexicon Bootstrap (Issue #13)
+- Entity extraction with OpenAI Structured Outputs
 - MCP server endpoints
-- Fine-tuning pipeline
-- Testing infrastructure
+
+📋 **Remaining Pipeline Stages**:
+- Stage 1: Intake System
+- Stage 3: Lexicon Bootstrap
+- Stage 4: Pool Filling
+- Stage 5: Graph Assembly
+- Stage 6: Representations & Retrieval
+- Stage 7: Literacy Scoring
+- Stage 8: Deliverables Generation
 
 ---
 
@@ -41,13 +52,17 @@ This document outlines the complete GitHub project structure for implementing En
 
 ---
 
-### Milestone 2: Core Data Models & Rights System 🚧
-**Status**: IN PROGRESS
+### Milestone 2: Core Data Models & Rights System ✅
+**Status**: COMPLETED
 **Goal**: Implement the Ten Pool Canon with rights-aware foundation
 
-#### Issues:
-- [ ] #5 **Create ProvenanceAndRights Model**
-  - Create migration and model
+#### Completed Issues:
+- [x] #5 Create ProvenanceAndRights Model
+- [x] #6 Implement Ten Pool Canon Models (all 10 pools)
+- [x] #7 Model Associations and Validations
+- [x] #8 Database Indexing Strategy
+- [x] #9 Intent & Task Model (fixed status callback issue)
+- [x] #12 Stage 2: Rights & Provenance Triage
   - Implement publishability/training_eligibility derivation
   - Add consent status and license enums
   - Create rights checking service

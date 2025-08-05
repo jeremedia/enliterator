@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_04_222000) do
+ActiveRecord::Schema[8.0].define(version: 2025_08_05_211843) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gin"
   enable_extension "pg_catalog.plpgsql"
@@ -184,6 +184,57 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_04_222000) do
     t.index ["principle_tags"], name: "index_ideas_on_principle_tags", using: :gin
     t.index ["provenance_and_rights_id"], name: "index_ideas_on_provenance_and_rights_id"
     t.index ["valid_time_start", "valid_time_end"], name: "index_ideas_on_valid_time_start_and_valid_time_end"
+  end
+
+  create_table "ingest_batches", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "source_type", null: false
+    t.integer "status", default: 0, null: false
+    t.jsonb "metadata", default: {}
+    t.jsonb "statistics", default: {}
+    t.datetime "started_at"
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "graph_assembly_stats"
+    t.datetime "graph_assembled_at"
+    t.index ["created_at"], name: "index_ingest_batches_on_created_at"
+    t.index ["source_type"], name: "index_ingest_batches_on_source_type"
+    t.index ["status"], name: "index_ingest_batches_on_status"
+    t.check_constraint "status = ANY (ARRAY[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20])", name: "check_status_values"
+  end
+
+  create_table "ingest_items", force: :cascade do |t|
+    t.bigint "ingest_batch_id", null: false
+    t.bigint "provenance_and_rights_id"
+    t.string "pool_item_type"
+    t.bigint "pool_item_id"
+    t.string "source_hash", null: false
+    t.string "file_path", null: false
+    t.string "source_type"
+    t.string "media_type", default: "unknown", null: false
+    t.string "triage_status", default: "pending", null: false
+    t.bigint "size_bytes"
+    t.text "content_sample"
+    t.jsonb "metadata", default: {}
+    t.jsonb "triage_metadata", default: {}
+    t.string "triage_error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "lexicon_status", default: "pending"
+    t.jsonb "lexicon_metadata", default: {}
+    t.text "content"
+    t.string "pool_status", default: "pending"
+    t.jsonb "pool_metadata", default: {}
+    t.index ["ingest_batch_id"], name: "index_ingest_items_on_ingest_batch_id"
+    t.index ["lexicon_status"], name: "index_ingest_items_on_lexicon_status"
+    t.index ["media_type"], name: "index_ingest_items_on_media_type"
+    t.index ["pool_item_type", "pool_item_id"], name: "index_ingest_items_on_pool_item"
+    t.index ["pool_item_type", "pool_item_id"], name: "index_ingest_items_on_pool_item_type_and_pool_item_id"
+    t.index ["pool_status"], name: "index_ingest_items_on_pool_status"
+    t.index ["provenance_and_rights_id"], name: "index_ingest_items_on_provenance_and_rights_id"
+    t.index ["source_hash"], name: "index_ingest_items_on_source_hash", unique: true
+    t.index ["triage_status"], name: "index_ingest_items_on_triage_status"
   end
 
   create_table "intent_and_tasks", force: :cascade do |t|
@@ -426,6 +477,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_04_222000) do
   add_foreign_key "idea_practicals", "ideas"
   add_foreign_key "idea_practicals", "practicals"
   add_foreign_key "ideas", "provenance_and_rights", column: "provenance_and_rights_id"
+  add_foreign_key "ingest_items", "ingest_batches"
+  add_foreign_key "ingest_items", "provenance_and_rights", column: "provenance_and_rights_id"
   add_foreign_key "intent_and_tasks", "provenance_and_rights", column: "provenance_and_rights_id"
   add_foreign_key "lexicon_and_ontologies", "provenance_and_rights", column: "provenance_and_rights_id"
   add_foreign_key "manifest_experiences", "experiences"

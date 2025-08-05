@@ -28,18 +28,18 @@ class IntentAndTask < ApplicationRecord
   }, prefix: true
 
   enum :status, {
-    pending: "pending",
-    processing: "processing",
-    completed: "completed",
-    failed: "failed",
-    cancelled: "cancelled"
+    pending: 0,
+    processing: 1,
+    completed: 2,
+    failed: 3,
+    cancelled: 4
   }, prefix: true
 
   # Associations
   belongs_to :user_session, optional: true, class_name: "Runtime::Session"
 
   # Validations
-  validates :raw_intent, presence: true
+  validates :user_goal, presence: true
   validates :deliverable_type, presence: true
   validates :modality, presence: true
   validates :status, presence: true

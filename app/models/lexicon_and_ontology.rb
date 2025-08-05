@@ -44,9 +44,9 @@ class LexiconAndOntology < ApplicationRecord
     exact = find_by(term: input)
     return exact if exact
     
-    # Try surface forms
-    where("? = ANY(surface_forms)", input).first ||
-      where("LOWER(?) = ANY(LOWER(surface_forms::text)::text[])", input.downcase).first
+    # Try surface forms (JSONB array)
+    where("surface_forms @> ?", [input].to_json).first ||
+      where("EXISTS (SELECT 1 FROM jsonb_array_elements_text(surface_forms) elem WHERE LOWER(elem) = LOWER(?))", input).first
   end
 
   def self.find_canonical(input)
