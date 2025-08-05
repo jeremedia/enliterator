@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_05_211843) do
+ActiveRecord::Schema[8.0].define(version: 2025_08_05_225433) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gin"
   enable_extension "pg_catalog.plpgsql"
@@ -59,6 +59,30 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_05_211843) do
     t.index ["influence_type"], name: "index_emanations_on_influence_type"
     t.index ["provenance_and_rights_id"], name: "index_emanations_on_provenance_and_rights_id"
     t.index ["valid_time_start", "valid_time_end"], name: "index_emanations_on_valid_time_start_and_valid_time_end"
+  end
+
+  create_table "embeddings", force: :cascade do |t|
+    t.string "embeddable_type", null: false
+    t.string "embeddable_id", null: false
+    t.string "pool", null: false
+    t.string "embedding_type", null: false
+    t.text "source_text", null: false
+    t.string "text_hash", null: false
+    t.vector "embedding", limit: 1536, null: false
+    t.boolean "publishable", default: false, null: false
+    t.boolean "training_eligible", default: false, null: false
+    t.jsonb "metadata", default: {}
+    t.string "model_version"
+    t.datetime "indexed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["embeddable_type", "embeddable_id"], name: "index_embeddings_on_embeddable"
+    t.index ["embedding"], name: "index_embeddings_on_embedding", opclass: :vector_cosine_ops, using: :hnsw
+    t.index ["embedding_type"], name: "index_embeddings_on_embedding_type"
+    t.index ["indexed_at"], name: "index_embeddings_on_indexed_at"
+    t.index ["pool"], name: "index_embeddings_on_pool"
+    t.index ["publishable", "training_eligible"], name: "index_embeddings_on_rights"
+    t.index ["text_hash"], name: "index_embeddings_on_text_hash", unique: true
   end
 
   create_table "evolutionaries", force: :cascade do |t|
@@ -198,6 +222,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_05_211843) do
     t.datetime "updated_at", null: false
     t.jsonb "graph_assembly_stats"
     t.datetime "graph_assembled_at"
+    t.datetime "deliverables_generated_at"
+    t.string "deliverables_path"
+    t.text "deliverables_errors"
     t.index ["created_at"], name: "index_ingest_batches_on_created_at"
     t.index ["source_type"], name: "index_ingest_batches_on_source_type"
     t.index ["status"], name: "index_ingest_batches_on_status"

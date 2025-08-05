@@ -5,12 +5,22 @@ if ! gem list foreman -i --silent; then
   gem install foreman
 fi
 
-# Default to port 3000 if not specified
-export PORT="${PORT:-3000}"
+# Enliterator runs on port 3077
+export PORT="${PORT:-3077}"
+
+# Enliterator domains
+export RAILS_HOSTS="e.dev.domt.app,e.domt.app,localhost"
+export DOMAIN_DEV="e.dev.domt.app"
+export DOMAIN_PROD="e.domt.app"
 
 # Let the debug gem allow remote connections,
 # but avoid loading until `debugger` is called
 export RUBY_DEBUG_OPEN="true"
 export RUBY_DEBUG_LAZY="true"
+
+echo "🚀 Starting Enliterator on port $PORT"
+echo "📍 Development: https://$DOMAIN_DEV"
+echo "📍 Production: https://$DOMAIN_PROD (currently pointing to Mac)"
+echo ""
 
 exec foreman start -f Procfile.dev "$@"

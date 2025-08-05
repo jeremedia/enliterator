@@ -15,6 +15,10 @@ Rails.application.configure do
   # Enable server timing.
   config.server_timing = true
 
+  # Allow Enliterator domains (accessible via Caddy proxy + Tailscale)
+  config.hosts << "e.dev.domt.app"
+  config.hosts << "e.domt.app"
+
   # Enable/disable Action Controller caching. By default Action Controller caching is disabled.
   # Run rails dev:cache to toggle Action Controller caching.
   if Rails.root.join("tmp/caching-dev.txt").exist?
@@ -37,8 +41,8 @@ Rails.application.configure do
   # Make template changes take effect immediately.
   config.action_mailer.perform_caching = false
 
-  # Set localhost to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: "localhost", port: 3000 }
+  # Set development domain to be used by links generated in mailer templates.
+  config.action_mailer.default_url_options = { host: ENV.fetch("DOMAIN_DEV", "e.dev.domt.app"), protocol: "https" }
 
   # Print deprecation notices to the Rails logger.
   config.active_support.deprecation = :log
