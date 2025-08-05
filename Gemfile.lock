@@ -133,6 +133,7 @@ GEM
       bigdecimal
       rexml
     crass (1.0.6)
+    csv (3.3.5)
     database_cleaner-active_record (2.2.2)
       activerecord (>= 5.a)
       database_cleaner-core (~> 2.0)
@@ -576,6 +577,7 @@ DEPENDENCIES
   brakeman
   capybara
   connection_pool
+  csv
   database_cleaner-active_record
   debug
   devise

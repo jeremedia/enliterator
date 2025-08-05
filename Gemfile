@@ -47,6 +47,9 @@ gem "openai", "~> 0.16.0"
 gem "neo4j-ruby-driver"
 # gem "activegraph" # Not using ActiveGraph OGM, using direct driver instead
 
+# CSV processing (required for Ruby 3.4+)
+gem "csv"
+
 # Vector embeddings with pgvector
 gem "neighbor"
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_05_225433) do
+ActiveRecord::Schema[8.0].define(version: 2025_08_05_234909) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gin"
   enable_extension "pg_catalog.plpgsql"
@@ -295,6 +295,15 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_05_225433) do
     t.index ["provenance_and_rights_id"], name: "index_intent_and_tasks_on_provenance_and_rights_id"
     t.index ["resolved_at"], name: "index_intent_and_tasks_on_resolved_at"
     t.index ["status"], name: "index_intent_and_tasks_on_status"
+  end
+
+  create_table "interview_sessions", force: :cascade do |t|
+    t.string "session_id"
+    t.jsonb "data"
+    t.boolean "completed"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["session_id"], name: "index_interview_sessions_on_session_id"
   end
 
   create_table "lexicon_and_ontologies", force: :cascade do |t|
