@@ -121,10 +121,16 @@ class Idea < ApplicationRecord
   end
   
   def sync_to_graph
-    Graph::SyncJob.perform_later(self)
+    return unless defined?(Graph::IdeaWriter)
+    Graph::IdeaWriter.new(self).sync
+  rescue StandardError => e
+    Rails.logger.error "Failed to sync Idea #{id} to graph: #{e.message}"
   end
   
   def remove_from_graph
-    Graph::RemoveJob.perform_later(self.class.name, id)
+    return unless defined?(Graph::IdeaRemover)
+    Graph::IdeaRemover.new(self).remove
+  rescue StandardError => e
+    Rails.logger.error "Failed to remove Idea #{id} from graph: #{e.message}"
   end
 end

@@ -26,7 +26,7 @@ class CreateIdeas < ActiveRecord::Migration[8.0]
     add_index :ideas, [:valid_time_start, :valid_time_end]
     
     # Full-text search index
-    add_index :ideas, :label, using: :gin, opclass: :gin_trgm_ops
-    add_index :ideas, :abstract, using: :gin, opclass: :gin_trgm_ops
+    add_index :ideas, :label, using: :gin, opclass: :gin_trgm_ops, name: 'index_ideas_on_label_trgm'
+    add_index :ideas, :abstract, using: :gin, opclass: :gin_trgm_ops, name: 'index_ideas_on_abstract_trgm'
   end
 end

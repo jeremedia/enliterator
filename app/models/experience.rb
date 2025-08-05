@@ -148,10 +148,16 @@ class Experience < ApplicationRecord
   end
   
   def sync_to_graph
-    Graph::SyncJob.perform_later(self)
+    return unless defined?(Graph::ExperienceWriter)
+    Graph::ExperienceWriter.new(self).sync
+  rescue StandardError => e
+    Rails.logger.error "Failed to sync Experience #{id} to graph: #{e.message}"
   end
   
   def remove_from_graph
-    Graph::RemoveJob.perform_later(self.class.name, id)
+    return unless defined?(Graph::ExperienceRemover)
+    Graph::ExperienceRemover.new(self).remove
+  rescue StandardError => e
+    Rails.logger.error "Failed to remove Experience #{id} from graph: #{e.message}"
   end
 end

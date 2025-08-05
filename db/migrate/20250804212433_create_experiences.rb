@@ -24,6 +24,6 @@ class CreateExperiences < ActiveRecord::Migration[8.0]
     add_index :experiences, :actor_id
     
     # Full-text search
-    add_index :experiences, :narrative_text, using: :gin, opclass: :gin_trgm_ops
+    add_index :experiences, :narrative_text, using: :gin, opclass: :gin_trgm_ops, name: 'index_experiences_on_narrative_trgm'
   end
 end

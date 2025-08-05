@@ -26,6 +26,6 @@ class CreateManifests < ActiveRecord::Migration[8.0]
     add_index :manifests, :components, using: :gin
     
     # Full-text search
-    add_index :manifests, :label, using: :gin, opclass: :gin_trgm_ops
+    add_index :manifests, :label, using: :gin, opclass: :gin_trgm_ops, name: 'index_manifests_on_label_trgm'
   end
 end

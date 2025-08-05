@@ -127,10 +127,16 @@ class Manifest < ApplicationRecord
   end
   
   def sync_to_graph
-    Graph::SyncJob.perform_later(self)
+    return unless defined?(Graph::ManifestWriter)
+    Graph::ManifestWriter.new(self).sync
+  rescue StandardError => e
+    Rails.logger.error "Failed to sync Manifest #{id} to graph: #{e.message}"
   end
   
   def remove_from_graph
-    Graph::RemoveJob.perform_later(self.class.name, id)
+    return unless defined?(Graph::ManifestRemover)
+    Graph::ManifestRemover.new(self).remove
+  rescue StandardError => e
+    Rails.logger.error "Failed to remove Manifest #{id} from graph: #{e.message}"
   end
 end

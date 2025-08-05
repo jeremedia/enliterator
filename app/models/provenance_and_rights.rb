@@ -99,6 +99,19 @@ class ProvenanceAndRights < ApplicationRecord
     parts.compact.join(" - ")
   end
   
+  # Convenience methods for boolean attributes
+  def publishable?
+    publishability
+  end
+  
+  def training_eligible?
+    training_eligibility
+  end
+  
+  def license
+    license_display_name
+  end
+  
   private
   
   def derive_rights

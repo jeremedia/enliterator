@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: enliterator_dev
       POSTGRES_DB: enliterator_development
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d
@@ -62,8 +62,8 @@ services:
       MINIO_ROOT_USER: enliterator
       MINIO_ROOT_PASSWORD: enliterator_dev
     ports:
-      - "9000:9000"  # API
-      - "9001:9001"  # Console
+      - "9002:9000"  # API
+      - "9003:9001"  # Console
     volumes:
       - minio_data:/data
     healthcheck:

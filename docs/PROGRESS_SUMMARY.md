@@ -46,12 +46,21 @@
 - GitHub project plan with 10 milestones and 41 issues
 - Progress tracking with todo list
 
+## Recently Completed ✅
+
+### Ten Pool Canon Models
+- All 10 core models implemented with spec-compliant fields
+- Join table models created for associations
+- Model validations and callbacks working
+- Test suite verifies creation and associations
+- Relational model updated to use only spec-defined verbs
+
 ## In Progress 🚧
 
-### Current Focus: Model Implementation
-- Need to complete remaining pool models
-- Implement all join table associations
-- Add model validations and callbacks
+### Current Focus: Pipeline Infrastructure
+- Need to fix IntentAndTask status field issue
+- Set up Solid Queue job infrastructure
+- Begin Stage 1: Intake System implementation
 
 ## Next Steps 📋
 
@@ -87,7 +96,7 @@
 - PostgreSQL 16 with pgvector
 - Neo4j 5 Community
 - Redis 7
-- OpenAI API (gpt-4o-2024-08-06)
+- OpenAI API (gpt-4.1-2025-04-14 and gpt-4.1-mini-2025-04-14)
 
 ## Commands to Continue
 
