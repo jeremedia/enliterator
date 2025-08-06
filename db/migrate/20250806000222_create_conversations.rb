@@ -1,7 +1,7 @@
 class CreateConversations < ActiveRecord::Migration[8.0]
   def change
     create_table :conversations do |t|
-      t.references :user, foreign_key: true, null: true
+      # User reference removed - can be added later when user management is implemented
       t.references :ingest_batch, foreign_key: true, null: true
       t.jsonb :context, default: {}
       t.jsonb :model_config, default: {}  # CRITICAL: Stores model configuration

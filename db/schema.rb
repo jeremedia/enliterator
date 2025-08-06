@@ -10,13 +10,27 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_05_234909) do
+ActiveRecord::Schema[8.0].define(version: 2025_08_06_004547) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gin"
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
   enable_extension "pgcrypto"
   enable_extension "vector"
+
+  create_table "conversations", force: :cascade do |t|
+    t.bigint "ingest_batch_id"
+    t.jsonb "context", default: {}
+    t.jsonb "model_config", default: {}
+    t.string "status"
+    t.string "expertise_level"
+    t.datetime "last_activity_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ingest_batch_id"], name: "index_conversations_on_ingest_batch_id"
+    t.index ["last_activity_at"], name: "index_conversations_on_last_activity_at"
+    t.index ["status"], name: "index_conversations_on_status"
+  end
 
   create_table "emanation_ideas", force: :cascade do |t|
     t.bigint "emanation_id", null: false
@@ -364,6 +378,31 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_05_234909) do
     t.index ["valid_time_start", "valid_time_end"], name: "index_manifests_on_valid_time_start_and_valid_time_end"
   end
 
+  create_table "messages", force: :cascade do |t|
+    t.bigint "conversation_id", null: false
+    t.integer "role"
+    t.text "content"
+    t.jsonb "metadata"
+    t.integer "tokens_used"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["conversation_id"], name: "index_messages_on_conversation_id"
+  end
+
+  create_table "negative_knowledges", force: :cascade do |t|
+    t.bigint "batch_id"
+    t.string "gap_type"
+    t.text "gap_description"
+    t.string "severity"
+    t.text "affected_pools"
+    t.text "impact"
+    t.text "suggested_remediation"
+    t.jsonb "metadata"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["batch_id"], name: "index_negative_knowledges_on_batch_id"
+  end
+
   create_table "pg_search_documents", force: :cascade do |t|
     t.text "content"
     t.string "searchable_type"
@@ -444,6 +483,31 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_05_234909) do
     t.index ["valid_time_start", "valid_time_end"], name: "index_practicals_on_valid_time_start_and_valid_time_end"
   end
 
+  create_table "prompt_versions", force: :cascade do |t|
+    t.bigint "prompt_id", null: false
+    t.text "content"
+    t.jsonb "variables"
+    t.integer "status"
+    t.integer "version_number"
+    t.float "performance_score"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["prompt_id"], name: "index_prompt_versions_on_prompt_id"
+  end
+
+  create_table "prompts", force: :cascade do |t|
+    t.string "key"
+    t.string "name"
+    t.text "description"
+    t.integer "category"
+    t.integer "context"
+    t.boolean "active"
+    t.integer "current_version_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_prompts_on_key", unique: true
+  end
+
   create_table "provenance_and_rights", force: :cascade do |t|
     t.jsonb "source_ids", default: [], null: false
     t.string "source_owner"
@@ -493,6 +557,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_05_234909) do
     t.index ["valid_time_start", "valid_time_end"], name: "index_relationals_on_valid_time_start_and_valid_time_end"
   end
 
+  add_foreign_key "conversations", "ingest_batches"
   add_foreign_key "emanation_ideas", "emanations"
   add_foreign_key "emanation_ideas", "ideas"
   add_foreign_key "emanation_relationals", "emanations"
@@ -520,10 +585,13 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_05_234909) do
   add_foreign_key "manifest_experiences", "experiences"
   add_foreign_key "manifest_experiences", "manifests"
   add_foreign_key "manifests", "provenance_and_rights", column: "provenance_and_rights_id"
+  add_foreign_key "messages", "conversations"
+  add_foreign_key "negative_knowledges", "ingest_batches", column: "batch_id"
   add_foreign_key "pipeline_artifacts", "pipeline_runs"
   add_foreign_key "pipeline_errors", "pipeline_runs"
   add_foreign_key "practical_ideas", "ideas"
   add_foreign_key "practical_ideas", "practicals"
   add_foreign_key "practicals", "provenance_and_rights", column: "provenance_and_rights_id"
+  add_foreign_key "prompt_versions", "prompts"
   add_foreign_key "relationals", "provenance_and_rights", column: "provenance_and_rights_id"
 end

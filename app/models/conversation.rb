@@ -1,6 +1,6 @@
 class Conversation < ApplicationRecord
   has_many :messages, dependent: :destroy
-  belongs_to :user, optional: true
+  # User association removed - can be added later when user management is implemented
   belongs_to :ingest_batch, optional: true
   
   # Store conversation context and state
@@ -36,7 +36,7 @@ class Conversation < ApplicationRecord
   
   scope :recent, -> { order(last_activity_at: :desc) }
   scope :active, -> { where(status: :active) }
-  scope :for_user, ->(user) { where(user: user) }
+  # for_user scope removed - can be added later when user management is implemented
   
   # Get or set the OpenAI model for this conversation
   def ai_model
