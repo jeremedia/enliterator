@@ -1,7 +1,7 @@
 // VisualizationManager - Orchestrates the creation and management of visualizations
 // This is the bridge between conversation and visual representation
 
-import { RelationshipGraph } from './visualizations/relationship_graph';
+import { RelationshipGraph } from 'navigator/visualizations/relationship_graph';
 
 class VisualizationManager {
   constructor() {

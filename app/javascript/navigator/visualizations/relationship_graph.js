@@ -3,7 +3,7 @@
 
 import * as d3 from 'd3';
 
-export class RelationshipGraph {
+class RelationshipGraph {
   constructor(container, data, options = {}) {
     this.container = container;
     this.data = this.processGraphData(data);
@@ -356,3 +356,6 @@ export class RelationshipGraph {
 
 // Make it available globally for easy access
 window.RelationshipGraph = RelationshipGraph;
+
+// Export for ES6 modules
+export { RelationshipGraph };

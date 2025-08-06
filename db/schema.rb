@@ -10,7 +10,12 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_06_155934) do
+ActiveRecord::Schema[8.0].define(version: 2025_08_06_225750) do
+  create_schema "ekn_11"
+  create_schema "ekn_12"
+  create_schema "ekn_13"
+  create_schema "ekn_14"
+
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gin"
   enable_extension "pg_catalog.plpgsql"
@@ -42,6 +47,28 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_155934) do
     t.index ["ingest_batch_id"], name: "index_conversations_on_ingest_batch_id"
     t.index ["last_activity_at"], name: "index_conversations_on_last_activity_at"
     t.index ["status"], name: "index_conversations_on_status"
+  end
+
+  create_table "ekns", force: :cascade do |t|
+    t.string "name", null: false
+    t.text "description"
+    t.string "status", default: "initializing"
+    t.string "domain_type", default: "general"
+    t.string "personality", default: "friendly"
+    t.integer "session_id"
+    t.jsonb "metadata", default: {}
+    t.jsonb "settings", default: {}
+    t.integer "total_nodes", default: 0
+    t.integer "total_relationships", default: 0
+    t.integer "total_items", default: 0
+    t.float "literacy_score"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "slug"
+    t.index ["metadata"], name: "index_ekns_on_metadata", using: :gin
+    t.index ["session_id"], name: "index_ekns_on_session_id"
+    t.index ["slug"], name: "index_ekns_on_slug", unique: true
+    t.index ["status"], name: "index_ekns_on_status"
   end
 
   create_table "emanation_ideas", force: :cascade do |t|
@@ -87,29 +114,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_155934) do
     t.index ["valid_time_start", "valid_time_end"], name: "index_emanations_on_valid_time_start_and_valid_time_end"
   end
 
-  create_table "embeddings", force: :cascade do |t|
-    t.string "embeddable_type", null: false
-    t.string "embeddable_id", null: false
-    t.string "pool", null: false
-    t.string "embedding_type", null: false
-    t.text "source_text", null: false
-    t.string "text_hash", null: false
-    t.vector "embedding", limit: 1536, null: false
-    t.boolean "publishable", default: false, null: false
-    t.boolean "training_eligible", default: false, null: false
-    t.jsonb "metadata", default: {}
-    t.string "model_version"
-    t.datetime "indexed_at"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["embeddable_type", "embeddable_id"], name: "index_embeddings_on_embeddable"
-    t.index ["embedding"], name: "index_embeddings_on_embedding", opclass: :vector_cosine_ops, using: :hnsw
-    t.index ["embedding_type"], name: "index_embeddings_on_embedding_type"
-    t.index ["indexed_at"], name: "index_embeddings_on_indexed_at"
-    t.index ["pool"], name: "index_embeddings_on_pool"
-    t.index ["publishable", "training_eligible"], name: "index_embeddings_on_rights"
-    t.index ["text_hash"], name: "index_embeddings_on_text_hash", unique: true
-  end
+# Could not dump table "embeddings" because of following StandardError
+#   Unknown type 'vector(1536)' for column 'embedding'
+
 
   create_table "evolutionaries", force: :cascade do |t|
     t.text "change_note", null: false
@@ -202,6 +209,17 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_155934) do
     t.index ["status"], name: "index_fine_tune_jobs_on_status"
   end
 
+  create_table "friendly_id_slugs", force: :cascade do |t|
+    t.string "slug", null: false
+    t.integer "sluggable_id", null: false
+    t.string "sluggable_type", limit: 50
+    t.string "scope"
+    t.datetime "created_at"
+    t.index ["slug", "sluggable_type", "scope"], name: "index_friendly_id_slugs_on_slug_and_sluggable_type_and_scope", unique: true
+    t.index ["slug", "sluggable_type"], name: "index_friendly_id_slugs_on_slug_and_sluggable_type"
+    t.index ["sluggable_type", "sluggable_id"], name: "index_friendly_id_slugs_on_sluggable_type_and_sluggable_id"
+  end
+
   create_table "idea_emanations", force: :cascade do |t|
     t.bigint "idea_id", null: false
     t.bigint "emanation_id", null: false
@@ -276,7 +294,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_155934) do
     t.string "deliverables_path"
     t.text "deliverables_errors"
     t.decimal "literacy_score"
+    t.bigint "ekn_id"
     t.index ["created_at"], name: "index_ingest_batches_on_created_at"
+    t.index ["ekn_id"], name: "index_ingest_batches_on_ekn_id"
     t.index ["source_type"], name: "index_ingest_batches_on_source_type"
     t.index ["status"], name: "index_ingest_batches_on_status"
     t.check_constraint "status = ANY (ARRAY[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20])", name: "check_status_values"
@@ -380,6 +400,31 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_155934) do
     t.index ["surface_forms"], name: "index_lexicon_and_ontologies_on_surface_forms", using: :gin
     t.index ["term"], name: "index_lexicon_and_ontologies_on_term", unique: true
     t.index ["valid_time_start", "valid_time_end"], name: "idx_on_valid_time_start_valid_time_end_5b95b14d20"
+  end
+
+  create_table "log_items", force: :cascade do |t|
+    t.uuid "uuid", null: false
+    t.bigint "log_id", null: false
+    t.integer "num"
+    t.string "log_label"
+    t.string "status"
+    t.text "text"
+    t.jsonb "item_data"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["log_id"], name: "index_log_items_on_log_id"
+    t.index ["uuid"], name: "index_log_items_on_uuid", unique: true
+  end
+
+  create_table "logs", force: :cascade do |t|
+    t.uuid "uuid", null: false
+    t.string "loggable_type", null: false
+    t.bigint "loggable_id", null: false
+    t.string "label"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["loggable_type", "loggable_id"], name: "index_logs_on_loggable"
+    t.index ["uuid"], name: "index_logs_on_uuid", unique: true
   end
 
   create_table "manifest_experiences", force: :cascade do |t|
@@ -627,6 +672,14 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_155934) do
     t.index ["valid_time_start", "valid_time_end"], name: "index_relationals_on_valid_time_start_and_valid_time_end"
   end
 
+  create_table "sessions", force: :cascade do |t|
+    t.string "browser_session_id", null: false
+    t.jsonb "metadata", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["browser_session_id"], name: "index_sessions_on_browser_session_id", unique: true
+  end
+
   create_table "webhook_events", force: :cascade do |t|
     t.string "event_id", null: false
     t.string "event_type", null: false
@@ -673,10 +726,12 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_155934) do
   add_foreign_key "idea_practicals", "ideas"
   add_foreign_key "idea_practicals", "practicals"
   add_foreign_key "ideas", "provenance_and_rights", column: "provenance_and_rights_id"
+  add_foreign_key "ingest_batches", "ekns"
   add_foreign_key "ingest_items", "ingest_batches"
   add_foreign_key "ingest_items", "provenance_and_rights", column: "provenance_and_rights_id"
   add_foreign_key "intent_and_tasks", "provenance_and_rights", column: "provenance_and_rights_id"
   add_foreign_key "lexicon_and_ontologies", "provenance_and_rights", column: "provenance_and_rights_id"
+  add_foreign_key "log_items", "logs"
   add_foreign_key "manifest_experiences", "experiences"
   add_foreign_key "manifest_experiences", "manifests"
   add_foreign_key "manifests", "provenance_and_rights", column: "provenance_and_rights_id"

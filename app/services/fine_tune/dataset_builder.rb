@@ -5,6 +5,7 @@ module FineTune
   # Generates JSONL files with different task types for teaching the model
   # about the canon, verbs, and path narration
   class DatasetBuilder < ApplicationService
+    include Graph::ConnectionHelper
     TASK_TYPES = %w[
       canon_map
       path_text
@@ -72,6 +73,12 @@ module FineTune
       raise ArgumentError, "Batch not ready (literacy score < 70)" if @batch.literacy_score.to_f < 70
     end
     
+    def database_name
+      # Get the Neo4j database name for this batch
+      return 'neo4j' unless @batch
+      @batch.neo4j_database_name || 'neo4j'
+    end
+    
     # Task 1: Canonical term mapping
     def generate_canon_mapping_examples
       # Get lexicon entries through IngestItems
@@ -109,13 +116,8 @@ module FineTune
     
     # Task 2: Path narration from graph structures
     def generate_path_narration_examples
-      # Query Neo4j for interesting paths
-      neo4j_session = Neo4j::Driver::GraphDatabase.driver(
-        ENV.fetch('NEO4J_URL', 'bolt://127.0.0.1:7687'),
-        Neo4j::Driver::AuthTokens.basic('neo4j', 'cheese28')
-      ).session
-      
-      begin
+      # Query Neo4j for interesting paths using singleton connection
+      neo4j_session(database: database_name) do |session|
         # Find paths of length 2-5 between different pool types
         # Note: Nodes might not have ingest_batch_id directly, they're linked via provenance
         query = <<~CYPHER
@@ -144,8 +146,6 @@ module FineTune
             output: path_text
           }
         end
-      ensure
-        neo4j_session.close
       end
     end
     

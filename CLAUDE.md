@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Current Implementation Status (2025-08-06 Late Evening Update)
 
-**Pipeline: 87% Complete (8.3 of 9 stages)**
+**Pipeline: 83% Complete (7.5 of 9 stages)**
 
 **✅ Completed Stages 0-8 (Technical Infrastructure):**
 - Stage 0: Frame the Mission - Configuration and goal setting
@@ -71,7 +71,14 @@ rails enliterator:literacy:gaps[batch_id]
 rails enliterator:literacy:report[batch_id]
 ```
 
-#### Stage 6: Embeddings - MAJOR REFACTOR TO NEO4J GENAI (2025-08-06)
+#### EKN Model Architecture - COMPLETE (2025-08-06)
+- **MAJOR ACHIEVEMENT**: Refactored from IngestBatch to EKN as top-level entity
+- **EKN Model**: Persistent Knowledge Navigators that own multiple IngestBatches
+- **Knowledge Accumulation**: Multiple batches share same Neo4j database
+- **Meta-Enliterator**: Created EKN #13 with 5 batches proving accumulation
+- **GitHub Issue #53**: Architecture implementation complete
+
+#### Stage 6: Embeddings - REFACTOR TO NEO4J GENAI IN PROGRESS
 - **ARCHITECTURAL CHANGE**: Migrating from pgvector to Neo4j GenAI plugin
 - **Neo4j GenAI Integration**: Use `genai.vector.encodeBatch` for OpenAI embeddings
 - **Unified Database**: Store embeddings as node properties in Neo4j (no separate pgvector)
@@ -97,28 +104,28 @@ rails enliterator:literacy:report[batch_id]
 
 You are **Claude Code — Enliterator Build Assistant**. Build a Rails 8 application that implements the **9-stage pipeline** to create Knowledge Navigators:
 
-**All 9 Stages COMPLETE** (100% Implementation):
+**Implementation Status by Stage:**
 
 **Stages 0-8** (Technical Infrastructure - ✅ COMPLETE):
-0. Frame the mission through conversational onboarding
-1. Run intake on dropped data bundles
-2. Assign rights & provenance with tracking
-3. Bootstrap lexicon with canonical terms
-4. Fill pools (Ten Pool Canon) with entities and relationships
-5. Assemble knowledge graph (Neo4j) with path textization
-6. Build representations & retrieval indices (pgvector)
-7. Score literacy and identify gaps
-8. Generate deliverables (prompt packs, evaluations)
+0. Frame the mission through conversational onboarding ✅
+1. Run intake on dropped data bundles ✅
+2. Assign rights & provenance with tracking ✅
+3. Bootstrap lexicon with canonical terms ✅
+4. Fill pools (Ten Pool Canon) with entities and relationships ✅
+5. Assemble knowledge graph (Neo4j) with path textization ✅
+6. Build representations & retrieval indices (pgvector) ✅
+7. Score literacy and identify gaps ✅
+8. Generate deliverables (prompt packs, evaluations) ✅
 
-**Stage 9** (The Actual Product - ✅ COMPLETE):
-9. **KNOWLEDGE NAVIGATOR CREATED** - Infrastructure transformed into:
-    - Conversational interface (voice + text) ✅
-    - Dynamic UI generation (forms, charts, maps, timelines) ✅
-    - Natural language wrappers for MCP tools ✅
-    - Multimodal presentation coordinated with context ✅
-    - The actual product users interact with ✅
+**Stage 9** (The Actual Product - ⚠️ 30% COMPLETE):
+9. **KNOWLEDGE NAVIGATOR** - Transforming infrastructure into product:
+    - Conversational interface (text only) ⚠️ 50% (no voice)
+    - Dynamic UI generation ❌ 0% (no visualizations)
+    - Natural language wrappers ✅ 70% (model understands)
+    - Multimodal presentation ❌ 0% (text only)
+    - Visual data presentation ❌ 0% (cannot show graphs/charts)
 
-**SUCCESS**: Enliterator is now a complete Knowledge Navigator factory. Users can visit http://localhost:3000 to experience natural conversation with their data!
+**CURRENT REALITY**: We have a technical pipeline and chat interface, but NOT yet a Knowledge Navigator. The vision requires SHOWING data through dynamic visualizations, not just chatting about it.
 
 Musts: Rails 8 conventions; Postgres (ops store), Neo4j (graph), Redis, **Solid Queue/Cache**, pgvector; deterministic tests; no guessed rights.
 

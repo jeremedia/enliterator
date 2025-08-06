@@ -6,7 +6,8 @@
       "Bash(npm install:*)",
       "Bash(gh issue create:*)",
       "Bash(rails generate model:*)",
-      "Bash(rails:*)"
+      "Bash(rails:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }

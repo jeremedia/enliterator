@@ -1,6 +1,16 @@
 # Enliterator
 
-A Rails 8 application that transforms drop-off data collections into **enliterated datasets** with **literate runtime** capabilities. Enliterator creates knowledge graphs that can converse intelligently about their contents, show reasoning paths, cite sources, and produce multimodal deliverables.
+A Rails 8 application that transforms data collections into **Enliterated Knowledge Navigators (EKNs)** - persistent, growing conversational interfaces to your data, inspired by Apple's 1987 Knowledge Navigator vision.
+
+## The Vision: Knowledge Navigators
+
+Enliterator doesn't just process data - it creates **Knowledge Navigators**. Each dataset becomes a knowledgeable colleague you can:
+- **Converse with naturally** using voice or text
+- **See data visualized dynamically** as graphs, timelines, maps, and charts
+- **Explore interactively** through clicking, zooming, and filtering
+- **Learn from progressively** as they accumulate knowledge over time
+
+**Current Status**: Pipeline complete (Stages 0-8), Knowledge Navigator interface 30% complete (Stage 9)
 
 ## What is Enliteracy?
 
@@ -14,6 +24,17 @@ A Rails 8 application that transforms drop-off data collections into **enliterat
 - Modeling it into pools of meaning with explicit flows
 - Adding rights, provenance, and canonical lexicon
 - Enabling the system to answer *why*, *how*, and *what's next*, not only *what*
+
+## Core Architecture: EKN Model
+
+Each **Enliterated Knowledge Navigator (EKN)** is a persistent entity that:
+- **Maintains identity** across sessions (e.g., "Chicken Knowledge", "Recipe Collection")
+- **Accumulates knowledge** through multiple data imports (IngestBatches)
+- **Shares a database** among all its batches for true knowledge growth
+- **Remembers conversations** and learning patterns
+- **Grows smarter** with each interaction and data addition
+
+The Meta-Enliterator (EKN #13) is Enliterator's understanding of itself - it guides users in creating their own Knowledge Navigators.
 
 ## Core Features
 

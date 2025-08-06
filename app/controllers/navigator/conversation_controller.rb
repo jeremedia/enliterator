@@ -24,8 +24,13 @@ module Navigator
       # Add user message to history
       add_to_conversation("user", user_input)
       
-      # Process through the conversation manager
-      response = conversation_manager.process_input(user_input, @conversation_context)
+      # Use the orchestrator for enhanced visualization support
+      if use_orchestrator?
+        response = conversation_orchestrator.process(user_input, current_ekn.slug)
+      else
+        # Fallback to regular conversation manager
+        response = conversation_manager.process_input(user_input, @conversation_context)
+      end
       
       # Add assistant response to history  
       add_to_conversation("assistant", response[:message])
@@ -45,6 +50,7 @@ module Navigator
         visualization: visualization,
         voice_url: voice_url,
         conversation_id: @conversation_id,
+        ekn_info: response[:ekn_info],
         suggestions: response[:suggestions] # Suggested follow-up questions
       }
     rescue StandardError => e
@@ -109,15 +115,34 @@ module Navigator
     end
     
     def current_ekn
-      @current_ekn ||= if session[:current_ekn_id]
-        IngestBatch.find_by(id: session[:current_ekn_id])
-      else
-        # Use the Meta-EKN by default
-        IngestBatch.where(status: 'completed')
-                   .where.not(literacy_score: nil)
-                   .order(literacy_score: :desc)
-                   .first
+      @current_ekn ||= begin
+        ekn = nil
+        
+        if session[:current_ekn_id]
+          # Try to find by ID or slug
+          ekn = Ekn.find_by(id: session[:current_ekn_id]) || Ekn.find_by(slug: session[:current_ekn_id])
+          
+          # If not found, clear the invalid session value
+          if ekn.nil?
+            session.delete(:current_ekn_id)
+          end
+        end
+        
+        # Fall back to Meta-Enliterator if no valid EKN in session
+        ekn || Ekn.find_by(slug: 'meta-enliterator') || Ekn.find_by(id: 13)
       end
+    end
+    
+    def use_orchestrator?
+      # Use orchestrator when we have an EKN and visualization support is enabled
+      current_ekn.is_a?(Ekn) && ENV['ENABLE_VISUALIZATIONS'] != 'false'
+    end
+    
+    def conversation_orchestrator
+      @conversation_orchestrator ||= Navigator::ConversationOrchestrator.new(
+        ekn: current_ekn,
+        context: @conversation_context
+      )
     end
     
     def user_preferences

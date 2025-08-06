@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 # Represents a batch of items being processed through the pipeline
+# NOW BELONGS TO AN EKN - no longer the top-level entity!
 class IngestBatch < ApplicationRecord
+  belongs_to :ekn  # CRITICAL: IngestBatch now belongs to an EKN
   has_many :ingest_items, dependent: :destroy
   
   # Status tracking for pipeline stages
@@ -42,37 +44,24 @@ class IngestBatch < ApplicationRecord
   # Callbacks
   before_validation :set_defaults
   
-  # Data Isolation Methods
-  # Each EKN gets completely isolated resources
-  
-  def neo4j_database_name
-    # Sanitized database name for Neo4j (only simple ascii, numbers, dots, dashes)
-    "ekn-#{id}"
-  end
-  
-  def postgres_schema_name
-    # Schema name for PostgreSQL isolation
-    "ekn_#{id}"
-  end
+  # CRITICAL CHANGE: Delegate to parent EKN for resource naming
+  # All batches for an EKN share the SAME database/schema!
+  delegate :neo4j_database_name, :postgres_schema_name, to: :ekn
   
   def storage_root_path
-    # Root path for file storage
-    case ENV.fetch('STORAGE_TYPE', 'filesystem')
-    when 'filesystem'
-      Rails.root.join('storage', 'ekns', id.to_s)
-    when 's3'
-      "s3://#{ENV['S3_BUCKET']}/ekns/#{id}/"
-    else
-      Rails.root.join('storage', 'ekns', id.to_s)
-    end
+    # Batch-specific storage under the EKN's storage
+    ekn.storage_root_path.join('batches', id.to_s)
   end
   
+  # DEPRECATED: EKN handles database creation/deletion now
+  # Keeping for compatibility but delegating to EKN
   def ensure_neo4j_database_exists!
-    Graph::DatabaseManager.ensure_database_exists(neo4j_database_name)
+    ekn.ensure_resources_exist!
   end
   
   def drop_neo4j_database!
-    Graph::DatabaseManager.drop_database(neo4j_database_name)
+    # DO NOT DROP! Other batches use the same database!
+    Rails.logger.warn "Attempted to drop Neo4j database from batch #{id} - ignoring (database belongs to EKN)"
   end
   
   def ensure_postgres_schema_exists!
@@ -138,10 +127,8 @@ class IngestBatch < ApplicationRecord
   end
   
   def drop_postgres_schema!
-    ApplicationRecord.connection.execute(<<-SQL)
-      DROP SCHEMA IF EXISTS #{postgres_schema_name} CASCADE;
-    SQL
-    Rails.logger.info "Dropped PostgreSQL schema: #{postgres_schema_name}"
+    # DO NOT DROP! Other batches use the same schema!
+    Rails.logger.warn "Attempted to drop PostgreSQL schema from batch #{id} - ignoring (schema belongs to EKN)"
   end
   
   def ensure_storage_exists!
@@ -167,19 +154,16 @@ class IngestBatch < ApplicationRecord
   end
   
   def ensure_all_resources_exist!
-    # Create all isolated resources for this EKN
-    ensure_neo4j_database_exists!
-    ensure_postgres_schema_exists!
-    ensure_storage_exists!
-    Rails.logger.info "All resources created for EKN #{id}: #{name}"
+    # Delegate to parent EKN - resources are shared across batches
+    ekn.ensure_resources_exist!
+    ensure_storage_exists!  # Batch-specific storage only
+    Rails.logger.info "Resources ensured for batch #{id} under EKN #{ekn.id}"
   end
   
   def destroy_all_resources!
-    # Destroy all isolated resources for this EKN
-    drop_neo4j_database!
-    drop_postgres_schema!
+    # Only destroy batch-specific storage, NOT shared databases!
     drop_all_storage!
-    Rails.logger.info "All resources destroyed for EKN #{id}: #{name}"
+    Rails.logger.info "Batch-specific storage destroyed for batch #{id}"
   end
   
   def progress_percentage

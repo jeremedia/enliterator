@@ -7,13 +7,26 @@ class NavigatorController < ApplicationController
     @conversation_id = session[:conversation_id] ||= SecureRandom.uuid
     @current_ekn = current_user_ekn
     
-    # Load graph statistics if we have an EKN
+    # Load graph statistics if we have an EKN with a valid database
     if @current_ekn
-      graph_service = Graph::QueryService.new(@current_ekn.id)
-      @graph_stats = graph_service.get_statistics
-      
-      # Set the current EKN in session
-      session[:current_ekn_id] ||= @current_ekn.id
+      # Check if the Neo4j database actually exists
+      if @current_ekn.neo4j_database_exists?
+        graph_service = Graph::QueryService.new(@current_ekn.neo4j_database_name)
+        @graph_stats = graph_service.get_statistics
+        
+        # Set the current EKN slug in session for easy reference
+        session[:current_ekn_id] = @current_ekn.slug || @current_ekn.id
+      else
+        # Database doesn't exist, fall back to Meta-Enliterator
+        Rails.logger.warn "EKN #{@current_ekn.id} database doesn't exist, switching to Meta-Enliterator"
+        session[:current_ekn_id] = 'meta-enliterator'
+        @current_ekn = Ekn.find_by(slug: 'meta-enliterator') || Ekn.find(13)
+        
+        if @current_ekn && @current_ekn.neo4j_database_exists?
+          graph_service = Graph::QueryService.new(@current_ekn.neo4j_database_name)
+          @graph_stats = graph_service.get_statistics
+        end
+      end
     end
     
     # Check if this is a first-time visitor
@@ -83,11 +96,22 @@ class NavigatorController < ApplicationController
   def current_user_ekn
     # Returns the user's most recent EKN or the one they're currently working with
     # For now, using the Meta-EKN (Enliterator's own Knowledge Navigator)
-    @current_user_ekn ||= IngestBatch.find_by(id: session[:current_ekn_id]) || 
-                          IngestBatch.where(status: 'completed')
-                                     .where.not(literacy_score: nil)
-                                     .order(literacy_score: :desc)
-                                     .first
+    @current_user_ekn ||= begin
+      ekn = nil
+      
+      if session[:current_ekn_id]
+        # Try to find by ID or slug
+        ekn = Ekn.find_by(id: session[:current_ekn_id]) || Ekn.find_by(slug: session[:current_ekn_id])
+        
+        # If not found, clear the invalid session value
+        if ekn.nil?
+          session.delete(:current_ekn_id)
+        end
+      end
+      
+      # Fall back to Meta-Enliterator if no valid EKN in session
+      ekn || Ekn.find_by(slug: 'meta-enliterator') || Ekn.find_by(id: 13)
+    end
   end
   
   def user_signed_in?

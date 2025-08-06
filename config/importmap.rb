@@ -6,7 +6,7 @@ pin "@hotwired/stimulus", to: "@hotwired--stimulus.js" # @3.2.2
 pin "@hotwired/stimulus-loading", to: "stimulus-loading.js"
 pin_all_from "app/javascript/controllers", under: "controllers"
 pin "@hotwired/turbo", to: "@hotwired--turbo.js" # @8.0.13
-pin "@rails/actioncable/src", to: "@rails--actioncable--src.js" # @8.0.200
+pin "@rails/actioncable", to: "@rails--actioncable.js" # @8.0.200
 pin "d3" # @7.9.0
 pin "d3-array" # @3.2.4
 pin "d3-axis" # @3.0.0
@@ -44,3 +44,5 @@ pin "robust-predicates" # @3.0.2
 
 # Navigator visualizations
 pin_all_from "app/javascript/navigator", under: "navigator"
+
+pin "hotwire-spark", to: "hotwire-spark.js", preload: true

@@ -4,3 +4,4 @@ import "controllers"
 
 // Knowledge Navigator visualizations
 import "navigator/visualization_manager"
+import "navigator/knowledge_canvas"

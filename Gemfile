@@ -100,6 +100,9 @@ gem "connection_pool"
 gem "dry-validation"
 gem "dry-struct"
 
+# Friendly URLs with slugs
+gem "friendly_id", "~> 5.5"
+
 # AWS SDK for S3 (if not using MinIO)
 gem "aws-sdk-s3"
 
@@ -142,6 +145,13 @@ end
 group :development do
   # Use console on exceptions pages [https://github.com/rails/web-console]
   gem "web-console"
+  gem "hotwire-spark"
+  gem "better_errors"
+
 end
 
 gem "activegraph", "~> 11.4"
+
+gem "annotate"
+
+

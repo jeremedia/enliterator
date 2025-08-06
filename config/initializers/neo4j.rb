@@ -53,6 +53,35 @@ module Graph
     def close
       @driver.close if @driver
     end
+    
+    # Check if a database exists
+    def database_exists?(database_name)
+      session = @driver.session(database: 'system')
+      result = session.run(
+        "SHOW DATABASES WHERE name = $name",
+        name: database_name
+      )
+      result.count > 0
+    rescue Neo4j::Driver::Exceptions::ClientException => e
+      # Community Edition doesn't support multi-database
+      if e.message.include?("Unsupported administration command")
+        Rails.logger.warn "Multi-database not supported. Using default database."
+        return true  # Default database always exists
+      end
+      raise
+    ensure
+      session&.close
+    end
+    
+    # Ensure a database exists (delegate to DatabaseManager)
+    def ensure_database_exists(database_name)
+      Graph::DatabaseManager.ensure_database_exists(database_name)
+    end
+    
+    # Drop a database (delegate to DatabaseManager)
+    def drop_database(database_name)
+      Graph::DatabaseManager.drop_database(database_name)
+    end
   end
 end
 

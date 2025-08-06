@@ -146,7 +146,7 @@ module Navigator
       # Get a sample of well-connected nodes
       cypher = <<~CYPHER
         MATCH (n)
-        WITH n, size((n)-[]-()) as degree
+        WITH n, COUNT {(n)-[]-()}  as degree
         ORDER BY degree DESC
         LIMIT #{limit}
         OPTIONAL MATCH (n)-[r]-(connected)
