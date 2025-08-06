@@ -186,8 +186,8 @@ module Navigator
     end
     
     def perform_semantic_search(query)
-      # Use pgvector embeddings for semantic search
-      embedding_service = Embedding::SearchService.new(@ekn.id)
+      # Use Neo4j GenAI embeddings for semantic search
+      embedding_service = ::Neo4j::EmbeddingService.new(@ekn.id)
       results = embedding_service.semantic_search(query, limit: 5)
       
       results.map do |result|

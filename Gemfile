@@ -53,8 +53,8 @@ gem "csv"
 # Colorized terminal output
 gem "rainbow"
 
-# Vector embeddings with pgvector
-gem "neighbor"
+# Vector embeddings now handled by Neo4j GenAI plugin
+# gem "neighbor" # Removed - using Neo4j GenAI instead of pgvector
 
 # PostgreSQL full-text search
 gem "pg_search"
