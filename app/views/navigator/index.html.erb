@@ -1,0 +1,221 @@
+<%# Knowledge Navigator Workspace - The actual Navigator, not a chat interface %>
+<%# Left: Conversation Partner (30%) | Right: Visualization Canvas (70%) %>
+
+<div id="knowledge-navigator-workspace" 
+     class="h-screen flex overflow-hidden bg-slate-50"
+     data-controller="navigator"
+     data-conversation-id="<%= @conversation_id %>">
+  
+  <%# Left Panel: Conversation Partner %>
+  <aside class="w-[30%] bg-white border-r border-slate-200 flex flex-col">
+    
+    <%# Header %>
+    <header class="px-4 py-3 border-b border-slate-200">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg font-semibold text-slate-900">Knowledge Navigator</h1>
+          <% if @current_ekn %>
+            <p class="text-sm text-slate-600"><%= @current_ekn.name %></p>
+          <% else %>
+            <p class="text-sm text-slate-600">Ready to explore</p>
+          <% end %>
+        </div>
+      </div>
+    </header>
+    
+    <%# Messages area %>
+    <div id="conversation-messages" 
+         data-navigator-target="messages"
+         class="flex-1 overflow-y-auto p-4 space-y-3">
+      
+      <%# Initial greeting %>
+      <div class="message assistant-message">
+        <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl px-4 py-3">
+          <p class="text-slate-800 text-sm">
+            <% if @current_ekn %>
+              I'm ready to help you navigate your <%= @current_ekn.name %> knowledge graph. 
+              With <%= @graph_stats&.dig(:total_nodes) || 0 %> entities and 
+              <%= @graph_stats&.dig(:total_relationships) || 0 %> relationships, 
+              there's much to explore. Ask me about connections, patterns, or specific concepts.
+            <% else %>
+              Welcome to the Knowledge Navigator. I transform data into visual, explorable knowledge. 
+              Start by asking about relationships or upload data to create your own Knowledge Navigator.
+            <% end %>
+          </p>
+        </div>
+      </div>
+      
+      <%# Previous conversation history %>
+      <% @conversation_history.select { |m| m[:content].present? }.each do |message| %>
+        <div class="message <%= message[:role] %>-message">
+          <div class="<%= message[:role] == 'assistant' ? 'bg-gradient-to-br from-blue-50 to-purple-50' : 'bg-slate-100' %> rounded-xl px-4 py-3">
+            <p class="text-slate-800 text-sm"><%= message[:content] %></p>
+          </div>
+        </div>
+      <% end %>
+      
+      <%# Typing indicator %>
+      <div id="typing-indicator" 
+           data-navigator-target="typingIndicator"
+           class="hidden">
+        <div class="bg-slate-100 rounded-xl px-4 py-3 inline-flex items-center space-x-2">
+          <div class="flex space-x-1">
+            <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
+            <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
+            <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
+          </div>
+          <span class="text-sm text-slate-600">Navigating...</span>
+        </div>
+      </div>
+    </div>
+    
+    <%# Input area %>
+    <div class="border-t border-slate-200 p-4">
+      <form id="navigator-input-form" 
+            data-navigator-target="form"
+            data-action="submit->navigator#handleSubmit">
+        
+        <div class="relative">
+          <textarea 
+            id="user-input"
+            data-navigator-target="input"
+            name="message"
+            rows="3"
+            class="w-full px-3 py-2 pr-10 bg-slate-50 border border-slate-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm"
+            placeholder="Ask about relationships, patterns, or concepts..."
+            autofocus
+          ></textarea>
+          
+          <%# Voice input button %>
+          <button type="button" 
+                  data-navigator-target="voiceInput"
+                  data-action="click->navigator#startVoiceInput"
+                  class="absolute right-2 bottom-2 p-1.5 rounded hover:bg-slate-200 transition-colors">
+            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
+          </button>
+        </div>
+        
+        <div class="mt-2 flex items-center justify-between">
+          <div class="flex flex-wrap gap-1">
+            <%# Quick action suggestions %>
+            <button type="button" 
+                    class="suggestion-chip px-2 py-1 text-xs bg-white border border-slate-300 rounded-full text-slate-600 hover:bg-slate-50"
+                    data-action="click->navigator#useSuggestion">
+              How do things connect?
+            </button>
+            <button type="button" 
+                    class="suggestion-chip px-2 py-1 text-xs bg-white border border-slate-300 rounded-full text-slate-600 hover:bg-slate-50"
+                    data-action="click->navigator#useSuggestion">
+              Show patterns
+            </button>
+            <button type="button" 
+                    class="suggestion-chip px-2 py-1 text-xs bg-white border border-slate-300 rounded-full text-slate-600 hover:bg-slate-50"
+                    data-action="click->navigator#useSuggestion">
+              Timeline
+            </button>
+          </div>
+          
+          <button type="submit" 
+                  class="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all">
+            Navigate
+          </button>
+        </div>
+      </form>
+    </div>
+  </aside>
+  
+  <%# Right Panel: Visualization Canvas %>
+  <main class="flex-1 relative overflow-hidden"
+        style="background-image: radial-gradient(circle, #e2e8f0 1px, transparent 1px); background-size: 20px 20px;">
+    
+    <%# Canvas header with controls %>
+    <div class="absolute top-0 left-0 right-0 bg-white/90 backdrop-blur-sm border-b border-slate-200 px-4 py-2 z-10">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+          <h2 class="text-sm font-medium text-slate-700">Visualization Canvas</h2>
+          <div id="canvas-status" class="text-xs text-slate-500">
+            <span data-navigator-target="canvasStatus">Ready for visualizations</span>
+          </div>
+        </div>
+        
+        <div class="flex items-center space-x-2">
+          <%# Canvas controls %>
+          <button class="p-1.5 rounded hover:bg-slate-100" title="Clear all visualizations">
+            <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+          <button class="p-1.5 rounded hover:bg-slate-100" title="Export visualizations">
+            <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+          </button>
+          <button class="p-1.5 rounded hover:bg-slate-100" title="Layout options">
+            <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <%# Visualization container %>
+    <div id="visualization-canvas" 
+         data-navigator-target="visualizationCanvas"
+         class="absolute inset-0 pt-12 p-4 overflow-auto">
+      
+      <%# Welcome state when no visualizations %>
+      <div id="canvas-welcome" 
+           data-navigator-target="canvasWelcome"
+           class="flex items-center justify-center h-full">
+        <div class="text-center max-w-md">
+          <svg class="w-24 h-24 text-slate-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          <h3 class="text-lg font-medium text-slate-700 mb-2">Visualization Canvas</h3>
+          <p class="text-sm text-slate-500 mb-4">
+            Ask about relationships, patterns, or concepts to see interactive visualizations appear here.
+          </p>
+          <p class="text-xs text-slate-400">
+            Try: "How do things connect?" or "Show me the main patterns"
+          </p>
+        </div>
+      </div>
+      
+      <%# Active visualizations will be added here dynamically %>
+      <div id="active-visualizations" 
+           data-navigator-target="activeVisualizations"
+           class="hidden grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
+        <%# Visualization windows will be inserted here %>
+      </div>
+    </div>
+    
+    <%# Floating entity inspector (hidden by default) %>
+    <div id="entity-inspector" 
+         data-navigator-target="entityInspector"
+         class="hidden absolute right-4 top-16 w-80 bg-white rounded-lg shadow-lg border border-slate-200 z-20">
+      <div class="p-4 border-b border-slate-200">
+        <div class="flex items-center justify-between">
+          <h3 class="font-medium text-slate-900">Entity Details</h3>
+          <button data-action="click->navigator#closeInspector" class="p-1 rounded hover:bg-slate-100">
+            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="p-4" data-navigator-target="inspectorContent">
+        <%# Entity details will be inserted here %>
+      </div>
+    </div>
+  </main>
+</div>
+
+<%# D3.js and visualization components are loaded via importmap %>

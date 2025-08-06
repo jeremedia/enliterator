@@ -15,7 +15,23 @@ Rails.application.routes.draw do
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
   # Defines the root path route ("/")
-  root "welcome#index"
+  root "navigator#index"  # Changed to Knowledge Navigator as main interface
+  
+  # Knowledge Navigator - The main user interface
+  namespace :navigator do
+    get '/', to: 'conversation#index'
+    post '/converse', to: 'conversation#converse'
+    post '/generate_ui', to: 'ui#generate'
+    post '/modify_ui', to: 'ui#modify'
+    post '/voice/transcribe', to: 'voice#transcribe'
+    post '/voice/synthesize', to: 'voice#synthesize'
+    get '/onboarding', to: 'onboarding#start'
+    post '/create_ekn', to: 'ekn#create'
+    get '/ekn/:id/explore', to: 'ekn#explore', as: :explore_ekn
+  end
+  
+  # Legacy welcome page (remove after transition)
+  get "welcome" => "welcome#index"
   
   # Admin interface
   namespace :admin do

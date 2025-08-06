@@ -4,9 +4,9 @@ require "neo4j/driver"
 
 # Neo4j configuration
 Rails.application.config.neo4j = {
-  url: ENV.fetch("NEO4J_URL", "bolt://localhost:7687"),
-  username: ENV.fetch("NEO4J_USERNAME", "neo4j"),
-  password: ENV.fetch("NEO4J_PASSWORD", "enliterator_dev"),
+  url: ENV.fetch("NEO4J_URL", "bolt://100.104.170.10:8687"),  # Neo4j Desktop on custom port
+  username: ENV.fetch("NEO4J_USERNAME", ""),  # Auth disabled
+  password: ENV.fetch("NEO4J_PASSWORD", ""),  # Auth disabled
   encryption: Rails.env.production?,
   pool_size: ENV.fetch("NEO4J_POOL_SIZE", 10).to_i,
   connection_timeout: 30,
@@ -23,10 +23,11 @@ module Graph
     def initialize
       config = Rails.application.config.neo4j
       
+      # Auth is disabled in Neo4j Desktop - use none
       @driver = Neo4j::Driver::GraphDatabase.driver(
         config[:url],
-        Neo4j::Driver::AuthTokens.basic(config[:username], config[:password]),
-        encryption: config[:encryption],
+        Neo4j::Driver::AuthTokens.none,
+        encryption: false,
         max_connection_pool_size: config[:pool_size],
         connection_timeout: config[:connection_timeout],
         max_retry_time: config[:max_retry_time]

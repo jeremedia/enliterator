@@ -10,13 +10,25 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_06_124919) do
+ActiveRecord::Schema[8.0].define(version: 2025_08_06_155934) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gin"
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
   enable_extension "pgcrypto"
   enable_extension "vector"
+
+  create_table "conversation_histories", force: :cascade do |t|
+    t.string "conversation_id"
+    t.string "user_id"
+    t.string "role"
+    t.text "content"
+    t.jsonb "metadata"
+    t.integer "position"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["conversation_id"], name: "index_conversation_histories_on_conversation_id"
+  end
 
   create_table "conversations", force: :cascade do |t|
     t.bigint "ingest_batch_id"

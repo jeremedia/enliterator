@@ -2,15 +2,21 @@
 
 module Graph
   # Service to sync lexicon entries to the Neo4j graph database
+  # Supports database-per-EKN isolation
   class LexiconWriter
-    def initialize(lexicon_entry)
+    def initialize(lexicon_entry, ingest_batch = nil)
       @entry = lexicon_entry
+      @batch = ingest_batch
+      @database_name = determine_database_name
     end
 
     def sync
-      Rails.logger.info "Syncing LexiconAndOntology #{@entry.id} to Neo4j"
+      Rails.logger.info "Syncing LexiconAndOntology #{@entry.id} to Neo4j database: #{@database_name}"
       
-      Graph::Connection.instance.transaction do |tx|
+      driver = Graph::Connection.instance.driver
+      session = driver.session(database: @database_name)
+      
+      session.write_transaction do |tx|
         # Create or update the Lexicon node
         create_or_update_node(tx)
         
@@ -21,13 +27,26 @@ module Graph
         create_term_relationships(tx)
       end
       
+      session.close
       true
     rescue StandardError => e
       Rails.logger.error "Failed to sync lexicon entry #{@entry.id}: #{e.message}"
       false
+    ensure
+      session&.close
     end
     
     private
+    
+    def determine_database_name
+      if @batch
+        @batch.ensure_neo4j_database_exists!
+        @batch.neo4j_database_name
+      else
+        # Fallback to default database for backward compatibility
+        'neo4j'
+      end
+    end
     
     def create_or_update_node(tx)
       properties = {

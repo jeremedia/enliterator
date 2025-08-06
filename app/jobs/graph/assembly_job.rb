@@ -10,11 +10,19 @@ module Graph
       @batch = IngestBatch.find(ingest_batch_id)
       @stats = initialize_stats
       
-      Rails.logger.info "Starting graph assembly for batch #{@batch.id}"
+      # Ensure isolated database exists for this EKN
+      @batch.ensure_neo4j_database_exists!
+      database_name = @batch.neo4j_database_name
+      
+      Rails.logger.info "Starting graph assembly for batch #{@batch.id} in database: #{database_name}"
       @batch.update!(status: 'graph_assembly_in_progress')
       
       ActiveRecord::Base.transaction do
-        Graph::Connection.instance.transaction do |tx|
+        # Use the isolated database for this EKN
+        driver = Graph::Connection.instance.driver
+        session = driver.session(database: database_name)
+        
+        session.write_transaction do |tx|
           # 1. Setup Neo4j constraints and indexes
           setup_graph_schema(tx)
           
@@ -33,6 +41,8 @@ module Graph
           # 6. Verify graph integrity
           verify_graph_integrity(tx)
         end
+        
+        session.close
         
         # Update batch status
         @batch.update!(

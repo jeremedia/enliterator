@@ -19,7 +19,7 @@ class Conversation < ApplicationRecord
   before_create :set_initial_status
   
   # Conversation statuses
-  enum status: {
+  enum :status, {
     active: 0,
     paused: 1,
     completed: 2,
@@ -27,7 +27,7 @@ class Conversation < ApplicationRecord
   }
   
   # User expertise levels
-  enum expertise_level: {
+  enum :expertise_level, {
     beginner: 0,
     intermediate: 1,
     advanced: 2,

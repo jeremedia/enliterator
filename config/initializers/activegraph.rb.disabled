@@ -1,0 +1,28 @@
+# ActiveGraph configuration for Neo4j
+# Using database-per-EKN architecture with Neo4j Desktop
+
+require 'active_graph'
+
+# Configure ActiveGraph to use our Neo4j Desktop instance
+ActiveGraph::Base.driver = Neo4j::Driver::GraphDatabase.driver(
+  ENV.fetch("NEO4J_URL", "bolt://jer-pro16.husky-carp.ts.net:8687"),
+  Neo4j::Driver::AuthTokens.basic(
+    ENV.fetch("NEO4J_USERNAME", "neo4j"),
+    ENV.fetch("NEO4J_PASSWORD", "enliterator")
+  ),
+  encryption: false,
+  max_connection_pool_size: ENV.fetch("NEO4J_POOL_SIZE", 10).to_i
+)
+
+# Set default database (can be overridden per model)
+ActiveGraph::Base.database = 'neo4j'
+
+# Configure ActiveGraph settings
+ActiveGraph::Config[:logger] = Rails.logger
+ActiveGraph::Config[:pretty_logged_cypher_queries] = Rails.env.development?
+ActiveGraph::Config[:record_timestamps] = true
+
+# Ensure driver is closed on exit
+at_exit do
+  ActiveGraph::Base.driver&.close
+end

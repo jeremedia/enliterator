@@ -29,6 +29,9 @@ class LexiconAndOntology < ApplicationRecord
                     trigram: { threshold: 0.3 }
                   }
 
+  # Associations
+  attr_accessor :ingest_batch # Transient attribute for batch context
+  
   # Callbacks
   before_validation :normalize_arrays
   before_validation :generate_repr_text
@@ -150,13 +153,13 @@ class LexiconAndOntology < ApplicationRecord
   end
 
   def sync_to_graph
-    Graph::LexiconWriter.new(self).sync
+    Graph::LexiconWriter.new(self, ingest_batch).sync
   rescue StandardError => e
     Rails.logger.error "Failed to sync LexiconAndOntology #{id} to graph: #{e.message}"
   end
 
   def remove_from_graph
-    Graph::LexiconRemover.new(self).remove
+    Graph::LexiconRemover.new(self, ingest_batch).remove
   rescue StandardError => e
     Rails.logger.error "Failed to remove LexiconAndOntology #{id} from graph: #{e.message}"
   end
