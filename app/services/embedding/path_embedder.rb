@@ -1,4 +1,4 @@
-module Embedding
+module EmbeddingServices
   class PathEmbedder
     include ActiveModel::Model
     

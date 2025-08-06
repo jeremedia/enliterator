@@ -1,4 +1,4 @@
-module Embedding
+module EmbeddingServices
   class BuilderJob < ApplicationJob
     queue_as :embeddings
     

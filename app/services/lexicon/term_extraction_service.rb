@@ -2,7 +2,7 @@
 
 module Lexicon
   # Model classes for structured term extraction
-  class ExtractedTerm < OpenAI::BaseModel
+  class ExtractedTerm < OpenAI::Helpers::StructuredOutput::BaseModel
     required :canonical_term, String, doc: "The normalized, properly cased canonical form"
     required :surface_forms, OpenAI::ArrayOf[String], doc: "Alternative forms, aliases, abbreviations"
     required :negative_surface_forms, OpenAI::ArrayOf[String], doc: "Common confusions or what this term is NOT"
@@ -11,21 +11,21 @@ module Lexicon
     required :confidence, Float, doc: "Extraction confidence (0-1)"
   end
 
-  class ExtractionMetadata < OpenAI::BaseModel
+  class ExtractionMetadata < OpenAI::Helpers::StructuredOutput::BaseModel
     required :total_terms, Integer
     required :source_length, Integer
     required :language, String
     required :domain_indicators, OpenAI::ArrayOf[String]
   end
 
-  class TermExtractionResult < OpenAI::BaseModel
+  class TermExtractionResult < OpenAI::Helpers::StructuredOutput::BaseModel
     required :extracted_terms, OpenAI::ArrayOf[ExtractedTerm]
     required :extraction_metadata, ExtractionMetadata
   end
 
   # Service to extract canonical terms from content using OpenAI Structured Outputs
   # Uses the Responses API with strict JSON schema for reliable extraction
-  class TermExtractionService < ApplicationService
+  class TermExtractionService < OpenaiConfig::BaseExtractionService
 
     attr_reader :content, :source_type, :metadata
 
@@ -35,38 +35,41 @@ module Lexicon
       @metadata = metadata
     end
 
-    def extract
-      return { success: false, error: 'Content is blank' } if content.blank?
+    def call
+      super
+    end
+    
+    # Backward compatibility alias
+    alias extract call
 
-      # Prepare the extraction prompt
-      messages = build_messages
+    protected
 
-      # Call OpenAI with Structured Outputs
-      response = OPENAI.chat.completions.create(
-        messages: messages,
-        model: ENV.fetch('OPENAI_MODEL', 'gpt-4o-2024-08-06'),
-        response_format: {
-          type: "json_schema",
-          json_schema: term_extraction_schema
-        },
-        temperature: 0  # Deterministic extraction
-      )
+    def response_model_class
+      TermExtractionResult
+    end
 
-      # Parse the structured response
-      extracted_data = JSON.parse(response.choices.first.message.content)
-      
-      # Transform to our internal format
-      terms = transform_extracted_terms(extracted_data)
+    def content_for_extraction
+      content.truncate(8000)
+    end
 
+    def variables_for_prompt
+      {
+        source_type: source_type,
+        metadata: metadata.to_json
+      }
+    end
+
+    def validate_inputs!
+      raise ExtractionError, 'Content is blank' if content.blank?
+    end
+
+    def transform_result(parsed_result)
       {
         success: true,
-        terms: terms,
-        confidence: calculate_confidence(extracted_data),
-        raw_response: extracted_data
+        terms: transform_extracted_terms(parsed_result),
+        confidence: calculate_confidence(parsed_result),
+        raw_response: parsed_result
       }
-    rescue StandardError => e
-      Rails.logger.error "Term extraction failed: #{e.message}"
-      { success: false, error: e.message }
     end
 
     private
@@ -99,83 +102,20 @@ module Lexicon
       PROMPT
     end
 
-    def term_extraction_schema
-      {
-        name: "TermExtraction",
-        strict: true,  # REQUIRED for guaranteed schema compliance
-        schema: {
-          type: "object",
-          properties: {
-            extracted_terms: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  canonical_term: {
-                    type: "string",
-                    description: "The normalized, properly cased canonical form"
-                  },
-                  surface_forms: {
-                    type: "array",
-                    items: { type: "string" },
-                    description: "Alternative forms, aliases, abbreviations"
-                  },
-                  negative_surface_forms: {
-                    type: "array",
-                    items: { type: "string" },
-                    description: "Common confusions or what this term is NOT"
-                  },
-                  canonical_description: {
-                    type: "string",
-                    description: "Neutral, factual description in 1-2 lines"
-                  },
-                  term_type: {
-                    type: "string",
-                    enum: ["concept", "entity", "place", "event", "process", "attribute", "general"],
-                    description: "The type of term"
-                  },
-                  confidence: {
-                    type: "number",
-                    minimum: 0,
-                    maximum: 1,
-                    description: "Extraction confidence (0-1)"
-                  }
-                },
-                required: ["canonical_term", "surface_forms", "negative_surface_forms", "canonical_description", "term_type", "confidence"],
-                additionalProperties: false
-              }
-            },
-            extraction_metadata: {
-              type: "object",
-              properties: {
-                total_terms: { type: "integer" },
-                source_length: { type: "integer" },
-                language: { type: "string" },
-                domain_indicators: {
-                  type: "array",
-                  items: { type: "string" }
-                }
-              },
-              required: ["total_terms", "source_length", "language", "domain_indicators"],
-              additionalProperties: false
-            }
-          },
-          required: ["extracted_terms", "extraction_metadata"],
-          additionalProperties: false
-        }
-      }
-    end
+    # No longer needed - using response model classes instead
 
-    def transform_extracted_terms(extracted_data)
-      extracted_data['extracted_terms'].map do |term|
+    def transform_extracted_terms(parsed_result)
+      return [] unless parsed_result.respond_to?(:extracted_terms)
+      
+      parsed_result.extracted_terms.map do |term|
         {
-          canonical_term: term['canonical_term'],
-          surface_forms: term['surface_forms'].reject(&:blank?).uniq,
-          negative_surface_forms: term['negative_surface_forms'].reject(&:blank?).uniq,
-          canonical_description: term['canonical_description'],
-          term_type: term['term_type'],
+          canonical_term: term.canonical_term,
+          surface_forms: term.surface_forms.reject(&:blank?).uniq,
+          negative_surface_forms: term.negative_surface_forms.reject(&:blank?).uniq,
+          canonical_description: term.canonical_description,
+          term_type: term.term_type.to_s,
           metadata: {
-            confidence: term['confidence'],
+            confidence: term.confidence,
             source_type: source_type,
             extracted_at: Time.current,
             source_metadata: metadata
@@ -184,12 +124,12 @@ module Lexicon
       end
     end
 
-    def calculate_confidence(extracted_data)
-      return 0.0 if extracted_data['extracted_terms'].empty?
+    def calculate_confidence(parsed_result)
+      return 0.0 unless parsed_result.respond_to?(:extracted_terms) && parsed_result.extracted_terms.any?
 
       # Average confidence across all extracted terms
-      total_confidence = extracted_data['extracted_terms'].sum { |t| t['confidence'] }
-      total_confidence / extracted_data['extracted_terms'].size
+      total_confidence = parsed_result.extracted_terms.sum(&:confidence)
+      total_confidence / parsed_result.extracted_terms.size
     end
   end
 end

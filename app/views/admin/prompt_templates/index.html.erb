@@ -1,0 +1,127 @@
+<div class="space-y-6">
+  <!-- Page header -->
+  <div class="sm:flex sm:items-center sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-bold leading-6 text-gray-900">Prompt Templates</h1>
+      <p class="mt-2 text-sm text-gray-500">Manage system and user prompts for different services</p>
+    </div>
+    <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
+      <%= link_to "New Template", new_admin_prompt_template_path,
+          class: "block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500" %>
+    </div>
+  </div>
+
+  <% PromptTemplate::PURPOSES.each do |purpose| %>
+    <% templates = @templates_by_purpose[purpose] || [] %>
+    <div class="rounded-lg bg-white shadow">
+      <div class="px-4 py-5 sm:p-6">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">
+          <%= purpose.humanize %> Templates
+          <span class="ml-2 text-sm text-gray-500">(<%= templates.size %>)</span>
+        </h2>
+        
+        <% if templates.any? %>
+          <div class="space-y-4">
+            <% templates.each do |template| %>
+              <div class="rounded-lg border <%= template.active? ? 'border-green-200 bg-green-50' : 'border-gray-200' %> p-4">
+                <div class="flex items-start justify-between">
+                  <div class="flex-1">
+                    <div class="flex items-center">
+                      <h3 class="text-sm font-medium text-gray-900">
+                        <%= template.name %>
+                      </h3>
+                      <% if template.active? %>
+                        <span class="ml-2 inline-flex rounded-full bg-green-100 px-2 text-xs font-semibold leading-5 text-green-800">Active</span>
+                      <% else %>
+                        <span class="ml-2 inline-flex rounded-full bg-gray-100 px-2 text-xs font-semibold leading-5 text-gray-800">Inactive</span>
+                      <% end %>
+                    </div>
+                    
+                    <% if template.service_class.present? %>
+                      <p class="mt-1 text-xs text-gray-500">
+                        Service: <code class="rounded bg-gray-100 px-1"><%= template.service_class %></code>
+                      </p>
+                    <% end %>
+                    
+                    <div class="mt-2">
+                      <details class="text-sm">
+                        <summary class="cursor-pointer text-indigo-600 hover:text-indigo-500">
+                          View prompts
+                        </summary>
+                        <div class="mt-2 space-y-2">
+                          <div>
+                            <span class="font-medium text-gray-700">System Prompt:</span>
+                            <pre class="mt-1 whitespace-pre-wrap rounded bg-gray-100 p-2 text-xs"><%= template.system_prompt&.truncate(500) %></pre>
+                          </div>
+                          <% if template.user_prompt_template.present? %>
+                            <div>
+                              <span class="font-medium text-gray-700">User Template:</span>
+                              <pre class="mt-1 whitespace-pre-wrap rounded bg-gray-100 p-2 text-xs"><%= template.user_prompt_template&.truncate(300) %></pre>
+                            </div>
+                          <% end %>
+                          <% if template.expected_variables.any? %>
+                            <div>
+                              <span class="font-medium text-gray-700">Variables:</span>
+                              <code class="ml-1 text-xs text-gray-600"><%= template.expected_variables.join(', ') %></code>
+                            </div>
+                          <% end %>
+                        </div>
+                      </details>
+                    </div>
+                  </div>
+                  
+                  <div class="ml-4 flex flex-shrink-0 space-x-2">
+                    <%= link_to "Edit", edit_admin_prompt_template_path(template),
+                        class: "text-sm text-indigo-600 hover:text-indigo-900" %>
+                    <%= link_to template.active? ? "Deactivate" : "Activate", 
+                        activate_admin_prompt_template_path(template),
+                        method: :post,
+                        class: "text-sm #{template.active? ? 'text-gray-600 hover:text-gray-900' : 'text-green-600 hover:text-green-900'}" %>
+                    <%= link_to "Duplicate", duplicate_admin_prompt_template_path(template),
+                        method: :post,
+                        class: "text-sm text-blue-600 hover:text-blue-900" %>
+                    <button onclick="testTemplate(<%= template.id %>)"
+                            class="text-sm text-green-600 hover:text-green-900">
+                      Test
+                    </button>
+                    <%= link_to "Delete", admin_prompt_template_path(template),
+                        method: :delete,
+                        data: { confirm: "Are you sure?" },
+                        class: "text-sm text-red-600 hover:text-red-900" %>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <p class="text-sm text-gray-500">No <%= purpose %> templates yet</p>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>
+
+<script>
+  function testTemplate(templateId) {
+    const sampleContent = prompt("Enter sample content to test:");
+    if (!sampleContent) return;
+    
+    fetch(`/admin/prompt_templates/${templateId}/test`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+      },
+      body: JSON.stringify({ sample_content: sampleContent })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) {
+        alert(`❌ Error: ${data.error}`);
+      } else {
+        alert(`✅ Template test successful!\n\nEstimated tokens: ${data.estimated_tokens}\nSystem prompt length: ${data.system_prompt_length}\nUser prompt length: ${data.user_prompt_length}`);
+        console.log('Test result:', data);
+      }
+    });
+  }
+</script>

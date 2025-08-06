@@ -1,0 +1,186 @@
+<div class="space-y-6">
+  <!-- Page header -->
+  <div class="sm:flex sm:items-center sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-bold leading-6 text-gray-900">OpenAI Settings</h1>
+      <p class="mt-2 text-sm text-gray-500">Configure models, temperatures, and API options</p>
+    </div>
+    <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
+      <%= link_to "New Setting", new_admin_openai_setting_path,
+          class: "block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500" %>
+    </div>
+  </div>
+
+  <!-- Model Settings -->
+  <div class="rounded-lg bg-white shadow">
+    <div class="px-4 py-5 sm:p-6">
+      <h2 class="text-lg font-medium text-gray-900 mb-4">Model Configuration</h2>
+      <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+        <table class="min-w-full divide-y divide-gray-300">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Task Type</th>
+              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Model</th>
+              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
+              <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 bg-white">
+            <% @model_settings.each do |setting| %>
+              <tr>
+                <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+                  <%= setting.model_type&.humanize || setting.key.gsub('model_', '').humanize %>
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                  <code class="rounded bg-gray-100 px-2 py-1"><%= setting.value %></code>
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                  <% if setting.active? %>
+                    <span class="inline-flex rounded-full bg-green-100 px-2 text-xs font-semibold leading-5 text-green-800">Active</span>
+                  <% else %>
+                    <span class="inline-flex rounded-full bg-gray-100 px-2 text-xs font-semibold leading-5 text-gray-800">Inactive</span>
+                  <% end %>
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm font-medium">
+                  <%= link_to "Edit", edit_admin_openai_setting_path(setting), 
+                      class: "text-indigo-600 hover:text-indigo-900 mr-3" %>
+                  <button onclick="testModel('<%= setting.value %>', '<%= setting.model_type %>')"
+                          class="text-green-600 hover:text-green-900">
+                    Test
+                  </button>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Temperature Settings -->
+  <div class="rounded-lg bg-white shadow">
+    <div class="px-4 py-5 sm:p-6">
+      <h2 class="text-lg font-medium text-gray-900 mb-4">Temperature Settings</h2>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <% @temperature_settings.each do |setting| %>
+          <div class="rounded-lg border border-gray-200 p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-sm font-medium text-gray-900">
+                  <%= setting.key.gsub('temperature_', '').humanize %>
+                </h3>
+                <p class="mt-1 text-2xl font-semibold text-gray-900">
+                  <%= setting.value %>
+                </p>
+                <p class="mt-1 text-xs text-gray-500">
+                  <%= setting.description %>
+                </p>
+              </div>
+              <%= link_to "Edit", edit_admin_openai_setting_path(setting),
+                  class: "text-sm text-indigo-600 hover:text-indigo-900" %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Configuration Settings -->
+  <div class="rounded-lg bg-white shadow">
+    <div class="px-4 py-5 sm:p-6">
+      <h2 class="text-lg font-medium text-gray-900 mb-4">API Configuration</h2>
+      <dl class="space-y-4">
+        <% @config_settings.each do |setting| %>
+          <div class="flex items-center justify-between rounded-lg border border-gray-200 p-4">
+            <div>
+              <dt class="text-sm font-medium text-gray-900">
+                <%= setting.key.humanize %>
+              </dt>
+              <dd class="mt-1 text-sm text-gray-500">
+                <%= setting.description %>
+              </dd>
+            </div>
+            <div class="flex items-center space-x-3">
+              <span class="text-sm font-medium text-gray-900">
+                <% if setting.value == 'true' %>
+                  <span class="inline-flex rounded-full bg-green-100 px-2 text-xs font-semibold leading-5 text-green-800">Enabled</span>
+                <% elsif setting.value == 'false' %>
+                  <span class="inline-flex rounded-full bg-gray-100 px-2 text-xs font-semibold leading-5 text-gray-800">Disabled</span>
+                <% else %>
+                  <code class="rounded bg-gray-100 px-2 py-1"><%= setting.value %></code>
+                <% end %>
+              </span>
+              <%= link_to "Edit", edit_admin_openai_setting_path(setting),
+                  class: "text-sm text-indigo-600 hover:text-indigo-900" %>
+            </div>
+          </div>
+        <% end %>
+      </dl>
+    </div>
+  </div>
+
+  <!-- All Settings (Debug View) -->
+  <details class="rounded-lg bg-white shadow">
+    <summary class="cursor-pointer px-4 py-5 sm:p-6">
+      <span class="text-lg font-medium text-gray-900">All Settings (Debug View)</span>
+    </summary>
+    <div class="px-4 pb-5 sm:px-6 sm:pb-6">
+      <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+        <table class="min-w-full divide-y divide-gray-300">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Key</th>
+              <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Category</th>
+              <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Value</th>
+              <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 bg-white text-sm">
+            <% @all_settings.each do |setting| %>
+              <tr>
+                <td class="whitespace-nowrap px-3 py-2 font-mono text-xs">
+                  <%= setting.key %>
+                </td>
+                <td class="whitespace-nowrap px-3 py-2">
+                  <%= setting.category %>
+                </td>
+                <td class="px-3 py-2">
+                  <code class="text-xs"><%= setting.value&.truncate(50) %></code>
+                </td>
+                <td class="whitespace-nowrap px-3 py-2">
+                  <%= link_to "Edit", edit_admin_openai_setting_path(setting), 
+                      class: "text-indigo-600 hover:text-indigo-900 text-xs" %>
+                  <%= link_to "Delete", admin_openai_setting_path(setting), 
+                      method: :delete,
+                      data: { confirm: "Are you sure?" },
+                      class: "text-red-600 hover:text-red-900 text-xs ml-2" %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </details>
+</div>
+
+<script>
+  function testModel(model, taskType) {
+    fetch('/admin/openai_settings/test_model', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+      },
+      body: JSON.stringify({ model: model, task_type: taskType })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert(`✅ ${data.message}`);
+      } else {
+        alert(`❌ Error: ${data.error}`);
+      }
+    });
+  }
+</script>

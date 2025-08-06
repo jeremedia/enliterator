@@ -1,4 +1,4 @@
-module Embedding
+module EmbeddingServices
   class SynchronousFallbackJob < ApplicationJob
     queue_as :embeddings
     

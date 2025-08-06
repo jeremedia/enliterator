@@ -1,4 +1,4 @@
-module Embedding
+module EmbeddingServices
   class EntityEmbedder
     include ActiveModel::Model
     

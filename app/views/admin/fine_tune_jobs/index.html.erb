@@ -1,0 +1,165 @@
+<div class="space-y-6">
+  <!-- Page header -->
+  <div class="sm:flex sm:items-center sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-bold leading-6 text-gray-900">Fine-Tune Jobs</h1>
+      <p class="mt-2 text-sm text-gray-500">Manage model fine-tuning for the literate interface</p>
+    </div>
+    <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
+      <%= link_to "New Fine-Tune", new_admin_fine_tune_job_path,
+          class: "block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500" %>
+    </div>
+  </div>
+
+  <% if @current_model %>
+    <div class="rounded-md bg-green-50 p-4">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+          </svg>
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-green-800">Active Fine-Tuned Model</h3>
+          <div class="mt-2 text-sm text-green-700">
+            <p><code class="rounded bg-green-100 px-2 py-1"><%= @current_model %></code></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <% if @pending_jobs.any? %>
+    <div class="rounded-lg bg-white shadow">
+      <div class="px-4 py-5 sm:p-6">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">Active Jobs</h2>
+        <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+          <table class="min-w-full divide-y divide-gray-300">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Job ID</th>
+                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Base Model</th>
+                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
+                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Started</th>
+                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 bg-white">
+              <% @pending_jobs.each do |job| %>
+                <tr>
+                  <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+                    <%= link_to job.openai_job_id.truncate(20), admin_fine_tune_job_path(job),
+                        class: "text-indigo-600 hover:text-indigo-900" %>
+                  </td>
+                  <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                    <%= job.base_model %>
+                  </td>
+                  <td class="whitespace-nowrap px-6 py-4 text-sm">
+                    <span class="inline-flex rounded-full bg-yellow-100 px-2 text-xs font-semibold leading-5 text-yellow-800">
+                      <%= job.status %>
+                    </span>
+                  </td>
+                  <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                    <%= job.started_at&.strftime("%b %d, %H:%M") %>
+                  </td>
+                  <td class="whitespace-nowrap px-6 py-4 text-sm font-medium">
+                    <%= button_to "Check Status", check_status_admin_fine_tune_job_path(job),
+                        method: :post,
+                        class: "text-green-600 hover:text-green-900 mr-3" %>
+                    <%= button_to "Cancel", cancel_admin_fine_tune_job_path(job),
+                        method: :post,
+                        data: { confirm: "Cancel this job?" },
+                        class: "text-red-600 hover:text-red-900" %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="rounded-lg bg-white shadow">
+    <div class="px-4 py-5 sm:p-6">
+      <h2 class="text-lg font-medium text-gray-900 mb-4">All Jobs</h2>
+      <% if @jobs.any? %>
+        <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+          <table class="min-w-full divide-y divide-gray-300">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Job ID</th>
+                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Base Model</th>
+                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
+                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Duration</th>
+                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Cost</th>
+                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 bg-white">
+              <% @jobs.each do |job| %>
+                <tr>
+                  <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+                    <%= link_to job.openai_job_id.truncate(20), admin_fine_tune_job_path(job),
+                        class: "text-indigo-600 hover:text-indigo-900" %>
+                  </td>
+                  <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                    <%= job.base_model %>
+                  </td>
+                  <td class="whitespace-nowrap px-6 py-4 text-sm">
+                    <span class="inline-flex rounded-full px-2 text-xs font-semibold leading-5
+                      <%= job.completed? ? 'bg-green-100 text-green-800' : 
+                         job.failed? ? 'bg-red-100 text-red-800' : 
+                         job.pending? ? 'bg-yellow-100 text-yellow-800' :
+                         'bg-gray-100 text-gray-800' %>">
+                      <%= job.status %>
+                    </span>
+                  </td>
+                  <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                    <%= job.duration_in_words || '-' %>
+                  </td>
+                  <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                    <% if job.training_cost %>
+                      $<%= number_with_precision(job.training_cost, precision: 2) %>
+                    <% else %>
+                      -
+                    <% end %>
+                  </td>
+                  <td class="whitespace-nowrap px-6 py-4 text-sm font-medium">
+                    <% if job.completed? && job.fine_tuned_model %>
+                      <%= button_to "Deploy", deploy_admin_fine_tune_job_path(job),
+                          method: :post,
+                          data: { confirm: "Deploy this model?" },
+                          class: "text-green-600 hover:text-green-900" %>
+                    <% elsif job.failed? %>
+                      <span class="text-red-500"><%= job.error_message&.truncate(30) %></span>
+                    <% else %>
+                      -
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <p class="text-sm text-gray-500">No fine-tune jobs yet. Create one to train a custom model for your dataset.</p>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Info section -->
+  <div class="rounded-lg bg-blue-50 p-6">
+    <h3 class="text-base font-semibold text-blue-900">About Fine-Tuning</h3>
+    <div class="mt-2 text-sm text-blue-700">
+      <p>Fine-tuning creates a custom model that understands your specific knowledge graph:</p>
+      <ul class="mt-2 list-disc list-inside space-y-1">
+        <li>Maps user phrases to canonical terms</li>
+        <li>Routes queries to appropriate MCP tools</li>
+        <li>Generates path narrations using your Relation Verb Glossary</li>
+        <li>Recognizes knowledge gaps and missing information</li>
+      </ul>
+      <p class="mt-3">The fine-tuned model acts as a router, never answering directly but always directing to the appropriate tool for fact retrieval.</p>
+    </div>
+  </div>
+</div>

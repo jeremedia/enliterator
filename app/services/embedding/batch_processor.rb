@@ -1,4 +1,4 @@
-module Embedding
+module EmbeddingServices
   class BatchProcessor
     include ActiveModel::Model
     

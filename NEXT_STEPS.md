@@ -1,11 +1,18 @@
 # Next Steps - Post-Pipeline Implementation
 
-**Updated**: 2025-08-05  
-**Status**: Core Pipeline 100% Complete ✅
+**Updated**: 2025-08-06  
+**Status**: Core Pipeline 100% Complete ✅ | OpenAI Integration In Progress 🚧
 
-## 🎉 Pipeline Complete - What's Next?
+## 📊 Current Focus: OpenAI Integration Overhaul
 
-The Enliterator zero-touch pipeline (Stages 1-8) is fully implemented. This guide outlines the next phase of development.
+While the pipeline stages are complete, we're actively overhauling the OpenAI integration (Issue #47) to use the Responses API with database-backed settings management.
+
+### In Progress Now:
+- ✅ Settings Management System (database models, admin UI)
+- ✅ Admin UI deployed at https://e.dev.domt.app/admin
+- 🚧 Refactoring services to use OpenAI::Helpers::StructuredOutput::BaseModel
+- 🚧 Implementing FineTune::DatasetBuilder (Issue #26)
+- 🚧 Implementing FineTune::Trainer (Issue #27)
 
 ## Immediate Actions (Week 1)
 

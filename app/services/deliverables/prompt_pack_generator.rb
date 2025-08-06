@@ -506,8 +506,8 @@ module Deliverables
         configuration: {
           temperature: 0,
           model_recommendations: {
-            extraction: 'gpt-4o-2024-08-06',
-            completion: 'gpt-4o-mini-2024-07-18'
+            extraction: OpenaiConfig::SettingsManager.model_for('extraction'),
+            completion: OpenaiConfig::SettingsManager.model_for('answer')
           }
         }
       }

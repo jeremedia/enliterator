@@ -6,16 +6,108 @@ namespace :enliterator do
       exit 1
     end
     
-    puts "Starting ingest for: #{args[:bundle_path]}"
-    # Implementation will be added
+    bundle_path = args[:bundle_path]
+    puts "Starting ingest for: #{bundle_path}"
+    
+    # Create or find ingest batch
+    batch_name = "ingest_#{File.basename(bundle_path, '.*')}_#{Time.current.strftime('%Y%m%d_%H%M%S')}"
+    batch = IngestBatch.find_or_create_by(name: batch_name) do |b|
+      b.source_type = 'zip_bundle'
+      b.metadata = { source_path: bundle_path }
+      b.status = :pending
+      b.started_at = Time.current
+    end
+    
+    puts "Created/found batch: #{batch.name} (ID: #{batch.id})"
+    
+    # Process the bundle and create ingest items
+    begin
+      require 'zip'
+      
+      item_count = 0
+      Zip::File.open(bundle_path) do |zip_file|
+        zip_file.each do |entry|
+          next if entry.directory?
+          next if entry.name.end_with?('/')
+          
+          # Skip certain files
+          next if entry.name.include?('.git/')
+          next if entry.name.include?('node_modules/')
+          next if entry.name.include?('vendor/bundle/')
+          next if entry.name.include?('tmp/')
+          next if entry.name.match?(/\.(log|tmp|pid|lock|DS_Store)$/i)
+          
+          # Read content safely
+          content = begin
+            entry.get_input_stream.read.force_encoding('UTF-8')
+          rescue Encoding::UndefinedConversionError
+            # Binary file or encoding issue - store as base64
+            "[BINARY FILE - #{entry.size} bytes]"
+          end
+          
+          # Create ingest item
+          item = batch.ingest_items.find_or_create_by(
+            file_path: entry.name
+          ) do |i|
+            i.media_type = detect_media_type(entry.name)
+            i.size_bytes = entry.size
+            i.content = content
+            i.triage_status = :pending
+            i.source_type = 'file'
+            i.content_sample = content&.truncate(500)
+            i.metadata = {
+              file_name: File.basename(entry.name),
+              directory: File.dirname(entry.name),
+              extension: File.extname(entry.name),
+              original_size: entry.size
+            }
+          end
+          
+          item_count += 1
+          print "."
+          
+          # Flush periodically
+          if item_count % 50 == 0
+            print " #{item_count}\n"
+          end
+        end
+      end
+      
+      batch.update!(
+        status: :intake_completed,
+        completed_at: Time.current,
+        statistics: {
+          items_processed: item_count,
+          processing_time: Time.current - batch.started_at
+        }
+      )
+      
+      puts "\n✅ Ingest complete: #{batch.ingest_items.count} items processed"
+      puts "Batch ID: #{batch.id}"
+      
+    rescue => e
+      batch.update!(status: :intake_failed)
+      puts "\n❌ Ingest failed: #{e.message}"
+      puts "Backtrace: #{e.backtrace.first(5).join("\n")}" if ENV['DEBUG']
+      raise e
+    end
   end
   
   namespace :graph do
     desc "Sync entities to Neo4j graph database"
-    task sync: :environment do
-      puts "Syncing to Neo4j..."
+    task :sync, [:batch_id] => :environment do |t, args|
+      batch_id = args[:batch_id] || IngestBatch.last&.id
+      
+      unless batch_id
+        puts "Usage: rails enliterator:graph:sync[batch_id]"
+        puts "Available batches:"
+        IngestBatch.pluck(:id, :name).each { |id, name| puts "  #{id}: #{name}" }
+        exit 1
+      end
+      
+      puts "Syncing batch #{batch_id} to Neo4j..."
       job = Graph::AssemblyJob.new
-      result = job.perform
+      result = job.perform(batch_id)
       puts "Graph sync complete: #{result[:status]}"
     end
     
@@ -62,7 +154,7 @@ namespace :enliterator do
         puts "Auto-selecting based on data size and urgency"
       end
       
-      job = Embedding::BuilderJob.new
+      job = EmbeddingServices::BuilderJob.new
       results = job.perform(
         batch_id: args[:batch_id],
         options: options
@@ -122,7 +214,7 @@ namespace :enliterator do
       
       puts "Processing batch #{args[:batch_id]}..."
       
-      processor = Embedding::BatchProcessor.new(ingest_batch_id: nil)
+      processor = EmbeddingServices::BatchProcessor.new(ingest_batch_id: nil)
       results = processor.process_results(args[:batch_id])
       
       puts "Results:"
@@ -149,7 +241,7 @@ namespace :enliterator do
       
       puts "Building #{index_type} index..."
       
-      builder = Embedding::IndexBuilder.new(
+      builder = EmbeddingServices::IndexBuilder.new(
         index_type: index_type,
         force_rebuild: true
       )
@@ -193,8 +285,8 @@ namespace :enliterator do
       # Generate embedding for query
       response = OPENAI.embeddings.create(
         input: args[:query],
-        model: Embedding::OPENAI_MODEL,
-        dimensions: Embedding::OPENAI_DIMENSIONS
+        model: ::Embedding::OPENAI_MODEL,
+        dimensions: ::Embedding::OPENAI_DIMENSIONS
       )
       
       query_embedding = response.data.first.embedding
@@ -786,5 +878,23 @@ namespace :enliterator do
     end
     
     puts "\nEmbedding Count: #{Embedding.count}"
+  end
+end
+
+# Helper method for media type detection (returns enum values for IngestItem)
+def detect_media_type(filename)
+  ext = File.extname(filename).downcase
+  case ext
+  when '.rb', '.rake', '.gemspec' then 'text'
+  when '.md', '.txt' then 'text'
+  when '.yml', '.yaml' then 'structured'
+  when '.json', '.xml' then 'structured'
+  when '.js', '.html', '.erb', '.css', '.scss' then 'text'
+  when '.sql', '.csv' then 'structured'
+  when '.png', '.jpg', '.jpeg', '.gif', '.svg' then 'image'
+  when '.mp3', '.wav', '.ogg' then 'audio'
+  when '.mp4', '.avi', '.mov' then 'video'
+  when '.zip', '.tar', '.gz' then 'binary'
+  else 'unknown'
   end
 end

@@ -61,12 +61,13 @@ Transform grounded answers into:
 ## Technology Stack
 
 - **Rails 8** with Solid Queue, Solid Cache, Solid Cable
-- **PostgreSQL** for operational data
-- **Neo4j** for knowledge graph
-- **pgvector** for embeddings and retrieval
-- **Redis** for caching
-- **OpenAI API** for extraction and fine-tuning
-- **Docker** for development environment
+- **PostgreSQL 16+** for operational data with pgvector extension
+- **Neo4j** for knowledge graph (bolt://127.0.0.1:7687)
+- **pgvector** with neighbor gem for embeddings (HNSW index)
+- **Redis** for caching and queue management
+- **OpenAI Ruby gem v0.16.0** with Responses API and Structured Outputs
+- **Docker Compose** for development services
+- **Admin UI** for settings management (https://e.dev.domt.app/admin)
 
 ## Quick Start
 
@@ -104,22 +105,21 @@ bin/dev
 Create a `.env` file:
 
 ```env
-# OpenAI Configuration
+# OpenAI Configuration (managed via Admin UI)
 OPENAI_API_KEY=your-api-key
-OPENAI_MODEL=gpt-4-turbo-preview
-OPENAI_MODEL_ANSWER=gpt-4
-OPENAI_FT_BASE=gpt-4o-mini
-OPENAI_FT_MODEL=ft:gpt-4o-mini:your-org:enliterator-canon-v1
 
 # Database URLs
 DATABASE_URL=postgresql://localhost/enliterator_development
 REDIS_URL=redis://localhost:6379
-NEO4J_URL=bolt://localhost:7687
-VECTOR_DB_URL=postgresql://localhost/enliterator_development
+NEO4J_URL=bolt://127.0.0.1:7687
+NEO4J_USERNAME=neo4j
+NEO4J_PASSWORD=your-password
 
-# Storage
+# Optional (defaults provided)
 STORAGE_BUCKET=enliterator-dev
 ```
+
+**Note**: OpenAI models and settings are now managed via the Admin UI at https://e.dev.domt.app/admin, not environment variables.
 
 ## Usage
 
@@ -190,11 +190,34 @@ bin/rails enliterator:graph:sync
 # Refresh embeddings
 bin/rails enliterator:embed:refresh
 
-# Build fine-tune dataset
-bin/rails enliterator:fine_tune:build
+# Build fine-tune dataset (NEW)
+bin/rails enliterator:fine_tune:build[batch_id]
+
+# Create and monitor fine-tune job (NEW)
+bin/rails runner "FineTune::Trainer.new(dataset_path: 'path/to/train.jsonl').call"
 
 # Run evaluation suite
 bin/rails enliterator:evaluate
+```
+
+### Fine-Tuning Capabilities (NEW)
+
+The system can now generate training datasets and fine-tune OpenAI models:
+
+```ruby
+# Generate training data from knowledge graph
+builder = FineTune::DatasetBuilder.new(batch_id: 1)
+dataset = builder.call
+
+# Train a fine-tuned model
+trainer = FineTune::Trainer.new(
+  dataset_path: dataset[:path],
+  base_model: 'gpt-4o-mini-2024-07-18'
+)
+job = trainer.call
+
+# Check training status
+status = FineTune::Trainer.check_status(job[:job_id])
 ```
 
 ## Architecture

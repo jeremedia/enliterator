@@ -1,0 +1,179 @@
+<div class="space-y-6">
+  <!-- Page header -->
+  <div class="border-b border-gray-200 pb-5">
+    <h1 class="text-2xl font-bold leading-6 text-gray-900">OpenAI Integration Dashboard</h1>
+    <p class="mt-2 max-w-4xl text-sm text-gray-500">
+      Manage your OpenAI models, prompts, and fine-tuning jobs for the Enliterator system.
+    </p>
+  </div>
+
+  <!-- Stats overview -->
+  <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+      <dt class="truncate text-sm font-medium text-gray-500">Active Settings</dt>
+      <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
+        <%= @active_settings %> / <%= @settings_count %>
+      </dd>
+    </div>
+    
+    <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+      <dt class="truncate text-sm font-medium text-gray-500">Prompt Templates</dt>
+      <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
+        <%= @active_templates %> / <%= @prompt_templates_count %>
+      </dd>
+    </div>
+    
+    <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+      <dt class="truncate text-sm font-medium text-gray-500">Today's Cost</dt>
+      <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
+        $<%= number_with_precision(@usage_stats[:today_cost], precision: 2) %>
+      </dd>
+    </div>
+    
+    <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+      <dt class="truncate text-sm font-medium text-gray-500">Batch Savings</dt>
+      <dd class="mt-1 text-3xl font-semibold tracking-tight text-green-600">
+        $<%= number_with_precision(@usage_stats[:batch_savings], precision: 2) %>
+      </dd>
+    </div>
+  </div>
+
+  <!-- Quick actions -->
+  <div class="rounded-lg bg-white shadow">
+    <div class="px-4 py-5 sm:p-6">
+      <h3 class="text-base font-semibold leading-6 text-gray-900">Quick Actions</h3>
+      <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <%= link_to "Configure Models", admin_openai_settings_path,
+            class: "inline-flex items-center justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500" %>
+        <%= link_to "Manage Prompts", admin_prompt_templates_path,
+            class: "inline-flex items-center justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500" %>
+        <%= link_to "New Fine-Tune", new_admin_fine_tune_job_path,
+            class: "inline-flex items-center justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500" %>
+        <%= button_to "Reset Defaults", reset_defaults_admin_openai_settings_path,
+            method: :post,
+            data: { confirm: "This will reset all settings to defaults. Continue?" },
+            class: "inline-flex items-center justify-center rounded-md bg-gray-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-500" %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Current configuration -->
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <!-- Active model configuration -->
+    <div class="rounded-lg bg-white shadow">
+      <div class="px-4 py-5 sm:p-6">
+        <h3 class="text-base font-semibold leading-6 text-gray-900">Active Models</h3>
+        <dl class="mt-3 space-y-2">
+          <div class="flex justify-between">
+            <dt class="text-sm text-gray-500">Extraction:</dt>
+            <dd class="text-sm font-medium text-gray-900">
+              <%= OpenaiConfig::SettingsManager.model_for(:extraction) %>
+            </dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-sm text-gray-500">Answer:</dt>
+            <dd class="text-sm font-medium text-gray-900">
+              <%= OpenaiConfig::SettingsManager.model_for(:answer) %>
+            </dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-sm text-gray-500">Routing:</dt>
+            <dd class="text-sm font-medium text-gray-900">
+              <%= OpenaiConfig::SettingsManager.model_for(:routing) %>
+            </dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-sm text-gray-500">Fine-Tune Base:</dt>
+            <dd class="text-sm font-medium text-gray-900">
+              <%= OpenaiConfig::SettingsManager.model_for(:fine_tune_base) %>
+            </dd>
+          </div>
+          <% if @current_model %>
+            <div class="flex justify-between border-t pt-2">
+              <dt class="text-sm font-medium text-green-600">Deployed Fine-Tune:</dt>
+              <dd class="text-sm font-medium text-green-600">
+                <%= @current_model %>
+              </dd>
+            </div>
+          <% end %>
+        </dl>
+      </div>
+    </div>
+
+    <!-- Recent fine-tune jobs -->
+    <div class="rounded-lg bg-white shadow">
+      <div class="px-4 py-5 sm:p-6">
+        <h3 class="text-base font-semibold leading-6 text-gray-900">Recent Fine-Tune Jobs</h3>
+        <% if @fine_tune_jobs.any? %>
+          <ul class="mt-3 space-y-2">
+            <% @fine_tune_jobs.each do |job| %>
+              <li class="flex items-center justify-between rounded-md bg-gray-50 px-3 py-2">
+                <div class="flex flex-col">
+                  <span class="text-sm font-medium text-gray-900">
+                    <%= job.base_model %>
+                  </span>
+                  <span class="text-xs text-gray-500">
+                    <%= job.created_at.strftime("%b %d, %Y") %>
+                  </span>
+                </div>
+                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                  <%= job.completed? ? 'bg-green-100 text-green-800' : 
+                     job.failed? ? 'bg-red-100 text-red-800' : 
+                     'bg-yellow-100 text-yellow-800' %>">
+                  <%= job.status %>
+                </span>
+              </li>
+            <% end %>
+          </ul>
+        <% else %>
+          <p class="mt-3 text-sm text-gray-500">No fine-tune jobs yet</p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- System status -->
+  <div class="rounded-lg bg-white shadow">
+    <div class="px-4 py-5 sm:p-6">
+      <h3 class="text-base font-semibold leading-6 text-gray-900">System Status</h3>
+      <dl class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div>
+          <dt class="text-sm font-medium text-gray-500">OpenAI API</dt>
+          <dd class="mt-1 text-sm text-gray-900">
+            <% if ENV['OPENAI_API_KEY'].present? %>
+              <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                Connected
+              </span>
+            <% else %>
+              <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
+                No API Key
+              </span>
+            <% end %>
+          </dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-gray-500">Batch API</dt>
+          <dd class="mt-1 text-sm text-gray-900">
+            <% if OpenaiConfig::SettingsManager.use_batch_api? %>
+              <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                Enabled (50% savings)
+              </span>
+            <% else %>
+              <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">
+                Disabled
+              </span>
+            <% end %>
+          </dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-gray-500">Responses API</dt>
+          <dd class="mt-1 text-sm text-gray-900">
+            <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+              Active (v0.16.0)
+            </span>
+          </dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+</div>

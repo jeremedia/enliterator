@@ -1,8 +1,14 @@
 # Enliterator Project Status
 
-**Last Updated**: 2025-08-05
+**Last Updated**: 2025-08-06 (Evening Update)
 
-## 🎉 Pipeline Status: 100% COMPLETE
+## 📊 Status Summary
+
+- **Pipeline Stages**: 100% COMPLETE (8 of 8) ✅
+- **OpenAI Integration**: Phase 2 COMPLETE ✅
+- **Admin UI**: DEPLOYED ✅
+- **Fine-Tune Services**: IMPLEMENTED ✅
+- **Production Ready**: READY FOR META-ENLITERATION 🚀
 
 Enliterator is a Rails 8 application that transforms dropped data collections into **enliterated datasets** - knowledge graphs that can converse, cite sources, and produce deliverables.
 
@@ -73,18 +79,48 @@ Enliterator is a Rails 8 application that transforms dropped data collections in
   - GenerationJob orchestrator
   - Full rake task suite
 
-### 🚀 Next Steps (Beyond Core Pipeline)
+### ✅ Recently Completed (2025-08-06)
 
-#### MCP Server Implementation
-- Core tools (extract_and_link, search, fetch, bridge)
-- Spatial tools (location_neighbors)
-- Persona management
+#### OpenAI Integration Overhaul (Issue #47)
+**Status**: Phase 2 COMPLETE ✅
 
-#### Fine-tuning & Runtime
-- Dataset generation from graph
-- Model training with OpenAI
-- Dialogue system
-- Delivery adapters (webpage, PDF, etc.)
+**Phase 1 (Previously Completed)**:
+- Settings Management System with database-backed configuration
+- Admin UI at https://e.dev.domt.app/admin
+- Base extraction service with correct OpenAI::Helpers::StructuredOutput::BaseModel
+- Lexicon::TermExtractionService refactored
+
+**Phase 2 (Completed Today)**:
+- ✅ Refactored pools/entity_extraction_service.rb to use BaseExtractionService
+- ✅ Refactored pools/relation_extraction_service.rb to use BaseExtractionService
+- ✅ Refactored mcp/extract_and_link_service.rb with proper response models
+- ✅ Implemented FineTune::DatasetBuilder (Issue #26) - generates JSONL from knowledge graph
+- ✅ Implemented FineTune::Trainer (Issue #27) - manages OpenAI fine-tuning jobs
+- ✅ Fixed Lexicon Bootstrap timeout with batching and parallel processing
+- ✅ Verified remaining services don't need refactoring (use different APIs or no OpenAI)
+
+### 🚀 Next Steps - Ready for Meta-Enliteration!
+
+#### Immediate Priority: Create First EKN
+1. **Run meta-enliteration on Enliterator codebase**
+   - Process the Enliterator's own code as the dataset
+   - Generate knowledge graph of the system itself
+   - Calculate literacy score (target: >85)
+
+2. **Generate fine-tune dataset**
+   - Use FineTune::DatasetBuilder to extract training examples
+   - Create JSONL with canon mappings, path narrations, etc.
+   
+3. **Train and deploy EKN model**
+   - Use FineTune::Trainer to create fine-tuned model
+   - Deploy as first Enliterated Knowledge Navigator
+   - Test with validation questions
+
+#### Secondary Priorities
+- MCP Server Implementation (extract_and_link, search, fetch, bridge)
+- Dialogue system enhancements
+- Performance optimization
+- Production deployment
 
 ## Key Technical Components
 

@@ -107,14 +107,14 @@ module Literate
       if input.match?(/exact|specific|precisely|database|SQL/i)
         @conversation.update!(
           temperature: 0.1,
-          model_name: "gpt-4o"
+          model_name: OpenaiConfig::SettingsManager.model_for('answer')
         )
         
       # Detect if we need creativity
       elsif input.match?(/idea|suggest|create|imagine|what if/i)
         @conversation.update!(
           temperature: 0.9,
-          model_name: "gpt-4o"
+          model_name: OpenaiConfig::SettingsManager.model_for('answer')
         )
         
       # Detect if we need structured data

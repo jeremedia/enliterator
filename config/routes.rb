@@ -12,6 +12,35 @@ Rails.application.routes.draw do
   # Defines the root path route ("/")
   root "welcome#index"
   
+  # Admin interface
+  namespace :admin do
+    resources :openai_settings do
+      collection do
+        post :test_model
+        post :reset_defaults
+      end
+    end
+    
+    resources :prompt_templates do
+      member do
+        post :duplicate
+        post :activate
+        post :test
+      end
+    end
+    
+    resources :fine_tune_jobs, only: [:index, :show, :new, :create] do
+      member do
+        post :check_status
+        post :deploy
+        post :cancel
+      end
+    end
+    
+    # Admin dashboard
+    get '/', to: 'dashboard#index', as: :dashboard
+  end
+  
   # Future API endpoints for MCP server
   namespace :api do
     namespace :v1 do

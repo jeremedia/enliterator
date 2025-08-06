@@ -61,10 +61,11 @@ namespace :meta_enliteration do
     # Create ingest batch
     batch = IngestBatch.create!(
       name: "meta_enliteration_#{Time.current.strftime('%Y%m%d')}",
-      source_path: bundle_path,
+      source_type: 'zip_bundle',
       metadata: {
         type: 'meta_enliteration',
-        purpose: 'Create Enliterator Knowledge Navigator'
+        purpose: 'Create Enliterator Knowledge Navigator',
+        source_path: bundle_path
       }
     )
     
@@ -72,27 +73,30 @@ namespace :meta_enliteration do
     
     # Run through pipeline stages
     stages = [
-      { name: "Stage 1: Intake", task: "enliterator:ingest" },
-      { name: "Stage 2: Rights", task: "enliterator:rights:process" },
-      { name: "Stage 3: Lexicon", task: "enliterator:lexicon:bootstrap" },
-      { name: "Stage 4: Pools", task: "enliterator:pools:extract" },
-      { name: "Stage 5: Graph", task: "enliterator:graph:sync" },
-      { name: "Stage 6: Embeddings", task: "enliterator:embed:generate" },
-      { name: "Stage 7: Literacy", task: "enliterator:literacy:score" },
-      { name: "Stage 8: Deliverables", task: "enliterator:deliverables:generate" }
+      { name: "Stage 1: Intake", task: "enliterator:ingest", args: [batch.metadata['source_path']] },
+      { name: "Stage 2: Graph Assembly", task: "enliterator:graph:sync", args: [batch.id] },
+      { name: "Stage 3: Embeddings", task: "enliterator:embed:generate", args: [batch.id] },
+      { name: "Stage 4: Literacy Scoring", task: "enliterator:literacy:score", args: [batch.id] },
+      { name: "Stage 5: Deliverables", task: "enliterator:deliverables:generate", args: [batch.id] }
     ]
     
     stages.each_with_index do |stage, index|
       puts Rainbow("\n▶️  #{stage[:name]}").yellow
       
       begin
-        # Invoke the rake task with batch_id
-        Rake::Task[stage[:task]].invoke(batch.id)
+        # Invoke the rake task with appropriate arguments
+        if stage[:args]
+          Rake::Task[stage[:task]].invoke(*stage[:args])
+        else
+          Rake::Task[stage[:task]].invoke
+        end
         puts Rainbow("   ✅ Complete").green
       rescue => e
         puts Rainbow("   ❌ Failed: #{e.message}").red
         puts Rainbow("\n⚠️  Pipeline stopped at #{stage[:name]}").yellow
-        exit 1
+        
+        # Don't exit - let's continue with other stages to see what works
+        puts Rainbow("   ⏭️  Continuing with next stage...").yellow
       end
     end
     

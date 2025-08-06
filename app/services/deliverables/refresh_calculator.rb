@@ -3,9 +3,13 @@ module Deliverables
   class RefreshCalculator < ApplicationService
     attr_reader :batch_id, :output_dir
 
+    # Model costs should be retrieved from settings, not hardcoded
+    # This is just for fallback estimation if settings don't exist
     OPENAI_COSTS = {
-      'gpt-4o-2024-08-06' => { input: 0.0025, output: 0.01 },  # per 1K tokens
-      'gpt-4o-mini-2024-07-18' => { input: 0.00015, output: 0.0006 },
+      'gpt-4.1' => { input: 0.002, output: 0.008 },  # per 1K tokens (2025 pricing)
+      'gpt-4.1-mini' => { input: 0.0001, output: 0.0004 },
+      'gpt-4.1-nano' => { input: 0.00005, output: 0.0002 },
+      'gpt-3.5-turbo' => { input: 0.0005, output: 0.0015 },
       'text-embedding-3-small' => { input: 0.00002, output: 0 },
       'text-embedding-3-large' => { input: 0.00013, output: 0 }
     }.freeze
@@ -250,8 +254,8 @@ module Deliverables
       
       total_tokens = extraction_tokens + embedding_tokens + qa_tokens
       
-      # Calculate costs per refresh
-      model = ENV.fetch('OPENAI_MODEL', 'gpt-4o-mini-2024-07-18')
+      # Calculate costs per refresh - use settings, not hardcoded models
+      model = OpenaiConfig::SettingsManager.model_for('extraction')
       embedding_model = 'text-embedding-3-small'
       
       extraction_cost = (extraction_tokens / 1000.0) * OPENAI_COSTS[model][:input]

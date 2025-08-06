@@ -30,7 +30,7 @@ module Pools
   end
 
   # Service to extract entities for the Ten Pool Canon using OpenAI Responses API
-  class EntityExtractionService < ApplicationService
+  class EntityExtractionService < OpenaiConfig::BaseExtractionService
     
     POOL_DESCRIPTIONS = {
       'idea' => 'Purpose: capture the why (principles, theories, intents, design rationales). Look for principles, doctrines, hypotheses, themes.',
@@ -50,48 +50,37 @@ module Pools
       @source_metadata = source_metadata
     end
 
-    def extract
-      return { success: false, error: 'Content is blank' } if content.blank?
-
-      # Build the extraction prompt
-      input_messages = build_input
-
-      # Call OpenAI with Responses API
-      response = OPENAI.responses.create(
-        model: ENV.fetch('OPENAI_MODEL', 'gpt-4o-2024-08-06'),
-        input: input_messages,
-        text: EntityExtractionResult,
-        temperature: 0  # Deterministic extraction
-      )
-
-      # Process the structured response
-      result = response.output
-        .flat_map { |output| output.content }
-        .grep_v(OpenAI::Models::Responses::ResponseOutputRefusal)
-        .first
-
-      if result
-        extraction = result.parsed
-        
-        # Transform to our internal format
-        entities = transform_entities(extraction.entities)
-        
-        {
-          success: true,
-          entities: entities,
-          metadata: extraction.extraction_metadata
-        }
-      else
-        { success: false, error: 'No valid response from OpenAI' }
-      end
-    rescue StandardError => e
-      Rails.logger.error "Entity extraction failed: #{e.message}"
-      { success: false, error: e.message }
+    def call
+      super
     end
 
-    private
+    alias extract call
 
-    def build_input
+    protected
+
+    def response_model_class
+      EntityExtractionResult
+    end
+
+    def validate_inputs!
+      raise ArgumentError, 'Content is required' if content.blank?
+    end
+
+    def content_for_extraction
+      user_prompt
+    end
+
+    def transform_result(parsed_result)
+      entities = transform_entities(parsed_result.entities)
+      
+      {
+        success: true,
+        entities: entities,
+        metadata: parsed_result.extraction_metadata.merge(extraction_metadata)
+      }
+    end
+
+    def build_messages
       [
         {
           role: :system,
@@ -103,6 +92,8 @@ module Pools
         }
       ]
     end
+
+    private
 
     def system_prompt
       <<~PROMPT

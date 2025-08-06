@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-50">
+  <head>
+    <title>Enliterator Admin</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="h-full">
+    <div class="min-h-full">
+      <!-- Navigation -->
+      <nav class="bg-indigo-600">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="flex h-16 items-center justify-between">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <h1 class="text-white text-xl font-bold">Enliterator Admin</h1>
+              </div>
+              <div class="hidden md:block">
+                <div class="ml-10 flex items-baseline space-x-4">
+                  <%= link_to "Dashboard", admin_dashboard_path, 
+                      class: "#{current_page?(admin_dashboard_path) ? 'bg-indigo-700' : ''} text-white hover:bg-indigo-500 rounded-md px-3 py-2 text-sm font-medium" %>
+                  <%= link_to "OpenAI Settings", admin_openai_settings_path,
+                      class: "#{current_page?(admin_openai_settings_path) ? 'bg-indigo-700' : ''} text-white hover:bg-indigo-500 rounded-md px-3 py-2 text-sm font-medium" %>
+                  <%= link_to "Prompt Templates", admin_prompt_templates_path,
+                      class: "#{current_page?(admin_prompt_templates_path) ? 'bg-indigo-700' : ''} text-white hover:bg-indigo-500 rounded-md px-3 py-2 text-sm font-medium" %>
+                  <%= link_to "Fine-Tune Jobs", admin_fine_tune_jobs_path,
+                      class: "#{controller_name == 'fine_tune_jobs' ? 'bg-indigo-700' : ''} text-white hover:bg-indigo-500 rounded-md px-3 py-2 text-sm font-medium" %>
+                </div>
+              </div>
+            </div>
+            <div class="hidden md:block">
+              <div class="ml-4 flex items-center md:ml-6">
+                <%= link_to "Back to App", root_path, 
+                    class: "text-white hover:bg-indigo-500 rounded-md px-3 py-2 text-sm font-medium" %>
+              </div>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Main content -->
+      <main>
+        <div class="mx-auto max-w-7xl px-4 pb-12 pt-8 sm:px-6 lg:px-8">
+          <% if notice.present? %>
+            <div class="mb-4 rounded-md bg-green-50 p-4">
+              <div class="flex">
+                <div class="ml-3">
+                  <p class="text-sm font-medium text-green-800"><%= notice %></p>
+                </div>
+              </div>
+            </div>
+          <% end %>
+          
+          <% if alert.present? %>
+            <div class="mb-4 rounded-md bg-red-50 p-4">
+              <div class="flex">
+                <div class="ml-3">
+                  <p class="text-sm font-medium text-red-800"><%= alert %></p>
+                </div>
+              </div>
+            </div>
+          <% end %>
+          
+          <%= yield %>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

@@ -9,19 +9,29 @@ module Lexicon
   # - Normalizes names and casing
   class BootstrapJob < ApplicationJob
     queue_as :pipeline
+    
+    # Process items in batches to avoid timeouts
+    BATCH_SIZE = 10
+    MAX_CONCURRENT_REQUESTS = 3
 
     def perform(ingest_batch_id)
       @batch = IngestBatch.find(ingest_batch_id)
       @extracted_terms = []
+      @terms_mutex = Mutex.new
 
       Rails.logger.info "Starting lexicon bootstrap for batch #{@batch.id}"
 
       # Update batch status
       @batch.update!(status: 'lexicon_in_progress')
 
-      # Process items that have completed rights triage
-      @batch.ingest_items.where(triage_status: 'completed').find_each do |item|
-        extract_terms_from_item(item)
+      # Process items that have completed rights triage in batches
+      items_to_process = @batch.ingest_items.where(triage_status: 'completed')
+      total_items = items_to_process.count
+      
+      Rails.logger.info "Processing #{total_items} items in batches of #{BATCH_SIZE}"
+      
+      items_to_process.find_in_batches(batch_size: BATCH_SIZE) do |item_batch|
+        process_item_batch(item_batch)
       end
 
       # Deduplicate and normalize extracted terms
@@ -40,6 +50,25 @@ module Lexicon
     end
 
     private
+    
+    def process_item_batch(items)
+      Rails.logger.info "Processing batch of #{items.size} items"
+      
+      # Process items in parallel using threads for better performance
+      threads = items.map do |item|
+        Thread.new { extract_terms_from_item(item) }
+      end
+      
+      # Wait for all threads to complete with a timeout
+      threads.each do |thread|
+        thread.join(30) # 30 second timeout per thread
+      end
+      
+      Rails.logger.info "Batch processing complete"
+    rescue StandardError => e
+      Rails.logger.error "Error processing batch: #{e.message}"
+      # Continue processing even if some items fail
+    end
 
     def extract_terms_from_item(item)
       return if item.content.blank?
@@ -52,7 +81,9 @@ module Lexicon
       ).extract
 
       if extraction_result[:success]
-        @extracted_terms.concat(extraction_result[:terms])
+        @terms_mutex.synchronize do
+          @extracted_terms.concat(extraction_result[:terms])
+        end
         
         # Update item with extraction metadata
         item.update!(

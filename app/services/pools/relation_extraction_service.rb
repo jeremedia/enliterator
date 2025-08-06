@@ -22,7 +22,7 @@ module Pools
   end
 
   # Service to extract relations between entities using the Relation Verb Glossary
-  class RelationExtractionService < ApplicationService
+  class RelationExtractionService < OpenaiConfig::BaseExtractionService
     
     attr_reader :content, :entities, :verb_glossary
 
@@ -32,48 +32,40 @@ module Pools
       @verb_glossary = verb_glossary
     end
 
-    def extract
-      return { success: false, error: 'No entities provided' } if entities.empty?
-
-      # Build the extraction prompt
-      input_messages = build_input
-
-      # Call OpenAI with Responses API
-      response = OPENAI.responses.create(
-        model: ENV.fetch('OPENAI_MODEL', 'gpt-4o-2024-08-06'),
-        input: input_messages,
-        text: RelationExtractionResult,
-        temperature: 0  # Deterministic extraction
-      )
-
-      # Process the structured response
-      result = response.output
-        .flat_map { |output| output.content }
-        .grep_v(OpenAI::Models::Responses::ResponseOutputRefusal)
-        .first
-
-      if result
-        extraction = result.parsed
-        
-        # Transform and validate relations
-        relations = transform_relations(extraction.relations)
-        
-        {
-          success: true,
-          relations: relations,
-          unmapped_relations: extraction.unmapped_relations
-        }
-      else
-        { success: false, error: 'No valid response from OpenAI' }
-      end
-    rescue StandardError => e
-      Rails.logger.error "Relation extraction failed: #{e.message}"
-      { success: false, error: e.message }
+    def call
+      super
     end
 
-    private
+    alias extract call
 
-    def build_input
+    protected
+
+    def response_model_class
+      RelationExtractionResult
+    end
+
+    def validate_inputs!
+      raise ArgumentError, 'No entities provided' if entities.empty?
+      raise ArgumentError, 'Content is required' if content.blank?
+      raise ArgumentError, 'Verb glossary is required' if verb_glossary.blank?
+    end
+
+    def content_for_extraction
+      user_prompt
+    end
+
+    def transform_result(parsed_result)
+      relations = transform_relations(parsed_result.relations)
+      
+      {
+        success: true,
+        relations: relations,
+        unmapped_relations: parsed_result.unmapped_relations,
+        metadata: extraction_metadata
+      }
+    end
+
+    def build_messages
       [
         {
           role: :system,
@@ -85,6 +77,8 @@ module Pools
         }
       ]
     end
+
+    private
 
     def system_prompt
       <<~PROMPT

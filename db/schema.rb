@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_06_004547) do
+ActiveRecord::Schema[8.0].define(version: 2025_08_06_015311) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gin"
   enable_extension "pg_catalog.plpgsql"
@@ -166,6 +166,30 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_004547) do
     t.index ["sentiment"], name: "index_experiences_on_sentiment"
   end
 
+  create_table "fine_tune_jobs", force: :cascade do |t|
+    t.string "openai_job_id", null: false
+    t.string "openai_file_id"
+    t.string "base_model", null: false
+    t.string "fine_tuned_model"
+    t.string "status", null: false
+    t.jsonb "hyperparameters", default: {}
+    t.jsonb "training_metrics", default: {}
+    t.integer "trained_tokens"
+    t.decimal "training_cost", precision: 10, scale: 4
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.text "error_message"
+    t.bigint "ingest_batch_id"
+    t.string "dataset_path"
+    t.integer "example_count"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["fine_tuned_model"], name: "index_fine_tune_jobs_on_fine_tuned_model"
+    t.index ["ingest_batch_id"], name: "index_fine_tune_jobs_on_ingest_batch_id"
+    t.index ["openai_job_id"], name: "index_fine_tune_jobs_on_openai_job_id", unique: true
+    t.index ["status"], name: "index_fine_tune_jobs_on_status"
+  end
+
   create_table "idea_emanations", force: :cascade do |t|
     t.bigint "idea_id", null: false
     t.bigint "emanation_id", null: false
@@ -239,6 +263,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_004547) do
     t.datetime "deliverables_generated_at"
     t.string "deliverables_path"
     t.text "deliverables_errors"
+    t.decimal "literacy_score"
     t.index ["created_at"], name: "index_ingest_batches_on_created_at"
     t.index ["source_type"], name: "index_ingest_batches_on_source_type"
     t.index ["status"], name: "index_ingest_batches_on_status"
@@ -403,6 +428,22 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_004547) do
     t.index ["batch_id"], name: "index_negative_knowledges_on_batch_id"
   end
 
+  create_table "openai_settings", force: :cascade do |t|
+    t.string "key", null: false
+    t.string "category"
+    t.text "value"
+    t.text "description"
+    t.string "model_type"
+    t.jsonb "metadata", default: {}
+    t.boolean "active", default: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_openai_settings_on_active"
+    t.index ["category"], name: "index_openai_settings_on_category"
+    t.index ["key"], name: "index_openai_settings_on_key", unique: true
+    t.index ["model_type"], name: "index_openai_settings_on_model_type"
+  end
+
   create_table "pg_search_documents", force: :cascade do |t|
     t.text "content"
     t.string "searchable_type"
@@ -481,6 +522,23 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_004547) do
     t.index ["provenance_and_rights_id"], name: "index_practicals_on_provenance_and_rights_id"
     t.index ["steps"], name: "index_practicals_on_steps", using: :gin
     t.index ["valid_time_start", "valid_time_end"], name: "index_practicals_on_valid_time_start_and_valid_time_end"
+  end
+
+  create_table "prompt_templates", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "service_class"
+    t.text "system_prompt"
+    t.text "user_prompt_template"
+    t.jsonb "variables", default: []
+    t.jsonb "metadata", default: {}
+    t.boolean "active", default: true
+    t.string "purpose"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_prompt_templates_on_active"
+    t.index ["name"], name: "index_prompt_templates_on_name", unique: true
+    t.index ["purpose"], name: "index_prompt_templates_on_purpose"
+    t.index ["service_class"], name: "index_prompt_templates_on_service_class"
   end
 
   create_table "prompt_versions", force: :cascade do |t|
