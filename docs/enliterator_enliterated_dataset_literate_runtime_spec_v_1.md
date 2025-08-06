@@ -1,6 +1,6 @@
-# Enliterator — Enliterated Dataset & Literate Runtime Spec (v1.1)
+# Enliterator — Enliterated Dataset & Literate Runtime Spec (v1.2)
 
-A self‑contained specification for turning a drop‑off data collection into an **enliterated dataset** that can converse, plan, and deliver multimodal outputs. It defines the pools of meaning, the flow verbs, a zero‑touch pipeline, delivery expectations, and acceptance checks so the resulting system behaves like a grounded domain expert that knows what it contains—and what it lacks.
+A self‑contained specification for turning a drop‑off data collection into a **Knowledge Navigator** - a multimodal conversational interface inspired by Apple's 1987 vision. Through a 9-stage pipeline, data becomes a literate system that can converse naturally, generate dynamic interfaces, and deliver insights through the most appropriate medium. The result behaves like a knowledgeable colleague who understands the data deeply and can present it in whatever form best serves the moment.
 
 ## Definitions
 - **Literate technology**: software that converses in natural language, shows its reasoning paths and sources, adapts to user intent and constraints, and produces deliverables—treating data as a partner in meaning rather than a passive store.
@@ -8,7 +8,7 @@ A self‑contained specification for turning a drop‑off data collection into a
 
 ---
 
-## 1) Zero‑touch enliteration pipeline (human drops data; system does the rest)
+## 1) Nine‑stage enliteration pipeline (human drops data; system creates Knowledge Navigator)
 
 ### 0) Frame the mission
 Inputs: domain scope, key questions, risk posture, time horizon.  
@@ -42,6 +42,25 @@ Compute pool **coverage**, flow **density**, temporal **completeness**, **spatia
 - Promptpack patterns for extraction and answering (structured + persona narrative).  
 - Evaluation bundle: answers with paths, citations, rights echo; spatial summaries when applicable.  
 - Change log and proposed refresh cadence.
+
+### 9) Knowledge Navigator creation
+Transform the enliterated dataset into a **Knowledge Navigator** - a multimodal conversational interface that makes the data truly literate. This is the culmination where technical infrastructure becomes a usable product.
+
+**Components**:
+- **Conversational interface**: Natural language dialogue (voice + text) powered by the fine-tuned model
+- **Dynamic UI generation**: Context-aware creation of forms, visualizations, maps, timelines
+- **Multimodal presentation**: Coordinated voice narration with visual elements
+- **Adaptive interaction**: Interface evolves based on user needs and data characteristics
+- **Natural wrappers**: MCP tools wrapped in conversation, never exposed as technical operations
+
+**User experience**: Like Apple's 1987 Knowledge Navigator - users converse naturally while the system generates appropriate interfaces, visualizations, and explanations on the fly. The dataset becomes a knowledgeable colleague.
+
+**Success criteria**:
+- Users can explore data through natural conversation
+- Technical complexity completely hidden
+- Dynamic UIs appear naturally during dialogue
+- Voice and visual modalities work in harmony
+- Every dataset becomes its own unique Navigator
 
 ### Only‑if‑blocked interactions
 Prompt a human only when: (a) rights are ambiguous, (b) spatial claims lack placement records, or (c) canonical names conflict after auto‑reconciliation. Provide defaults so the pipeline proceeds conservatively.
