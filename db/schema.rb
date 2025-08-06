@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_06_015311) do
+ActiveRecord::Schema[8.0].define(version: 2025_08_06_124919) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gin"
   enable_extension "pg_catalog.plpgsql"
@@ -613,6 +613,31 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_015311) do
     t.index ["target_type", "target_id"], name: "index_relationals_on_target"
     t.index ["target_type", "target_id"], name: "index_relationals_on_target_type_and_target_id"
     t.index ["valid_time_start", "valid_time_end"], name: "index_relationals_on_valid_time_start_and_valid_time_end"
+  end
+
+  create_table "webhook_events", force: :cascade do |t|
+    t.string "event_id", null: false
+    t.string "event_type", null: false
+    t.string "webhook_id", null: false
+    t.datetime "timestamp", null: false
+    t.string "signature"
+    t.jsonb "headers", default: {}
+    t.jsonb "payload", default: {}, null: false
+    t.string "status", default: "pending", null: false
+    t.datetime "processed_at"
+    t.text "error_message"
+    t.jsonb "metadata", default: {}
+    t.integer "retry_count", default: 0
+    t.string "resource_type"
+    t.string "resource_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_webhook_events_on_created_at"
+    t.index ["event_id"], name: "index_webhook_events_on_event_id", unique: true
+    t.index ["event_type"], name: "index_webhook_events_on_event_type"
+    t.index ["resource_type", "resource_id"], name: "index_webhook_events_on_resource_type_and_resource_id"
+    t.index ["status"], name: "index_webhook_events_on_status"
+    t.index ["webhook_id"], name: "index_webhook_events_on_webhook_id"
   end
 
   add_foreign_key "conversations", "ingest_batches"

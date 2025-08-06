@@ -172,7 +172,7 @@ module OpenaiConfig
       
       private
       
-      def self.default_model_for(task)
+      def default_model_for(task)
         case task.to_s
         when 'extraction'
           ENV.fetch("OPENAI_MODEL", "gpt-4.1")  # Latest 2025 model
@@ -187,7 +187,7 @@ module OpenaiConfig
         end
       end
       
-      def self.default_temperature_for(task)
+      def default_temperature_for(task)
         temps = Rails.application.config.openai[:temperature]
         
         case task.to_s
@@ -202,7 +202,7 @@ module OpenaiConfig
         end
       end
       
-      def self.default_prompt_template_for(service_name)
+      def default_prompt_template_for(service_name)
         # Return a basic template structure that services can use
         # This allows services to work even without a database template
         OpenStruct.new(
@@ -218,7 +218,7 @@ module OpenaiConfig
         )
       end
       
-      def self.default_system_prompt_for(service_name)
+      def default_system_prompt_for(service_name)
         case service_name
         when /TermExtraction/i
           "You are a lexicon extraction specialist. Extract canonical terms, surface forms, and descriptions from content."

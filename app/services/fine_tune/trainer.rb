@@ -5,9 +5,9 @@ module FineTune
   # Handles uploading training data, creating fine-tune jobs, and monitoring progress
   class Trainer < ApplicationService
     DEFAULT_HYPERPARAMETERS = {
-      n_epochs: 3,
-      batch_size: 1,
-      learning_rate_multiplier: 1.0
+      n_epochs: "auto",
+      batch_size: "auto",
+      learning_rate_multiplier: "auto"
     }.freeze
     
     attr_reader :dataset_path, :base_model, :suffix, :hyperparameters, :validation_path
@@ -70,8 +70,8 @@ module FineTune
         fine_tuned_model: job.fine_tuned_model,
         created_at: Time.at(job.created_at),
         finished_at: job.finished_at ? Time.at(job.finished_at) : nil,
-        error: job.error&.to_h,
-        hyperparameters: job.hyperparameters.to_h,
+        error: job[:error],  # Use raw access to avoid parsing issues
+        hyperparameters: job[:hyperparameters],  # Use raw access
         result_files: job.result_files,
         trained_tokens: job.trained_tokens,
         validation_file: job.validation_file,

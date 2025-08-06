@@ -74,9 +74,9 @@ module FineTune
     
     # Task 1: Canonical term mapping
     def generate_canon_mapping_examples
-      # Get lexicon entries with surface forms
-      lexicon_entries = Lexicon.where(ingest_batch_id: batch_id)
-                               .where.not(surface_forms: nil)
+      # Get lexicon entries through IngestItems
+      # For now, use all canonical terms since lexicon might be global
+      lexicon_entries = LexiconAndOntology.where.not(surface_forms: nil)
       
       lexicon_entries.find_each do |entry|
         # Map surface forms to canonical terms
@@ -85,8 +85,8 @@ module FineTune
             task: 'canon_map',
             input: surface_form,
             output: {
-              canonical: entry.canonical_term,
-              pool: entry.pool_type,
+              canonical: entry.term,
+              pool: entry.pool_association || 'lexicon',
               description: entry.canonical_description
             }.to_json
           }
@@ -100,7 +100,7 @@ module FineTune
             output: {
               canonical: nil,
               pool: nil,
-              note: "Not a valid term for #{entry.canonical_term}"
+              note: "Not a valid term for #{entry.term}"
             }.to_json
           }
         end
@@ -117,17 +117,15 @@ module FineTune
       
       begin
         # Find paths of length 2-5 between different pool types
+        # Note: Nodes might not have ingest_batch_id directly, they're linked via provenance
         query = <<~CYPHER
           MATCH path = (n1)-[r1]->(n2)-[r2*0..3]->(n3)
-          WHERE n1.ingest_batch_id = $batch_id
-            AND n2.ingest_batch_id = $batch_id
-            AND n3.ingest_batch_id = $batch_id
-            AND labels(n1)[0] <> labels(n3)[0]
+          WHERE labels(n1)[0] <> labels(n3)[0]
           RETURN path
-          LIMIT 500
+          LIMIT 100
         CYPHER
         
-        result = neo4j_session.run(query, batch_id: batch_id)
+        result = neo4j_session.run(query)
         
         result.each do |record|
           path = record[:path]
@@ -243,22 +241,32 @@ module FineTune
     # Task 5: Rights-aware phrasing
     def generate_rights_aware_examples
       # Find experiences with different rights levels
-      public_experiences = Experience.where(
-        ingest_batch_id: batch_id,
-        publishability: true,
-        training_eligibility: true
-      ).limit(20)
+      # Get experiences through IngestItems and ProvenanceAndRights
+      batch_items = IngestItem.where(ingest_batch_id: batch_id, pool_item_type: 'Experience')
       
-      restricted_experiences = Experience.where(
-        ingest_batch_id: batch_id,
-        publishability: false
-      ).limit(20)
+      public_experiences = []
+      restricted_experiences = []
+      
+      batch_items.includes(:provenance_and_rights).find_each do |item|
+        next unless item.pool_item
+        
+        if item.provenance_and_rights&.publishability && item.provenance_and_rights&.training_eligibility
+          public_experiences << item.pool_item
+          break if public_experiences.size >= 20
+        elsif !item.provenance_and_rights&.publishability
+          restricted_experiences << item.pool_item
+          break if restricted_experiences.size >= 20
+        end
+      end
       
       public_experiences.each do |exp|
+        narrative = exp.respond_to?(:narrative_text) ? exp.narrative_text : exp.description
+        next unless narrative.present?
+        
         @examples << {
           task: 'rights_style',
           input: "quote experience #{exp.id}",
-          output: "Direct quote allowed: '#{exp.narrative_text.truncate(200)}'"
+          output: "Direct quote allowed: '#{narrative.truncate(200)}'"
         }
       end
       
@@ -274,7 +282,7 @@ module FineTune
     # Task 6: Gap detection and awareness
     def generate_gap_detection_examples
       # Load gap analysis if available
-      gap_report_path = Rails.root.join('tmp', 'deliverables', "batch_#{batch_id}", 'gap_analysis.json')
+      gap_report_path = Rails.root.join('tmp', 'deliverables', batch_id.to_s, 'gap_analysis.json')
       
       if File.exist?(gap_report_path)
         gaps = JSON.parse(File.read(gap_report_path))
@@ -316,6 +324,13 @@ module FineTune
     
     # Helper methods
     
+    def get_pool_items_for_batch(pool_class_name)
+      IngestItem.where(ingest_batch_id: batch_id, pool_item_type: pool_class_name)
+                .includes(:pool_item)
+                .map(&:pool_item)
+                .compact
+    end
+    
     def extract_nodes_from_path(path)
       path.nodes.map do |node|
         {
@@ -330,8 +345,8 @@ module FineTune
       path.relationships.map do |rel|
         {
           verb: rel.type.downcase,
-          source_id: rel.start_node.properties[:id],
-          target_id: rel.end_node.properties[:id]
+          source_id: rel.start_node_id,
+          target_id: rel.end_node_id
         }
       end
     end

@@ -8,9 +8,12 @@
 - **OpenAI Integration**: Phase 2 COMPLETE ✅
 - **Admin UI**: DEPLOYED ✅
 - **Fine-Tune Services**: IMPLEMENTED ✅
-- **Production Ready**: READY FOR META-ENLITERATION 🚀
+- **Literate Interface**: 0% COMPLETE ❌
+- **Production Ready**: NO - MISSING CORE USER INTERFACE 🚨
 
-Enliterator is a Rails 8 application that transforms dropped data collections into **enliterated datasets** - knowledge graphs that can converse, cite sources, and produce deliverables.
+Enliterator is a Rails 8 application that transforms dropped data collections into **Enliterated Knowledge Navigators (EKNs)** - conversational interfaces to your data, like Apple's 1987 Knowledge Navigator vision but for any dataset.
+
+**CRITICAL**: The pipeline is complete but the product isn't usable. We built the engine but not the car. Users need a conversational interface to create and interact with their EKNs. See [LITERATE_INTERFACE_MISSING.md](./LITERATE_INTERFACE_MISSING.md) for details.
 
 ## Pipeline Implementation Progress
 
@@ -99,28 +102,38 @@ Enliterator is a Rails 8 application that transforms dropped data collections in
 - ✅ Fixed Lexicon Bootstrap timeout with batching and parallel processing
 - ✅ Verified remaining services don't need refactoring (use different APIs or no OpenAI)
 
-### 🚀 Next Steps - Ready for Meta-Enliteration!
+### 🚀 Next Steps - Build the Literate Interface!
 
-#### Immediate Priority: Create First EKN
-1. **Run meta-enliteration on Enliterator codebase**
-   - Process the Enliterator's own code as the dataset
-   - Generate knowledge graph of the system itself
-   - Calculate literacy score (target: >85)
+#### CRITICAL Priority: Create the Conversational Interface (Issue #49)
+1. **Build user-facing chat interface**
+   - Natural language conversation UI (not admin panel)
+   - Onboarding flow that explains Enliterator conversationally
+   - Guide users through creating their first EKN
+   - Real Knowledge Navigator experience (like Apple's 1987 vision)
 
-2. **Generate fine-tune dataset**
-   - Use FineTune::DatasetBuilder to extract training examples
-   - Create JSONL with canon mappings, path narrations, etc.
-   
-3. **Train and deploy EKN model**
-   - Use FineTune::Trainer to create fine-tuned model
-   - Deploy as first Enliterated Knowledge Navigator
-   - Test with validation questions
+2. **Implement literate process narration**
+   - Conversational updates during pipeline processing
+   - Natural explanations of what's being discovered
+   - Story-telling from the emerging knowledge graph
+   - Error handling in plain language
 
-#### Secondary Priorities
-- MCP Server Implementation (extract_and_link, search, fetch, bridge)
-- Dialogue system enhancements
-- Performance optimization
-- Production deployment
+3. **Connect literate layer to technical foundation**
+   - Literate interface → Routing model → Pipeline
+   - Natural language wrappers for MCP tools
+   - Conversational access to knowledge graphs
+   - Story generation from graph paths
+
+#### THEN: Create First Production EKN
+1. **Use Enliterator's Knowledge Navigator to process itself**
+   - Meta-enliteration guided by conversation
+   - Navigator explains what it's finding in the codebase
+   - Creates Enliterator's own EKN
+
+#### Previous "Secondary" Priorities (Actually Core)
+- MCP Server Implementation WITH conversational wrappers
+- Dialogue system (this IS the product, not an enhancement!)
+- Knowledge exploration through natural language
+- Production deployment of the conversational interface
 
 ## Key Technical Components
 

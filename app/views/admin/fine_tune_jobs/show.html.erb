@@ -1,0 +1,227 @@
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="mb-6">
+    <%= link_to "← Back to Jobs", admin_fine_tune_jobs_path, 
+        class: "text-blue-600 hover:text-blue-800" %>
+  </div>
+
+  <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+    <div class="px-4 py-5 sm:px-6">
+      <h3 class="text-lg leading-6 font-medium text-gray-900">
+        Fine-Tune Job Details
+      </h3>
+      <p class="mt-1 max-w-2xl text-sm text-gray-500">
+        <%= @job.openai_job_id %>
+      </p>
+    </div>
+    
+    <div class="border-t border-gray-200">
+      <dl>
+        <!-- Status -->
+        <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Status</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                       <%= @job.completed? ? 'bg-green-100 text-green-800' : 
+                           @job.failed? ? 'bg-red-100 text-red-800' : 
+                           @job.pending? ? 'bg-yellow-100 text-yellow-800' :
+                           'bg-gray-100 text-gray-800' %>">
+              <%= @job.status.upcase %>
+            </span>
+            <% if @job.pending? %>
+              <%= link_to "Check Status", check_status_admin_fine_tune_job_path(@job), 
+                  method: :post, class: "ml-4 text-blue-600 hover:text-blue-800 text-sm" %>
+            <% end %>
+          </dd>
+        </div>
+
+        <!-- Base Model -->
+        <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Base Model</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <%= @job.base_model %>
+          </dd>
+        </div>
+
+        <!-- Fine-Tuned Model -->
+        <% if @job.fine_tuned_model.present? %>
+          <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+            <dt class="text-sm font-medium text-gray-500">Fine-Tuned Model</dt>
+            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+              <code class="bg-gray-100 px-2 py-1 rounded text-xs">
+                <%= @job.fine_tuned_model %>
+              </code>
+              <% if @job.completed? %>
+                <%= link_to "Deploy Model", deploy_admin_fine_tune_job_path(@job), 
+                    method: :post, class: "ml-4 text-green-600 hover:text-green-800 text-sm",
+                    data: { confirm: "Deploy this model for routing?" } %>
+                <%= link_to "Evaluate Model", evaluate_admin_fine_tune_job_path(@job), 
+                    class: "ml-4 text-blue-600 hover:text-blue-800 text-sm" %>
+              <% end %>
+            </dd>
+          </div>
+        <% end %>
+
+        <!-- Training File -->
+        <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Training File</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <%= @job.openai_file_id || "N/A" %>
+          </dd>
+        </div>
+
+        <!-- Dataset Path -->
+        <% if @job.dataset_path.present? %>
+          <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+            <dt class="text-sm font-medium text-gray-500">Dataset Path</dt>
+            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+              <code class="text-xs"><%= @job.dataset_path %></code>
+            </dd>
+          </div>
+        <% end %>
+
+        <!-- Ingest Batch -->
+        <% if @job.ingest_batch.present? %>
+          <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+            <dt class="text-sm font-medium text-gray-500">Ingest Batch</dt>
+            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+              <%= link_to @job.ingest_batch.name, admin_dashboard_path, 
+                  class: "text-blue-600 hover:text-blue-800" %>
+              <span class="text-gray-500 ml-2">(ID: <%= @job.ingest_batch_id %>)</span>
+            </dd>
+          </div>
+        <% end %>
+
+        <!-- Hyperparameters -->
+        <% if @job.hyperparameters.present? %>
+          <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+            <dt class="text-sm font-medium text-gray-500">Hyperparameters</dt>
+            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+              <pre class="bg-gray-100 p-2 rounded text-xs overflow-x-auto"><%= JSON.pretty_generate(@job.hyperparameters) %></pre>
+            </dd>
+          </div>
+        <% end %>
+
+        <!-- Training Metrics -->
+        <% if @job.trained_tokens.present? %>
+          <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+            <dt class="text-sm font-medium text-gray-500">Trained Tokens</dt>
+            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+              <%= number_with_delimiter(@job.trained_tokens) %>
+              <% if @job.training_cost.present? %>
+                <span class="text-gray-500 ml-2">(Cost: $<%= @job.training_cost %>)</span>
+              <% end %>
+            </dd>
+          </div>
+        <% end %>
+
+        <!-- Timing -->
+        <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Started At</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <%= @job.started_at&.strftime("%B %d, %Y at %I:%M %p") || "N/A" %>
+          </dd>
+        </div>
+
+        <% if @job.finished_at.present? %>
+          <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+            <dt class="text-sm font-medium text-gray-500">Finished At</dt>
+            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+              <%= @job.finished_at.strftime("%B %d, %Y at %I:%M %p") %>
+              <% if @job.duration_in_words %>
+                <span class="text-gray-500 ml-2">(Duration: <%= @job.duration_in_words %>)</span>
+              <% end %>
+            </dd>
+          </div>
+        <% end %>
+
+        <!-- Error Message -->
+        <% if @job.error_message.present? %>
+          <div class="bg-red-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+            <dt class="text-sm font-medium text-gray-500">Error</dt>
+            <dd class="mt-1 text-sm text-red-900 sm:mt-0 sm:col-span-2">
+              <%= @job.error_message %>
+            </dd>
+          </div>
+        <% end %>
+
+        <!-- Training Metrics -->
+        <% if @job.training_metrics.present? && @job.training_metrics.any? %>
+          <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+            <dt class="text-sm font-medium text-gray-500">Training Metrics</dt>
+            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+              <pre class="bg-gray-100 p-2 rounded text-xs overflow-x-auto"><%= JSON.pretty_generate(@job.training_metrics) %></pre>
+            </dd>
+          </div>
+        <% end %>
+
+        <!-- Example Count -->
+        <% if @job.example_count.present? %>
+          <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+            <dt class="text-sm font-medium text-gray-500">Training Examples</dt>
+            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+              <%= number_with_delimiter(@job.example_count) %> examples
+            </dd>
+          </div>
+        <% end %>
+      </dl>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="mt-6 flex space-x-3">
+    <% if @job.pending? && @job.openai_job_id != 'sample-job-id' %>
+      <%= link_to "Cancel Job", cancel_admin_fine_tune_job_path(@job), 
+          method: :post, class: "inline-flex items-center px-4 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50",
+          data: { confirm: "Are you sure you want to cancel this job?" } %>
+    <% end %>
+    
+    <%= link_to "Back to List", admin_fine_tune_jobs_path, 
+        class: "inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50" %>
+  </div>
+
+  <!-- Webhook Events -->
+  <% if defined?(WebhookEvent) %>
+    <% events = WebhookEvent.where("payload->>'id' = ?", @job.openai_job_id).order(created_at: :desc) %>
+    <% if events.any? %>
+      <div class="mt-8 bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">
+            Webhook Events
+          </h3>
+          <p class="mt-1 max-w-2xl text-sm text-gray-500">
+            Recent webhook events for this job
+          </p>
+        </div>
+        <div class="border-t border-gray-200">
+          <ul class="divide-y divide-gray-200">
+            <% events.limit(10).each do |event| %>
+              <li class="px-4 py-4 sm:px-6">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                               <%= event.status == 'processed' ? 'bg-green-100 text-green-800' : 
+                                   event.status == 'failed' ? 'bg-red-100 text-red-800' : 
+                                   'bg-yellow-100 text-yellow-800' %>">
+                      <%= event.status %>
+                    </span>
+                    <p class="ml-4 text-sm font-medium text-gray-900">
+                      <%= event.event_type %>
+                    </p>
+                  </div>
+                  <p class="text-sm text-gray-500">
+                    <%= event.created_at.strftime("%b %d at %I:%M %p") %>
+                  </p>
+                </div>
+                <% if event.error_message.present? %>
+                  <p class="mt-2 text-sm text-red-600">
+                    <%= event.error_message %>
+                  </p>
+                <% end %>
+              </li>
+            <% end %>
+          </ul>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+</div>

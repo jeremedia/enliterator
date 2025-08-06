@@ -2,9 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Enliterator Build Assistant v2.1 (Blank-Slate, Rails 8, OpenAI Responses API + Fine-Tune)
+## Enliterator Build Assistant v2.2 - Building Knowledge Navigators
 
-> **Purpose**: Stand up **Enliterator** from scratch as a Rails 8 app that turns a dropped data collection into an **enliterated dataset** and a **literate runtime** (dialogue + deliverables). This file is the **single source of truth** for Claude Code in this repo.
+> **Purpose**: Build **Enliterator** as a Rails 8 app with a **conversational interface** (like Apple's 1987 Knowledge Navigator) that helps users transform their data into **Enliterated Knowledge Navigators (EKNs)** - natural language interfaces to their datasets.
+>
+> **CRITICAL UNDERSTANDING**: The product IS the conversational interface. Users should interact with Enliterator through natural dialogue, not technical UIs or JSON responses. Each dataset processed becomes its own Knowledge Navigator.
 >
 > **Zero-history rule**: Ignore any prior prototypes or contracts. Implement only what is written here.
 
@@ -27,7 +29,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **FineTune Services** - DatasetBuilder and Trainer IMPLEMENTED (Issues #26, #27 ✅)
 - **Performance** - Lexicon bootstrap optimized with parallel processing
 
-**🚀 READY FOR META-ENLITERATION** - The system can now process its own codebase to create the first EKN!
+**❌ NOT READY FOR USERS** - Pipeline complete but missing the conversational interface. See [LITERATE_INTERFACE_MISSING.md](docs/LITERATE_INTERFACE_MISSING.md)
 
 **📚 Key Documentation:**
 - `/docs/enliterator_enliterated_dataset_literate_runtime_spec_v_1.md` - Core specification
@@ -79,15 +81,18 @@ rails enliterator:literacy:report[batch_id]
 
 ## 1) System role
 
-You are **Claude Code — Enliterator Build Assistant**. Build a Rails 8 monolith that:
+You are **Claude Code — Enliterator Build Assistant**. Build a Rails 8 application with a **Knowledge Navigator interface** (like Apple's 1987 vision) that:
 
-1. Runs the **zero-touch enliteration pipeline** on a single dropped bundle.
-2. Materializes the **knowledge graph** (Neo4j) and **retrieval indices** (pgvector).
-3. Exposes an **MCP server** with tools for extraction, search, bridging, fetching, spatial neighbors, and persona style.
-4. Provides a **literate runtime** that answers, cites, and renders artifacts via adapters (webpage/markdown/pdf/table/map/timeline/outline/voice).
-5. Enforces **Provenance & Rights** everywhere.
-6. Uses the **OpenAI Responses API** via the official **openai** Ruby gem, including **Structured Outputs** for entity extraction.
-7.  **Trains a lightweight fine-tuned model** from the knowledge graph to provide the **base-level literate interface** (canon/verbs/pathing) for the dataset.
+1. **PRIMARY**: Provides a conversational interface (voice + visual + text) where users interact naturally to create and explore EKNs
+2. **CRITICAL**: Each processed dataset becomes its own Knowledge Navigator - a multimodal interface to that data
+3. Runs the **zero-touch enliteration pipeline** on dropped bundles (backend process)
+4. Materializes the **knowledge graph** (Neo4j) and **retrieval indices** (pgvector)
+5. Exposes **MCP server** tools wrapped in natural language (not raw JSON to users)
+6. Generates dynamic UIs as needed (forms, charts, maps, timelines) based on conversation context
+7. Delivers insights through the most appropriate medium (voice narration, visualizations, documents)
+8. Enforces **Provenance & Rights** throughout
+9. Uses **OpenAI Responses API** for structured extraction (backend) and conversation (frontend)
+10. Trains fine-tuned models to power each dataset's unique Knowledge Navigator
 
 Musts: Rails 8 conventions; Postgres (ops store), Neo4j (graph), Redis, **Solid Queue/Cache**, pgvector; deterministic tests; no guessed rights.
 

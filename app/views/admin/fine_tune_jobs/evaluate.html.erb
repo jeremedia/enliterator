@@ -1,0 +1,191 @@
+<div class="min-h-screen bg-gray-50" data-controller="model-evaluator" 
+     data-model-evaluator-job-id-value="<%= @job.id %>"
+     data-model-evaluator-base-model-value="<%= @base_model %>"
+     data-model-evaluator-fine-tuned-model-value="<%= @fine_tuned_model %>">
+  
+  <!-- Header -->
+  <div class="bg-white shadow-sm border-b">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center py-4">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">Model Evaluation</h1>
+          <p class="text-sm text-gray-500">Compare base model with fine-tuned model</p>
+        </div>
+        <div class="flex space-x-2">
+          <%= link_to "← Back to Job", admin_fine_tune_job_path(@job), 
+              class: "px-4 py-2 text-sm text-gray-700 hover:text-gray-900" %>
+          <button data-action="click->model-evaluator#clearConversation" 
+                  class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm font-medium">
+            Clear Conversation
+          </button>
+          <button data-action="click->model-evaluator#exportConversation" 
+                  class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">
+            Export
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- System Prompt Section -->
+  <div class="bg-white border-b">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <details open class="group">
+        <summary class="flex items-center justify-between cursor-pointer">
+          <h2 class="text-lg font-medium text-gray-900">System Prompt</h2>
+          <svg class="w-5 h-5 text-gray-500 transform transition-transform group-open:rotate-180" 
+               fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </summary>
+        <div class="mt-3">
+          <textarea data-model-evaluator-target="systemPrompt"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono"
+                    rows="4"
+                    placeholder="Enter system prompt for both models..."><%= @system_prompt %></textarea>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- Main Content Area -->
+  <div class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <!-- Chat Columns -->
+    <div class="grid grid-cols-2 gap-6 h-[calc(100vh-380px)]">
+      
+      <!-- Base Model Column -->
+      <div class="bg-white rounded-lg shadow-md flex flex-col">
+        <div class="px-4 py-3 border-b bg-gray-50 rounded-t-lg">
+          <h3 class="font-semibold text-gray-900">Base Model</h3>
+          <p class="text-xs text-gray-500 mt-1 font-mono"><%= @base_model %></p>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto p-4" data-model-evaluator-target="baseMessages">
+          <div class="text-gray-400 text-sm text-center py-8">
+            No messages yet. Start a conversation below.
+          </div>
+        </div>
+        
+        <div class="px-4 py-2 border-t bg-gray-50 rounded-b-lg">
+          <div class="flex items-center justify-between text-xs text-gray-500">
+            <span data-model-evaluator-target="baseStatus">Ready</span>
+            <span data-model-evaluator-target="baseMetrics"></span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Fine-Tuned Model Column -->
+      <div class="bg-white rounded-lg shadow-md flex flex-col">
+        <div class="px-4 py-3 border-b bg-blue-50 rounded-t-lg">
+          <h3 class="font-semibold text-gray-900">Fine-Tuned Model</h3>
+          <p class="text-xs text-gray-500 mt-1 font-mono"><%= @fine_tuned_model %></p>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto p-4" data-model-evaluator-target="fineTunedMessages">
+          <div class="text-gray-400 text-sm text-center py-8">
+            No messages yet. Start a conversation below.
+          </div>
+        </div>
+        
+        <div class="px-4 py-2 border-t bg-blue-50 rounded-b-lg">
+          <div class="flex items-center justify-between text-xs text-gray-500">
+            <span data-model-evaluator-target="fineTunedStatus">Ready</span>
+            <span data-model-evaluator-target="fineTunedMetrics"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Section -->
+    <div class="mt-6 bg-white rounded-lg shadow-md p-4">
+      <div class="flex space-x-3">
+        <textarea data-model-evaluator-target="userMessage"
+                  data-action="keydown.cmd+enter->model-evaluator#sendMessage keydown.ctrl+enter->model-evaluator#sendMessage"
+                  class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  rows="3"
+                  placeholder="Enter your message... (Cmd+Enter to send)"></textarea>
+        
+        <div class="flex flex-col space-y-2">
+          <button data-action="click->model-evaluator#sendMessage"
+                  data-model-evaluator-target="sendButton"
+                  class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+            Send to Both
+          </button>
+          
+          <select data-model-evaluator-target="temperature"
+                  class="px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500">
+            <option value="0">Temp: 0</option>
+            <option value="0.3">Temp: 0.3</option>
+            <option value="0.5">Temp: 0.5</option>
+            <option value="0.7" selected>Temp: 0.7</option>
+            <option value="1.0">Temp: 1.0</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Message Templates (hidden, for JavaScript cloning) -->
+<template id="user-message-template">
+  <div class="mb-4">
+    <div class="flex items-start space-x-2">
+      <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm font-medium">U</div>
+      <div class="flex-1">
+        <div class="bg-gray-100 rounded-lg px-3 py-2">
+          <p class="text-sm text-gray-800 whitespace-pre-wrap message-content"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<template id="assistant-message-template">
+  <div class="mb-4">
+    <div class="flex items-start space-x-2">
+      <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">AI</div>
+      <div class="flex-1">
+        <div class="bg-blue-50 rounded-lg px-3 py-2">
+          <p class="text-sm text-gray-800 whitespace-pre-wrap message-content"></p>
+        </div>
+        <div class="mt-1 flex items-center space-x-3 text-xs text-gray-500">
+          <span class="response-time"></span>
+          <span class="token-count"></span>
+          <button class="copy-button hover:text-gray-700" data-action="click->model-evaluator#copyMessage">
+            Copy
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<template id="loading-message-template">
+  <div class="mb-4">
+    <div class="flex items-start space-x-2">
+      <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">AI</div>
+      <div class="flex-1">
+        <div class="bg-blue-50 rounded-lg px-3 py-2">
+          <div class="flex space-x-1">
+            <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
+            <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
+            <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<template id="error-message-template">
+  <div class="mb-4">
+    <div class="flex items-start space-x-2">
+      <div class="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white text-sm font-medium">!</div>
+      <div class="flex-1">
+        <div class="bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          <p class="text-sm text-red-800 error-content"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
