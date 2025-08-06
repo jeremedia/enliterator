@@ -1,0 +1,204 @@
+<div class="container mx-auto px-4 py-8" data-turbo-permanent>
+  <div class="mb-8">
+    <%= link_to "← Back to Pipeline Runs", pipeline_runs_path, 
+                class: "text-blue-600 hover:text-blue-800" %>
+  </div>
+
+  <div id="pipeline_run_<%= @pipeline_run.id %>" 
+       data-controller="pipeline-monitor"
+       data-pipeline-monitor-run-id-value="<%= @pipeline_run.id %>"
+       data-pipeline-monitor-refresh-value="5000">
+    
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+      <div class="flex justify-between items-start mb-6">
+        <div>
+          <h1 class="text-3xl font-bold mb-2">Pipeline Run #<%= @pipeline_run.id %></h1>
+          <p class="text-gray-600">
+            EKN: <span class="font-medium"><%= @pipeline_run.ekn.name %></span> | 
+            Batch: #<%= @pipeline_run.ingest_batch_id %>
+          </p>
+        </div>
+        
+        <div class="flex gap-2">
+          <% case @pipeline_run.status %>
+          <% when 'running' %>
+            <%= button_to "⏸ Pause", pause_pipeline_run_path(@pipeline_run), 
+                          method: :post,
+                          class: "bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded" %>
+          <% when 'paused', 'failed' %>
+            <% if @pipeline_run.can_retry? %>
+              <%= button_to "▶️ Resume", resume_pipeline_run_path(@pipeline_run), 
+                            method: :post,
+                            class: "bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded" %>
+            <% end %>
+          <% end %>
+          
+          <%= link_to "📝 View Logs", logs_pipeline_run_path(@pipeline_run), 
+                      class: "bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded" %>
+        </div>
+      </div>
+      
+      <!-- Status Overview -->
+      <div class="grid grid-cols-4 gap-4 mb-6">
+        <div class="bg-gray-50 p-4 rounded">
+          <div class="text-sm text-gray-600">Status</div>
+          <div class="text-xl font-bold <%= status_color_class(@pipeline_run.status) %>">
+            <%= @pipeline_run.status.upcase %>
+          </div>
+        </div>
+        
+        <div class="bg-gray-50 p-4 rounded">
+          <div class="text-sm text-gray-600">Current Stage</div>
+          <div class="text-xl font-bold">
+            <%= @status[:stage_number] %>
+          </div>
+          <div class="text-sm">
+            <%= @pipeline_run.current_stage&.humanize %>
+          </div>
+        </div>
+        
+        <div class="bg-gray-50 p-4 rounded">
+          <div class="text-sm text-gray-600">Progress</div>
+          <div class="text-xl font-bold">
+            <%= @status[:progress_percentage] %>%
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+            <div class="bg-blue-600 h-2 rounded-full transition-all duration-500" 
+                 style="width: <%= @status[:progress_percentage] %>%"></div>
+          </div>
+        </div>
+        
+        <div class="bg-gray-50 p-4 rounded">
+          <div class="text-sm text-gray-600">Duration</div>
+          <div class="text-xl font-bold">
+            <%= @status[:duration_seconds] %>s
+          </div>
+        </div>
+      </div>
+      
+      <!-- Stage Progress Grid -->
+      <div class="mb-6">
+        <h2 class="text-xl font-semibold mb-4">Stage Progress</h2>
+        <div class="grid grid-cols-3 gap-4">
+          <% EknPipelineRun::PIPELINE_STAGES.each do |num, info| %>
+            <% stage_status = @pipeline_run.stage_statuses[info[:name]] %>
+            <div class="border rounded-lg p-4 <%= stage_status_class(stage_status) %>">
+              <div class="flex justify-between items-start mb-2">
+                <div>
+                  <div class="font-medium">
+                    Stage <%= num %>: <%= info[:name].humanize %>
+                  </div>
+                  <div class="text-sm text-gray-600">
+                    <%= info[:description] %>
+                  </div>
+                </div>
+                <div>
+                  <% case stage_status %>
+                  <% when 'completed' %>
+                    <span class="text-green-600">✅</span>
+                  <% when 'running' %>
+                    <span class="text-blue-600 animate-pulse">🔄</span>
+                  <% when 'failed' %>
+                    <span class="text-red-600">❌</span>
+                  <% when nil, 'pending' %>
+                    <span class="text-gray-400">⏳</span>
+                  <% end %>
+                </div>
+              </div>
+              
+              <% if @pipeline_run.stage_metrics[info[:name]].present? %>
+                <div class="text-xs text-gray-500 mt-2">
+                  <% @pipeline_run.stage_metrics[info[:name]].each do |key, value| %>
+                    <div><%= key.humanize %>: <%= value %></div>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+      
+      <!-- Metrics -->
+      <% if @status[:metrics].present? %>
+        <div class="mb-6">
+          <h2 class="text-xl font-semibold mb-4">Metrics</h2>
+          <div class="grid grid-cols-4 gap-4">
+            <div class="bg-blue-50 p-4 rounded">
+              <div class="text-sm text-gray-600">Items Processed</div>
+              <div class="text-2xl font-bold text-blue-600">
+                <%= @status[:metrics][:items_processed] || 0 %>
+              </div>
+            </div>
+            
+            <div class="bg-green-50 p-4 rounded">
+              <div class="text-sm text-gray-600">Nodes Created</div>
+              <div class="text-2xl font-bold text-green-600">
+                <%= @status[:metrics][:nodes_created] || 0 %>
+              </div>
+            </div>
+            
+            <div class="bg-purple-50 p-4 rounded">
+              <div class="text-sm text-gray-600">Relationships</div>
+              <div class="text-2xl font-bold text-purple-600">
+                <%= @status[:metrics][:relationships_created] || 0 %>
+              </div>
+            </div>
+            
+            <div class="bg-yellow-50 p-4 rounded">
+              <div class="text-sm text-gray-600">Literacy Score</div>
+              <div class="text-2xl font-bold text-yellow-600">
+                <%= @status[:metrics][:literacy_score] || 'N/A' %>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+      
+      <!-- Latest Activity -->
+      <div class="mb-6">
+        <h2 class="text-xl font-semibold mb-4">Latest Activity</h2>
+        <div class="bg-gray-50 rounded-lg p-4 font-mono text-sm">
+          <% if @logs.any? %>
+            <% @logs.each do |log_line| %>
+              <div class="mb-1"><%= log_line %></div>
+            <% end %>
+          <% else %>
+            <div class="text-gray-500">No activity yet...</div>
+          <% end %>
+        </div>
+      </div>
+      
+      <!-- Error Details -->
+      <% if @pipeline_run.error_message.present? %>
+        <div class="mb-6">
+          <h2 class="text-xl font-semibold mb-4 text-red-600">Error Details</h2>
+          <div class="bg-red-50 rounded-lg p-4">
+            <div class="font-medium mb-2">Failed at: <%= @pipeline_run.failed_stage %></div>
+            <div class="text-sm"><%= @pipeline_run.error_message %></div>
+            <% if @pipeline_run.error_details.present? %>
+              <details class="mt-2">
+                <summary class="cursor-pointer text-sm text-red-600">Show details</summary>
+                <pre class="mt-2 text-xs overflow-x-auto"><%= JSON.pretty_generate(@pipeline_run.error_details) %></pre>
+              </details>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+      
+      <!-- Next Action -->
+      <div class="bg-blue-50 rounded-lg p-4">
+        <div class="text-sm text-gray-600 mb-1">Suggested Next Action:</div>
+        <code class="text-sm"><%= @status[:next_action] %></code>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Auto-refresh for running pipelines
+  <% if @pipeline_run.running? %>
+    setTimeout(() => {
+      Turbo.visit(window.location.href, { action: 'replace' })
+    }, 5000);
+  <% end %>
+</script>

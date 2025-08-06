@@ -22,6 +22,8 @@ class Log < ApplicationRecord
 
   has_many :log_items, -> { order(num: :desc) }, dependent: :delete_all
 
+  before_validation :set_uuid, on: :create
+
   def clear
     log_items.delete_all
   end
@@ -32,5 +34,11 @@ class Log < ApplicationRecord
 
   def log_lines
     log_items.map(&:log_line)
+  end
+
+  private
+
+  def set_uuid
+    self.uuid ||= SecureRandom.uuid
   end
 end

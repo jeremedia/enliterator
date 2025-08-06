@@ -20,6 +20,15 @@ gem "tailwindcss-rails"
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 # gem "bcrypt", "~> 3.1.7"
 
+# State machine for pipeline orchestration
+gem "aasm", "~> 5.5"
+
+# Positioning gem for ordered records
+gem "positioning"
+
+# Awesome print for better debugging output
+gem "awesome_print"
+
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 

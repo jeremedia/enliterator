@@ -19,14 +19,19 @@ class IngestItem < ApplicationRecord
   }, prefix: true
   
   # Media type categories
+  # These types determine how content is processed through the pipeline
   enum :media_type, {
-    text: 'text',
-    image: 'image',
-    audio: 'audio',
-    video: 'video',
-    structured: 'structured',
-    binary: 'binary',
-    unknown: 'unknown'
+    text: 'text',           # Plain text, markdown, documentation
+    code: 'code',           # Source code files (Ruby, Python, JS, etc.)
+    config: 'config',       # Configuration files (YAML, JSON configs, XML configs)
+    data: 'data',           # Data files (CSV, JSON data, XML data)
+    document: 'document',   # Rich documents (PDF, Word, etc.)
+    image: 'image',         # Image files (PNG, JPG, GIF, etc.)
+    audio: 'audio',         # Audio files (MP3, WAV, etc.)
+    video: 'video',         # Video files (MP4, AVI, etc.)
+    structured: 'structured', # Generic structured data (backwards compatibility)
+    binary: 'binary',       # Other binary files
+    unknown: 'unknown'      # Unable to determine type
   }, prefix: true
   
   # Validations

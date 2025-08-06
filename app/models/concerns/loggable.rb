@@ -63,7 +63,7 @@ module Loggable
     ap "<-LOG #{log_entry.id}-> #{log_text}"
     
     # Broadcast progress updates for SchemaRequest logs to SlackChannel UI
-    if self.is_a?(SchemaRequest) && should_broadcast_log_message?(log_text)
+    if defined?(SchemaRequest) && self.is_a?(SchemaRequest) && should_broadcast_log_message?(log_text)
       broadcast_progress_update(format_log_message_for_ui(log_text))
     end
   end

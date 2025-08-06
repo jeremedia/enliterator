@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_06_225750) do
+ActiveRecord::Schema[8.0].define(version: 2025_08_06_231125) do
   create_schema "ekn_11"
   create_schema "ekn_12"
   create_schema "ekn_13"
@@ -47,6 +47,40 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_225750) do
     t.index ["ingest_batch_id"], name: "index_conversations_on_ingest_batch_id"
     t.index ["last_activity_at"], name: "index_conversations_on_last_activity_at"
     t.index ["status"], name: "index_conversations_on_status"
+  end
+
+  create_table "ekn_pipeline_runs", force: :cascade do |t|
+    t.bigint "ekn_id", null: false
+    t.bigint "ingest_batch_id", null: false
+    t.string "status", default: "initialized", null: false
+    t.string "current_stage"
+    t.integer "current_stage_number", default: 0
+    t.jsonb "stage_statuses", default: {}
+    t.jsonb "stage_metrics", default: {}
+    t.datetime "stage_started_at"
+    t.datetime "stage_completed_at"
+    t.datetime "started_at"
+    t.datetime "completed_at"
+    t.integer "total_items_processed", default: 0
+    t.integer "total_nodes_created", default: 0
+    t.integer "total_relationships_created", default: 0
+    t.float "literacy_score"
+    t.string "failed_stage"
+    t.text "error_message"
+    t.jsonb "error_details", default: {}
+    t.integer "retry_count", default: 0
+    t.datetime "last_retry_at"
+    t.jsonb "options", default: {}
+    t.boolean "auto_advance", default: true
+    t.boolean "skip_failed_items", default: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["current_stage"], name: "index_ekn_pipeline_runs_on_current_stage"
+    t.index ["ekn_id", "created_at"], name: "index_ekn_pipeline_runs_on_ekn_id_and_created_at"
+    t.index ["ekn_id", "status"], name: "index_ekn_pipeline_runs_on_ekn_id_and_status"
+    t.index ["ekn_id"], name: "index_ekn_pipeline_runs_on_ekn_id"
+    t.index ["ingest_batch_id"], name: "index_ekn_pipeline_runs_on_ingest_batch_id"
+    t.index ["status"], name: "index_ekn_pipeline_runs_on_status"
   end
 
   create_table "ekns", force: :cascade do |t|
@@ -706,6 +740,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_225750) do
   end
 
   add_foreign_key "conversations", "ingest_batches"
+  add_foreign_key "ekn_pipeline_runs", "ekns"
+  add_foreign_key "ekn_pipeline_runs", "ingest_batches"
   add_foreign_key "emanation_ideas", "emanations"
   add_foreign_key "emanation_ideas", "ideas"
   add_foreign_key "emanation_relationals", "emanations"

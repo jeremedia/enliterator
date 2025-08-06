@@ -2,6 +2,8 @@ GEM
   remote: https://rubygems.org/
   specs:
     Ascii85 (2.0.1)
+    aasm (5.5.1)
+      concurrent-ruby (~> 1.0)
     actioncable (8.0.2)
       actionpack (= 8.0.2)
       activesupport (= 8.0.2)
@@ -93,6 +95,7 @@ GEM
       io-event (~> 1.6, >= 1.6.5)
     async-io (1.43.2)
       async
+    awesome_print (1.9.2)
     aws-eventstream (1.4.0)
     aws-partitions (1.1143.0)
     aws-sdk-core (3.229.0)
@@ -367,6 +370,9 @@ GEM
     pg_search (2.3.7)
       activerecord (>= 6.1)
       activesupport (>= 6.1)
+    positioning (0.4.6)
+      activerecord (>= 6.1)
+      activesupport (>= 6.1)
     pp (0.6.2)
       prettyprint
     prettyprint (0.2.0)
@@ -601,8 +607,10 @@ PLATFORMS
   x86_64-linux-musl
 
 DEPENDENCIES
+  aasm (~> 5.5)
   activegraph (~> 11.4)
   annotate
+  awesome_print
   aws-sdk-s3
   benchmark-ips
   better_errors
@@ -636,6 +644,7 @@ DEPENDENCIES
   pdf-reader
   pg (~> 1.1)
   pg_search
+  positioning
   propshaft
   puma (>= 5.0)
   pundit

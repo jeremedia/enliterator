@@ -33,6 +33,15 @@ Rails.application.routes.draw do
   # Legacy welcome page (remove after transition)
   get "welcome" => "welcome#index"
   
+  # Pipeline Runs monitoring
+  resources :pipeline_runs, only: [:index, :show, :new, :create] do
+    member do
+      post :resume
+      post :pause
+      get :logs
+    end
+  end
+  
   # Admin interface
   namespace :admin do
     resources :openai_settings do

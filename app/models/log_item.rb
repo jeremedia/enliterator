@@ -33,6 +33,7 @@ class LogItem < ApplicationRecord
   DEFAULT_DATA = {}
 
   after_initialize :set_defaults, unless: :persisted?
+  before_validation :set_uuid, on: :create
 
   after_create :broadcast_create
 
@@ -49,5 +50,11 @@ class LogItem < ApplicationRecord
 
   def log_line
     "##{self.num} - #{self.log_label} - #{self.text}"
+  end
+
+  private
+
+  def set_uuid
+    self.uuid ||= SecureRandom.uuid
   end
 end

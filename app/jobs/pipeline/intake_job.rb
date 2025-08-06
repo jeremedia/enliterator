@@ -1,49 +1,149 @@
 # frozen_string_literal: true
 
 module Pipeline
-  # Stage 1: Intake - Bundle discovery and processing
+  # Stage 1: Intake - Process IngestItems and prepare for rights triage
   class IntakeJob < BaseJob
     queue_as :intake
     
-    def perform(bundle_path, options = {})
-      log_progress "Starting intake for bundle: #{bundle_path}"
+    def perform(pipeline_run_id)
+      # BaseJob sets up @pipeline_run, @batch, @ekn
+      super
       
-      # Create pipeline run record
-      pipeline_run = PipelineRun.create!(
-        bundle_path: bundle_path,
-        stage: "intake",
-        started_at: Time.current,
-        options: options
-      )
+      log_progress "Processing intake for #{@batch.ingest_items.count} items"
       
-      # Process the bundle
-      result = Ingest::BundleProcessor.new(bundle_path, pipeline_run: pipeline_run).process
+      processed = 0
+      failed = 0
       
-      # Record results
-      pipeline_run.update!(
-        completed_at: Time.current,
-        status: "completed",
-        metrics: result.metrics,
-        file_count: result.files.count
-      )
-      
-      # Queue next stage for each file
-      result.files.each do |file_info|
-        Pipeline::RightsTriageJob.perform_later(file_info, pipeline_run)
+      @batch.ingest_items.find_each do |item|
+        begin
+          process_item(item)
+          processed += 1
+          
+          # Log progress every 10 items
+          if processed % 10 == 0
+            log_progress "Processed #{processed} items...", level: :debug
+          end
+        rescue => e
+          log_progress "Failed to process item #{item.id}: #{e.message}", level: :warn
+          failed += 1
+          item.update!(triage_status: 'failed', error_message: e.message)
+        end
       end
       
-      log_progress "Completed intake: #{result.files.count} files discovered"
-      track_metric "intake.files_discovered", result.files.count
-      track_metric "intake.duration_ms", (Time.current - pipeline_run.started_at) * 1000
+      log_progress "✅ Intake complete: #{processed} processed, #{failed} failed"
       
-      result
+      # Track metrics
+      track_metric :items_processed, processed
+      track_metric :items_failed, failed
+      track_metric :total_items, @batch.ingest_items.count
+      
+      # Update batch status
+      @batch.update!(status: 'intake_completed')
+    end
+    
+    private
+    
+    def process_item(item)
+      # Determine media type if not set
+      if item.media_type.blank?
+        item.media_type = detect_media_type(item.file_path)
+      end
+      
+      # Calculate file hash if not set
+      if item.file_hash.blank? && File.exist?(item.file_path)
+        item.file_hash = calculate_file_hash(item.file_path)
+      end
+      
+      # Get file size
+      if File.exist?(item.file_path)
+        item.file_size = File.size(item.file_path)
+      end
+      
+      # Mark as ready for triage
+      item.triage_status = 'ready'
+      item.save!
+      
+      log_progress "Item #{item.id}: #{File.basename(item.file_path)} ready for triage", level: :debug
+    end
+    
+    def detect_media_type(file_path)
+      # Use the same detection logic as Pipeline::Orchestrator
+      extension = File.extname(file_path).downcase
+      basename = File.basename(file_path).downcase
+      
+      # First check for specific config file patterns
+      if basename.match?(/^(gemfile|rakefile|dockerfile|makefile|procfile|guardfile|capfile|brewfile)/)
+        return 'config'
+      elsif basename.match?(/\.(yml|yaml)$/) && basename.match?(/(config|settings|database|credentials|secrets)/)
+        return 'config'
+      elsif basename == 'package.json' || basename == 'composer.json' || basename == 'cargo.toml'
+        return 'config'
+      end
+      
+      # Then check by extension
+      case extension
+      # Source code files
+      when '.rb', '.py', '.js', '.ts', '.jsx', '.tsx', '.java', '.go', '.rs', '.cpp', '.c', '.h', 
+           '.php', '.swift', '.kt', '.scala', '.clj', '.ex', '.exs', '.erl', '.hs', '.ml', '.fs'
+        'code'
+      
+      # Documentation and text files  
+      when '.md', '.txt', '.rst', '.adoc', '.org', '.textile', '.rdoc', '.pod', '.man'
+        'text'
+      
+      # Configuration files
+      when '.yml', '.yaml', '.toml', '.ini', '.cfg', '.conf', '.properties', '.env'
+        'config'
+      
+      # Data files
+      when '.json', '.xml', '.csv', '.tsv', '.jsonl', '.ndjson'
+        # Try to distinguish between config and data based on path/name
+        if file_path.include?('/config/') || file_path.include?('/settings/') || 
+           basename.match?(/config|settings|manifest/)
+          'config'
+        else
+          'data'
+        end
+      
+      # Document files
+      when '.pdf', '.doc', '.docx', '.odt', '.rtf', '.tex', '.epub'
+        'document'
+      
+      # Image files
+      when '.jpg', '.jpeg', '.png', '.gif', '.svg', '.ico', '.bmp', '.tiff', '.webp'
+        'image'
+      
+      # Audio files
+      when '.mp3', '.wav', '.ogg', '.m4a', '.flac', '.aac', '.wma'
+        'audio'
+      
+      # Video files
+      when '.mp4', '.mov', '.avi', '.wmv', '.flv', '.mkv', '.webm', '.m4v', '.mpg', '.mpeg'
+        'video'
+      
+      # Binary files
+      when '.exe', '.dll', '.so', '.dylib', '.bin', '.dat', '.db', '.sqlite', '.zip', '.tar', '.gz', '.rar'
+        'binary'
+      
+      else
+        'unknown'
+      end
+    end
+    
+    def calculate_file_hash(file_path)
+      Digest::SHA256.file(file_path).hexdigest
     rescue => e
-      pipeline_run&.update!(
-        status: "failed",
-        error_message: e.message,
-        completed_at: Time.current
-      )
-      raise
+      log_progress "Could not calculate hash for #{file_path}: #{e.message}", level: :warn
+      nil
+    end
+    
+    def collect_stage_metrics
+      {
+        items_processed: @metrics[:items_processed] || 0,
+        items_failed: @metrics[:items_failed] || 0,
+        total_items: @metrics[:total_items] || 0,
+        batch_id: @batch.id
+      }
     end
   end
 end
