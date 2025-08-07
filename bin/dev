@@ -21,6 +21,7 @@ export RUBY_DEBUG_LAZY="true"
 echo "🚀 Starting Enliterator on port $PORT"
 echo "📍 Development: https://$DOMAIN_DEV"
 echo "📍 Production: https://$DOMAIN_PROD (currently pointing to Mac)"
+echo "⚙️  Starting services: Web Server, Tailwind CSS, Solid Queue Worker"
 echo ""
 
 exec foreman start -f Procfile.dev "$@"
