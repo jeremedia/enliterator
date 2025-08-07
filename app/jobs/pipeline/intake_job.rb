@@ -1,13 +1,21 @@
 # frozen_string_literal: true
 
+# PURPOSE: Stage 1 of the 9-stage pipeline - Intake and Discovery
+# This job processes raw file paths from an IngestBatch, reads their content,
+# calculates hashes for deduplication, and prepares items for rights triage.
+# CRITICAL: Must populate content and content_sample fields for downstream stages.
+#
+# Inputs: IngestBatch with file_paths
+# Outputs: IngestItems with content, hashes, and media types ready for Stage 2
+
 module Pipeline
   # Stage 1: Intake - Process IngestItems and prepare for rights triage
   class IntakeJob < BaseJob
     queue_as :intake
     
     def perform(pipeline_run_id)
-      # BaseJob sets up @pipeline_run, @batch, @ekn
-      super
+      # BaseJob sets up @pipeline_run, @batch, @ekn via around_perform
+      # Do NOT call super - BaseJob uses around_perform to wrap this method
       
       log_progress "Processing intake for #{@batch.ingest_items.count} items"
       
@@ -54,9 +62,20 @@ module Pipeline
         item.file_hash = calculate_file_hash(item.file_path)
       end
       
-      # Get file size
+      # Get file size and content
       if File.exist?(item.file_path)
         item.file_size = File.size(item.file_path)
+        
+        # Read file content for rights inference and lexicon extraction
+        begin
+          full_content = File.read(item.file_path, encoding: 'UTF-8', invalid: :replace, undef: :replace)
+          item.content_sample = full_content[0..4999] # First 5000 chars for rights inference
+          item.content = full_content # Store full content for processing
+        rescue => e
+          log_progress "Could not read content from #{item.file_path}: #{e.message}", level: :warn
+          item.content_sample = ""
+          item.content = ""
+        end
       end
       
       # Mark as ready for triage
