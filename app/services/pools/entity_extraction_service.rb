@@ -5,11 +5,11 @@ module Pools
   class EntityAttributes < OpenAI::Helpers::StructuredOutput::BaseModel
     required :label, String, doc: "The name or title of the entity"
     required :abstract, String, nil?: true, doc: "A brief description or abstract (for Ideas)"
-    required :principle_tags, Array, nil?: true, doc: "Principle tags (for Ideas)"
-    required :components, Array, nil?: true, doc: "Component list (for Manifests)"
+    required :principle_tags, OpenAI::ArrayOf[String], nil?: true, doc: "Principle tags (for Ideas)"
+    required :components, OpenAI::ArrayOf[String], nil?: true, doc: "Component list (for Manifests)"
     required :narrative_text, String, nil?: true, doc: "Narrative content (for Experiences)"
     required :goal, String, nil?: true, doc: "The goal or purpose (for Practicals)"
-    required :steps, Array, nil?: true, doc: "Steps or procedures (for Practicals)"
+    required :steps, OpenAI::ArrayOf[String], nil?: true, doc: "Steps or procedures (for Practicals)"
     required :change_note, String, nil?: true, doc: "Description of change (for Evolutionary)"
     required :influence_type, String, nil?: true, doc: "Type of influence (for Emanations)"
     required :relation_type, String, nil?: true, doc: "Type of relation (for Relational)"
@@ -25,8 +25,9 @@ module Pools
   end
 
   class EntityExtractionResult < OpenAI::Helpers::StructuredOutput::BaseModel
-    required :entities, Array, doc: "List of extracted entities"
-    required :extraction_metadata, Hash, doc: "Metadata about the extraction"
+    required :entities, OpenAI::ArrayOf[ExtractedEntity], doc: "List of extracted entities"
+    required :confidence_threshold, Float, nil?: true, doc: "Minimum confidence threshold used"
+    required :lexicon_matches_found, Integer, nil?: true, doc: "Number of lexicon matches found"
   end
 
   # Service to extract entities for the Ten Pool Canon using OpenAI Responses API
@@ -76,7 +77,12 @@ module Pools
       {
         success: true,
         entities: entities,
-        metadata: parsed_result.extraction_metadata.merge(extraction_metadata)
+        metadata: {
+          confidence_threshold: parsed_result.confidence_threshold,
+          lexicon_matches_found: parsed_result.lexicon_matches_found,
+          entities_count: entities.size,
+          extraction_time: Time.current
+        }.merge(extraction_metadata)
       }
     end
 
@@ -139,9 +145,9 @@ module Pools
     def transform_entities(entities)
       entities.map do |entity|
         {
-          pool_type: entity.pool_type,
+          pool_type: entity.pool_type.downcase,  # Ensure lowercase
           confidence: entity.confidence,
-          attributes: build_attributes(entity.pool_type, entity.attributes),
+          attributes: build_attributes(entity.pool_type.downcase, entity.attributes),
           lexicon_match: entity.lexicon_match,
           source_span: entity.source_span
         }
