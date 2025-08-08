@@ -1,5 +1,34 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: spatials
+#
+#  id                       :bigint           not null, primary key
+#  location_name            :string           not null
+#  sector                   :string
+#  portal                   :string
+#  year                     :integer
+#  coordinates              :jsonb
+#  neighbors                :jsonb
+#  placement_type           :string
+#  description              :text
+#  repr_text                :text             not null
+#  provenance_and_rights_id :bigint           not null
+#  valid_time_start         :datetime         not null
+#  valid_time_end           :datetime
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#
+# Indexes
+#
+#  index_spatials_on_location_name                        (location_name)
+#  index_spatials_on_portal                               (portal)
+#  index_spatials_on_provenance_and_rights_id             (provenance_and_rights_id)
+#  index_spatials_on_sector                               (sector)
+#  index_spatials_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
+#  index_spatials_on_year                                 (year)
+#
 # Spatial Pool - Represents location and spatial information
 # Used for domains that have physical or conceptual spatial dimensions
 class Spatial < ApplicationRecord

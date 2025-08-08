@@ -47,8 +47,8 @@ module Graph
           create_existence_constraint(label, 'publishability')
           create_existence_constraint(label, 'training_eligibility')
         when 'Lexicon'
-          # Backfill existing nodes before creating constraint
-          backfill_canonical_description
+          # The backfill must not run in a schema transaction.
+          # AssemblyJob runs a separate data transaction to backfill before calling setup.
           create_existence_constraint(label, 'canonical_description')
         end
         

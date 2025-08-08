@@ -1,5 +1,37 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: provenance_and_rights
+#
+#  id                   :bigint           not null, primary key
+#  source_ids           :jsonb            not null
+#  source_owner         :string
+#  collectors           :jsonb
+#  collection_method    :string           not null
+#  consent_status       :integer          default("unknown"), not null
+#  license_type         :integer          default("unspecified"), not null
+#  custom_terms         :jsonb
+#  publishability       :boolean          default(FALSE), not null
+#  training_eligibility :boolean          default(FALSE), not null
+#  embargo_until        :datetime
+#  quarantined          :boolean          default(FALSE), not null
+#  quarantine_reason    :string
+#  valid_time_start     :datetime         not null
+#  valid_time_end       :datetime
+#  created_at           :datetime         not null
+#  updated_at           :datetime         not null
+#
+# Indexes
+#
+#  idx_on_valid_time_start_valid_time_end_afad4edcbc    (valid_time_start,valid_time_end)
+#  index_p_and_r_on_publish_and_train                   (publishability,training_eligibility)
+#  index_provenance_and_rights_on_embargo_until         (embargo_until)
+#  index_provenance_and_rights_on_publishability        (publishability)
+#  index_provenance_and_rights_on_quarantined           (quarantined)
+#  index_provenance_and_rights_on_source_ids            (source_ids) USING gin
+#  index_provenance_and_rights_on_training_eligibility  (training_eligibility)
+#
 # Model for tracking source, attribution, consent, and derived rights
 class ProvenanceAndRights < ApplicationRecord
   include TimeTrackable

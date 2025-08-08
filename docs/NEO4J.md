@@ -62,7 +62,9 @@ Neo4j Desktop Instance
 ```ruby
 class Ekn < ApplicationRecord
   def neo4j_database_name
-    "ekn-#{id}"  # e.g., "ekn-13" for Meta-Enliterator
+    # Prefer the EKN slug for readability and stability
+    # Falls back to ID if slug is not present
+    "ekn-#{slug.presence || id}"  # e.g., "ekn-meta-enliterator"
   end
 end
 ```

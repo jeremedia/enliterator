@@ -23,5 +23,7 @@ echo "📍 Development: https://$DOMAIN_DEV"
 echo "📍 Production: https://$DOMAIN_PROD (currently pointing to Mac)"
 echo "⚙️  Starting services: Web Server, Tailwind CSS, Solid Queue Worker"
 echo ""
+echo "📘 Docs: Read AGENTS.md and CLAUDE.md for contributor guidance"
+echo "🔎 Neo4j: See docs/NEO4J.md (vectors via Neo4j GenAI)"
 
 exec foreman start -f Procfile.dev "$@"

@@ -1,5 +1,54 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: ingest_items
+#
+#  id                       :bigint           not null, primary key
+#  ingest_batch_id          :bigint           not null
+#  provenance_and_rights_id :bigint
+#  pool_item_type           :string
+#  pool_item_id             :bigint
+#  source_hash              :string           not null
+#  file_path                :string           not null
+#  source_type              :string
+#  media_type               :string           default("unknown"), not null
+#  triage_status            :string           default("pending"), not null
+#  size_bytes               :bigint
+#  content_sample           :text
+#  metadata                 :jsonb
+#  triage_metadata          :jsonb
+#  triage_error             :string
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#  lexicon_status           :string           default("pending")
+#  lexicon_metadata         :jsonb
+#  content                  :text
+#  pool_status              :string           default("pending")
+#  pool_metadata            :jsonb
+#  graph_status             :string
+#  graph_metadata           :jsonb
+#  embedding_status         :string
+#  embedding_metadata       :jsonb
+#  training_eligible        :boolean
+#  publishable              :boolean
+#  quarantined              :boolean
+#  quarantine_reason        :string
+#  file_hash                :string
+#  file_size                :integer
+#
+# Indexes
+#
+#  index_ingest_items_on_ingest_batch_id                  (ingest_batch_id)
+#  index_ingest_items_on_lexicon_status                   (lexicon_status)
+#  index_ingest_items_on_media_type                       (media_type)
+#  index_ingest_items_on_pool_item                        (pool_item_type,pool_item_id)
+#  index_ingest_items_on_pool_item_type_and_pool_item_id  (pool_item_type,pool_item_id)
+#  index_ingest_items_on_pool_status                      (pool_status)
+#  index_ingest_items_on_provenance_and_rights_id         (provenance_and_rights_id)
+#  index_ingest_items_on_source_hash                      (source_hash) UNIQUE
+#  index_ingest_items_on_triage_status                    (triage_status)
+#
 # Represents an individual item in an ingest batch
 class IngestItem < ApplicationRecord
   belongs_to :ingest_batch

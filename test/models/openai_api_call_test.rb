@@ -1,5 +1,76 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: api_calls
+#
+#  id                 :bigint           not null, primary key
+#  type               :string           not null
+#  service_name       :string           not null
+#  endpoint           :string           not null
+#  model_used         :string
+#  model_version      :string
+#  request_params     :jsonb
+#  response_data      :jsonb
+#  response_headers   :jsonb
+#  prompt_tokens      :integer
+#  completion_tokens  :integer
+#  total_tokens       :integer
+#  cached_tokens      :integer
+#  reasoning_tokens   :integer
+#  image_count        :integer
+#  image_size         :string
+#  image_quality      :string
+#  audio_duration     :float
+#  voice_id           :string
+#  input_cost         :decimal(12, 8)
+#  output_cost        :decimal(12, 8)
+#  total_cost         :decimal(12, 8)
+#  currency           :string           default("USD")
+#  response_time_ms   :float
+#  processing_time_ms :float
+#  retry_count        :integer          default(0)
+#  queue_time_ms      :float
+#  status             :string           default("pending"), not null
+#  error_code         :string
+#  error_message      :text
+#  error_details      :jsonb
+#  trackable_type     :string
+#  trackable_id       :bigint
+#  user_id            :bigint
+#  request_id         :string
+#  batch_id           :string
+#  response_cache_key :string
+#  session_id         :string
+#  metadata           :jsonb
+#  cached_response    :boolean          default(FALSE)
+#  environment        :string
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  ekn_id             :bigint
+#
+# Indexes
+#
+#  idx_api_calls_trackable                                    (trackable_type,trackable_id)
+#  index_api_calls_on_batch_id                                (batch_id)
+#  index_api_calls_on_created_at                              (created_at)
+#  index_api_calls_on_ekn_id                                  (ekn_id)
+#  index_api_calls_on_ekn_id_and_created_at                   (ekn_id,created_at)
+#  index_api_calls_on_ekn_id_and_endpoint                     (ekn_id,endpoint)
+#  index_api_calls_on_model_used                              (model_used)
+#  index_api_calls_on_request_id                              (request_id)
+#  index_api_calls_on_service_name                            (service_name)
+#  index_api_calls_on_service_name_and_status_and_created_at  (service_name,status,created_at)
+#  index_api_calls_on_session_id                              (session_id)
+#  index_api_calls_on_session_id_and_created_at               (session_id,created_at)
+#  index_api_calls_on_status                                  (status)
+#  index_api_calls_on_trackable                               (trackable_type,trackable_id)
+#  index_api_calls_on_type                                    (type)
+#  index_api_calls_on_type_and_created_at                     (type,created_at)
+#  index_api_calls_on_type_and_model_used_and_created_at      (type,model_used,created_at)
+#  index_api_calls_on_user_id                                 (user_id)
+#  index_api_calls_on_user_id_and_created_at                  (user_id,created_at)
+#
 require 'test_helper'
 
 class OpenaiApiCallTest < ActiveSupport::TestCase

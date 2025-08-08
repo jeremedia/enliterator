@@ -9,61 +9,69 @@ module Neo4j
       @driver = Graph::Connection.instance.driver
     end
     
-    # Initialize and configure the OpenAI provider
+    # Initialize provider if supported; otherwise, fall back to per-call token
     def configure_provider
       api_key = ENV['OPENAI_API_KEY']
       raise "OPENAI_API_KEY not set" unless api_key
-      
+
       session = @driver.session(database: @database_name)
-      
-      # Note: GenAI config is global, not per-database
-      # So we configure it once for the entire Neo4j instance
-      result = session.run(<<~CYPHER)
-        CALL genai.config.init({
-          provider: 'openai',
-          apiKey: $api_key
-        })
-      CYPHER
-      
-      # Set default model
-      session.run(<<~CYPHER)
-        CALL genai.config.set({
-          provider: 'openai',
-          model: 'text-embedding-3-small'
-        })
-      CYPHER
-      
-      session.close
-      Rails.logger.info "Configured OpenAI provider for Neo4j GenAI"
-      true
-    rescue => e
-      Rails.logger.error "Failed to configure OpenAI provider: #{e.message}"
-      Rails.logger.error "Error class: #{e.class}"
-      Rails.logger.error "Backtrace: #{e.backtrace.first(5).join("\n")}"
-      puts "ERROR: #{e.message}"
-      session&.close
-      false
+      # Detect availability of config procedures
+      proc_check = session.run("SHOW PROCEDURES YIELD name RETURN collect(name) AS names").single
+      names = (proc_check && proc_check[:names]) || []
+
+      if names.include?('genai.config.init')
+        # Newer GenAI supports global config
+        session.run(<<~CYPHER, api_key: api_key)
+          CALL genai.config.init({ provider: 'openai', apiKey: $api_key })
+        CYPHER
+        session.run("CALL genai.config.set({ provider: 'openai', model: 'text-embedding-3-small' })")
+        Rails.logger.info "Configured OpenAI provider via genai.config.*"
+        session.close
+        return true
+      end
+
+      # No global config available; verify encodeBatch exists and works with token
+      has_encode_batch = names.include?('genai.vector.encodeBatch')
+      unless has_encode_batch
+        Rails.logger.warn "Neo4j GenAI encodeBatch procedure not available"
+        session.close
+        return false
+      end
+
+      # Probe a simple embedding call with token passed inline (common in older GenAI builds)
+      begin
+        session.run(<<~CYPHER, text: 'hello world', token: api_key)
+          CALL genai.vector.encodeBatch([$text], 'OpenAI', { token: $token, model: 'text-embedding-3-small' })
+          YIELD index, vector
+          RETURN size(vector) AS dims
+        CYPHER
+        Rails.logger.info "GenAI encodeBatch available; using per-call token"
+        true
+      rescue => e
+        Rails.logger.warn "GenAI encodeBatch probe failed: #{e.message}"
+        false
+      ensure
+        session&.close
+      end
     end
     
     # Verify provider is configured
     def verify_provider
       session = @driver.session(database: @database_name)
-      
-      result = session.run(<<~CYPHER)
-        CALL genai.config.show()
-        YIELD provider, isConfigured, models
-        WHERE provider = 'openai'
-        RETURN isConfigured, models
-      CYPHER
-      
-      config = result.single
-      unless config && config[:isConfigured]
-        raise "OpenAI provider not configured. Run configure_provider first."
-      end
-      
-      Rails.logger.info "OpenAI models available: #{config[:models]}"
+      names = session.run("SHOW PROCEDURES YIELD name RETURN collect(name) AS names").single[:names] rescue []
       session.close
-      config
+      {
+        has_config: names.include?('genai.config.init'),
+        has_encode_batch: names.include?('genai.vector.encodeBatch'),
+        providers: begin
+          s = @driver.session(database: @database_name)
+          r = s.run("CALL genai.vector.listEncodingProviders() YIELD name RETURN collect(name) AS providers").single
+          s.close
+          (r && r[:providers]) || []
+        rescue
+          []
+        end
+      }
     rescue => e
       Rails.logger.error "Failed to verify provider: #{e.message}"
       session&.close
@@ -140,14 +148,16 @@ module Neo4j
       
       session = @driver.session(database: @database_name)
       
-      result = session.run(<<~CYPHER, text: text)
-        CALL genai.vector.encode($text, {
-          provider: 'openai',
+      # Use single-text encode if available; pass token inline when needed
+      query = <<~CYPHER
+        CALL genai.vector.encode($text, 'OpenAI', {
+          token: $token,
           model: 'text-embedding-3-small'
-        }) 
-        YIELD embedding
-        RETURN embedding
+        }) YIELD vector
+        RETURN vector AS embedding
       CYPHER
+
+      result = session.run(query, text: text, token: ENV['OPENAI_API_KEY'])
       
       embedding = result.single[:embedding]
       session.close

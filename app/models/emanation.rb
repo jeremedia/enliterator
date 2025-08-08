@@ -1,5 +1,30 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: emanations
+#
+#  id                       :bigint           not null, primary key
+#  influence_type           :string           not null
+#  target_context           :text
+#  pathway                  :text
+#  evidence                 :text
+#  repr_text                :text             not null
+#  provenance_and_rights_id :bigint           not null
+#  valid_time_start         :datetime         not null
+#  valid_time_end           :datetime
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#  strength                 :float
+#  evidence_refs            :jsonb
+#  temporal_extent          :jsonb
+#
+# Indexes
+#
+#  index_emanations_on_influence_type                       (influence_type)
+#  index_emanations_on_provenance_and_rights_id             (provenance_and_rights_id)
+#  index_emanations_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
+#
 # Emanation pool: influences, consequences, and effects
 class Emanation < ApplicationRecord
   include HasRights

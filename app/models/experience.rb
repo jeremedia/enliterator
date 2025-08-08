@@ -1,5 +1,30 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: experiences
+#
+#  id                       :bigint           not null, primary key
+#  agent_label              :string
+#  context                  :text
+#  narrative_text           :text             not null
+#  sentiment                :string
+#  observed_at              :datetime         not null
+#  repr_text                :text             not null
+#  provenance_and_rights_id :bigint           not null
+#  actor_id                 :bigint
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#
+# Indexes
+#
+#  index_experiences_on_actor_id                  (actor_id)
+#  index_experiences_on_agent_label               (agent_label)
+#  index_experiences_on_narrative_trgm            (narrative_text) USING gin
+#  index_experiences_on_observed_at               (observed_at)
+#  index_experiences_on_provenance_and_rights_id  (provenance_and_rights_id)
+#  index_experiences_on_sentiment                 (sentiment)
+#
 # Captures lived outcomes and perceptions
 class Experience < ApplicationRecord
   include HasRights

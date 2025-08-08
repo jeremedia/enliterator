@@ -1,4 +1,4 @@
-module EmbeddingServices
+module Embedding
   class BatchMonitorJob < ApplicationJob
     queue_as :embeddings
     

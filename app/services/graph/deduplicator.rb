@@ -7,6 +7,7 @@ module Graph
       @tx = transaction
       @resolved_count = 0
       @merge_details = []
+      @apoc_available = apoc_merge_available?
     end
     
     def resolve_all
@@ -122,41 +123,63 @@ module Graph
     def merge_nodes(label, keep_id, remove_id, reason)
       Rails.logger.info "Merging #{label} nodes: keeping #{keep_id}, removing #{remove_id} (#{reason})"
       
-      # Transfer all relationships from remove_id to keep_id
-      transfer_query = <<~CYPHER
-        MATCH (keep:#{label} {id: $keep_id})
-        MATCH (remove:#{label} {id: $remove_id})
-        OPTIONAL MATCH (remove)-[r]->(target)
-        FOREACH (ignored IN CASE WHEN r IS NOT NULL THEN [1] ELSE [] END |
-          MERGE (keep)-[new_r:#{relationship_type_variable('r')}]->(target)
-          SET new_r = properties(r)
-        )
-        WITH keep, remove
-        OPTIONAL MATCH (source)-[r]->(remove)
-        FOREACH (ignored IN CASE WHEN r IS NOT NULL THEN [1] ELSE [] END |
-          MERGE (source)-[new_r:#{relationship_type_variable('r')}]->(keep)
-          SET new_r = properties(r)
-        )
-        RETURN count(*) as relationships_transferred
-      CYPHER
+      transfer_query = if @apoc_available
+        <<~CYPHER
+          MATCH (keep:#{label} {id: $keep_id})
+          MATCH (remove:#{label} {id: $remove_id})
+          OPTIONAL MATCH (remove)-[r_out]->(target)
+          WITH keep, remove, collect({r: r_out, target: target}) AS outgoing
+          UNWIND outgoing AS o
+          WITH keep, remove, o.r AS r, o.target AS target
+          WHERE r IS NOT NULL
+          CALL apoc.merge.relationship(keep, type(r), {}, properties(r), target) YIELD rel
+          WITH keep, remove
+          OPTIONAL MATCH (source)-[r_in]->(remove)
+          WITH keep, remove, collect({r: r_in, source: source}) AS incoming
+          UNWIND incoming AS i
+          WITH keep, remove, i.r AS r, i.source AS source
+          WHERE r IS NOT NULL
+          CALL apoc.merge.relationship(source, type(r), {}, properties(r), keep) YIELD rel
+          RETURN count(rel) AS relationships_transferred
+        CYPHER
+      else
+        # Fallback: enumerate known relationship types
+        rel_types = begin
+          types = []
+          if defined?(Graph::EdgeLoader::VERB_GLOSSARY)
+            glossary = Graph::EdgeLoader::VERB_GLOSSARY
+            types += glossary.keys
+            types += glossary.values.map { |v| v[:reverse] }.compact
+          end
+          types += %w[has_rights implements]
+          types.map { |t| t.upcase }.uniq
+        end
+
+        outgoing_blocks = rel_types.map do |t|
+          "FOREACH (_ IN CASE WHEN r IS NOT NULL AND type(r)='#{t}' THEN [1] ELSE [] END |\n            MERGE (keep)-[new_r:#{t}]->(target)\n            SET new_r = properties(r)\n          )"
+        end.join("\n")
+
+        incoming_blocks = rel_types.map do |t|
+          "FOREACH (_ IN CASE WHEN r IS NOT NULL AND type(r)='#{t}' THEN [1] ELSE [] END |\n            MERGE (source)-[new_r:#{t}]->(keep)\n            SET new_r = properties(r)\n          )"
+        end.join("\n")
+
+        <<~CYPHER
+          MATCH (keep:#{label} {id: $keep_id})
+          MATCH (remove:#{label} {id: $remove_id})
+          OPTIONAL MATCH (remove)-[r]->(target)
+          #{outgoing_blocks}
+          WITH keep, remove
+          OPTIONAL MATCH (source)-[r]->(remove)
+          #{incoming_blocks}
+          RETURN count(*) as relationships_transferred
+        CYPHER
+      end
       
       # Execute transfer
       @tx.run(transfer_query, keep_id: keep_id, remove_id: remove_id)
       
-      # Merge properties (keep non-null values from both)
-      merge_properties_query = <<~CYPHER
-        MATCH (keep:#{label} {id: $keep_id})
-        MATCH (remove:#{label} {id: $remove_id})
-        SET keep += 
-          CASE 
-            WHEN remove.updated_at > keep.updated_at 
-            THEN properties(remove)
-            ELSE {}
-          END
-        RETURN keep.id
-      CYPHER
-      
-      @tx.run(merge_properties_query, keep_id: keep_id, remove_id: remove_id)
+      # Skip bulk property merging to avoid overwriting unique keys like `id`.
+      # If needed, targeted merges of specific non-identity properties can be added per label.
       
       # Delete the duplicate node
       delete_query = <<~CYPHER
@@ -211,17 +234,22 @@ module Graph
       merge_nodes('Lexicon', keep_id, remove_id, "Same term: #{term}")
     end
     
-    def relationship_type_variable(var_name)
-      # Neo4j doesn't support dynamic relationship types in MERGE
-      # We need to handle this differently
-      "TYPE(#{var_name})"
-    end
+    # No longer needed: dynamic relationship types handled via APOC
     
     def spatial_pool_exists?
       # Check if Spatial nodes exist in the graph
       query = "MATCH (s:Spatial) RETURN count(s) > 0 as exists"
       result = @tx.run(query).single
       result[:exists]
+    end
+
+    def apoc_merge_available?
+      begin
+        res = @tx.run("SHOW PROCEDURES YIELD name WHERE name='apoc.merge.relationship' RETURN count(*) AS c").single
+        res && res[:c].to_i > 0
+      rescue
+        false
+      end
     end
   end
 end

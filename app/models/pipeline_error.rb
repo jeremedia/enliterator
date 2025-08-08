@@ -1,5 +1,23 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: pipeline_errors
+#
+#  id              :bigint           not null, primary key
+#  pipeline_run_id :bigint           not null
+#  stage           :string           not null
+#  error_type      :string           not null
+#  message         :text
+#  occurred_at     :datetime         not null
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#
+# Indexes
+#
+#  index_pipeline_errors_on_pipeline_run_id  (pipeline_run_id)
+#  index_pipeline_errors_on_stage            (stage)
+#
 # Track errors that occur during pipeline runs
 class PipelineError < ApplicationRecord
   belongs_to :pipeline_run

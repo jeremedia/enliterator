@@ -1,5 +1,29 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: pipeline_runs
+#
+#  id            :bigint           not null, primary key
+#  bundle_path   :string           not null
+#  stage         :string           not null
+#  status        :string           not null
+#  started_at    :datetime         not null
+#  completed_at  :datetime
+#  metrics       :jsonb
+#  options       :jsonb
+#  file_count    :integer
+#  error_message :text
+#  created_at    :datetime         not null
+#  updated_at    :datetime         not null
+#
+# Indexes
+#
+#  index_pipeline_runs_on_stage             (stage)
+#  index_pipeline_runs_on_stage_and_status  (stage,status)
+#  index_pipeline_runs_on_started_at        (started_at)
+#  index_pipeline_runs_on_status            (status)
+#
 # Track pipeline execution runs
 class PipelineRun < ApplicationRecord
   # Enums

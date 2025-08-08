@@ -174,29 +174,31 @@ module Literacy
       end
       
       if check_graph
-        graph_metrics = @neo4j.read_transaction do |tx|
-          node_query = <<~CYPHER
-            MATCH (n)
-            WHERE n.batch_id = $batch_id
-            RETURN count(n) as node_count
-          CYPHER
+        begin
+          graph_metrics = @neo4j.read_transaction do |tx|
+            node_query = <<~CYPHER
+              MATCH (n)
+              WHERE n.batch_id = $batch_id
+              RETURN count(n) as node_count
+            CYPHER
+            
+            edge_query = <<~CYPHER
+              MATCH (n)-[r]-(m)
+              WHERE n.batch_id = $batch_id AND m.batch_id = $batch_id
+              RETURN count(DISTINCT r) as edge_count
+            CYPHER
+            
+            nodes = tx.run(node_query, batch_id: @batch_id).single[:node_count]
+            edges = tx.run(edge_query, batch_id: @batch_id).single[:edge_count]
+            
+            { nodes: nodes, edges: edges / 2 }
+          end
           
-          edge_query = <<~CYPHER
-            MATCH (n)-[r]-(m)
-            WHERE n.batch_id = $batch_id AND m.batch_id = $batch_id
-            RETURN count(DISTINCT r) as edge_count
-          CYPHER
-          
-          nodes = tx.run(node_query, batch_id: @batch_id).single[:node_count]
-          edges = tx.run(edge_query, batch_id: @batch_id).single[:edge_count]
-          
-          { nodes: nodes, edges: edges / 2 }
+          metrics[:graph_nodes] = graph_metrics[:nodes]
+          metrics[:graph_edges] = graph_metrics[:edges]
+        rescue StandardError => e
+          Rails.logger.error "Failed to get graph metrics: #{e.message}"
         end
-        
-        metrics[:graph_nodes] = graph_metrics[:nodes]
-        metrics[:graph_edges] = graph_metrics[:edges]
-      rescue StandardError => e
-        Rails.logger.error "Failed to get graph metrics: #{e.message}"
       end
       
       if check_embeddings

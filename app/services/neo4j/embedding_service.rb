@@ -68,7 +68,7 @@ module Neo4j
       session = @driver.session(database: @database_name)
       
       # Find nodes needing embeddings
-      where_clause = @batch_id ? "n.batch_id = '#{@batch_id}'" : "true"
+      where_clause = @batch_id ? "n.batch_id = $batch_id" : "true"
       
       cypher = <<~CYPHER
         MATCH (n)
@@ -77,7 +77,8 @@ module Neo4j
         AND n.embedding IS NULL
         WITH n LIMIT #{limit}
         WITH collect(n.repr_text) as texts, collect(n) as nodes
-        CALL genai.vector.encodeBatch(texts, 'openai', {
+        CALL genai.vector.encodeBatch(texts, 'OpenAI', {
+          token: $token,
           model: 'text-embedding-3-small'
         }) YIELD index, resource, vector
         WITH nodes[index] as node, vector
@@ -85,7 +86,9 @@ module Neo4j
         RETURN count(node) as processed
       CYPHER
       
-      result = session.run(cypher)
+      params = { token: ENV['OPENAI_API_KEY'] }
+      params[:batch_id] = @batch_id if @batch_id
+      result = session.run(cypher, params)
       processed = result.single[:processed] || 0
       
       session.close
@@ -101,7 +104,7 @@ module Neo4j
     def generate_path_embeddings(limit: 100)
       session = @driver.session(database: @database_name)
       
-      where_clause = @batch_id ? "n.batch_id = '#{@batch_id}'" : "true"
+      where_clause = @batch_id ? "n.batch_id = $batch_id" : "true"
       
       # First, textize paths that don't have text
       textize_cypher = <<~CYPHER
@@ -113,7 +116,9 @@ module Neo4j
         RETURN count(r) as textized
       CYPHER
       
-      result = session.run(textize_cypher)
+      params = {}
+      params[:batch_id] = @batch_id if @batch_id
+      result = session.run(textize_cypher, params)
       textized = result.single[:textized] || 0
       Rails.logger.info "Textized #{textized} paths"
       
@@ -124,7 +129,8 @@ module Neo4j
         AND r.embedding IS NULL
         WITH r LIMIT #{limit}
         WITH collect(r.path_text) as texts, collect(r) as rels
-        CALL genai.vector.encodeBatch(texts, 'openai', {
+        CALL genai.vector.encodeBatch(texts, 'OpenAI', {
+          token: $token,
           model: 'text-embedding-3-small'
         }) YIELD index, resource, vector
         WITH rels[index] as rel, vector
@@ -132,7 +138,9 @@ module Neo4j
         RETURN count(rel) as processed
       CYPHER
       
-      result = session.run(embed_cypher)
+      params = { token: ENV['OPENAI_API_KEY'] }
+      params[:batch_id] = @batch_id if @batch_id
+      result = session.run(embed_cypher, params)
       processed = result.single[:processed] || 0
       
       session.close
@@ -154,7 +162,7 @@ module Neo4j
     def verify_embeddings
       session = @driver.session(database: @database_name)
       
-      where_clause = @batch_id ? "n.batch_id = '#{@batch_id}'" : "true"
+      where_clause = @batch_id ? "n.batch_id = $batch_id" : "true"
       
       cypher = <<~CYPHER
         MATCH (n)
@@ -166,7 +174,9 @@ module Neo4j
           collect(DISTINCT labels(n)[0]) as pools_with_embeddings
       CYPHER
       
-      result = session.run(cypher)
+      params = {}
+      params[:batch_id] = @batch_id if @batch_id
+      result = session.run(cypher, params)
       stats = result.single
       
       session.close
@@ -190,8 +200,9 @@ module Neo4j
       
       session = @driver.session(database: @database_name)
       
-      result = session.run(<<~CYPHER, text: text)
-        CALL genai.vector.encode($text, 'openai', {
+      result = session.run(<<~CYPHER, text: text, token: ENV['OPENAI_API_KEY'])
+        CALL genai.vector.encode($text, 'OpenAI', {
+          token: $token,
           model: 'text-embedding-3-small'
         }) YIELD vector
         RETURN vector

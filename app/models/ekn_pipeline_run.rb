@@ -1,5 +1,45 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: ekn_pipeline_runs
+#
+#  id                          :bigint           not null, primary key
+#  ekn_id                      :bigint           not null
+#  ingest_batch_id             :bigint           not null
+#  status                      :string           default("initialized"), not null
+#  current_stage               :string
+#  current_stage_number        :integer          default(0)
+#  stage_statuses              :jsonb
+#  stage_metrics               :jsonb
+#  stage_started_at            :datetime
+#  stage_completed_at          :datetime
+#  started_at                  :datetime
+#  completed_at                :datetime
+#  total_items_processed       :integer          default(0)
+#  total_nodes_created         :integer          default(0)
+#  total_relationships_created :integer          default(0)
+#  literacy_score              :float
+#  failed_stage                :string
+#  error_message               :text
+#  error_details               :jsonb
+#  retry_count                 :integer          default(0)
+#  last_retry_at               :datetime
+#  options                     :jsonb
+#  auto_advance                :boolean          default(TRUE)
+#  skip_failed_items           :boolean          default(FALSE)
+#  created_at                  :datetime         not null
+#  updated_at                  :datetime         not null
+#
+# Indexes
+#
+#  index_ekn_pipeline_runs_on_current_stage          (current_stage)
+#  index_ekn_pipeline_runs_on_ekn_id                 (ekn_id)
+#  index_ekn_pipeline_runs_on_ekn_id_and_created_at  (ekn_id,created_at)
+#  index_ekn_pipeline_runs_on_ekn_id_and_status      (ekn_id,status)
+#  index_ekn_pipeline_runs_on_ingest_batch_id        (ingest_batch_id)
+#  index_ekn_pipeline_runs_on_status                 (status)
+#
 # EknPipelineRun orchestrates the complete 9-stage pipeline for processing data into Knowledge Navigators
 # It provides state management, progress tracking, error recovery, and observability
 class EknPipelineRun < ApplicationRecord
@@ -130,34 +170,47 @@ class EknPipelineRun < ApplicationRecord
     stage_statuses[stage_info[:name]] = 'running'
     save!
     
-    # Queue the job for this stage
+    # Queue or run the job for this stage
     if stage_info[:job].present?
-      log_info("Queuing job: #{stage_info[:job]}", label: "stage_#{next_stage_num}")
       job_class = stage_info[:job].constantize
-      
-      # Queue the job and verify it was created
-      job = job_class.perform_later(self.id)
-      
-      # Verify job was actually created in database
-      if job && job.job_id
-        log_info("Job queued successfully with ID: #{job.job_id}", label: "stage_#{next_stage_num}")
-        
-        # Double-check job exists in Solid Queue
-        if defined?(SolidQueue::Job)
-          queue_job = SolidQueue::Job.where("arguments LIKE ?", "%#{job.job_id}%").first
-          if queue_job
-            log_debug("Verified job in queue: #{queue_job.class_name}", label: "stage_#{next_stage_num}")
-          else
-            log_warn("⚠️ Job #{job.job_id} not found in Solid Queue!", label: "errors")
-          end
-        end
+
+      if inline_mode?
+        log_info("Running job inline: #{stage_info[:job]}", label: "stage_#{next_stage_num}")
+        # Run synchronously in-process. The job's BaseJob wrapper will
+        # mark stage completion and auto-advance if configured.
+        job_class.perform_now(self.id)
       else
-        log_error("❌ Failed to queue job for stage #{next_stage_num}!", label: "errors")
-        fail!("Failed to queue job: #{stage_info[:job]}")
+        log_info("Queuing job: #{stage_info[:job]}", label: "stage_#{next_stage_num}")
+        # Queue the job and verify it was created
+        job = job_class.perform_later(self.id)
+
+        # Verify job was actually created in database
+        if job && job.job_id
+          log_info("Job queued successfully with ID: #{job.job_id}", label: "stage_#{next_stage_num}")
+
+          # Double-check job exists in Solid Queue
+          if defined?(SolidQueue::Job)
+            queue_job = SolidQueue::Job.where("arguments LIKE ?", "%#{job.job_id}%").first
+            if queue_job
+              log_debug("Verified job in queue: #{queue_job.class_name}", label: "stage_#{next_stage_num}")
+            else
+              log_warn("⚠️ Job #{job.job_id} not found in Solid Queue!", label: "errors")
+            end
+          end
+        else
+          log_error("❌ Failed to queue job for stage #{next_stage_num}!", label: "errors")
+          fail!("Failed to queue job: #{stage_info[:job]}")
+        end
       end
     end
     
     broadcast_stage_change!
+  end
+
+  # Prefer explicit env flag to avoid guessing worker state
+  def inline_mode?
+    # Run synchronously when PIPELINE_INLINE is truthy or in test
+    ActiveModel::Type::Boolean.new.cast(ENV["PIPELINE_INLINE"]) || Rails.env.test?
   end
   
   def mark_stage_complete!(metrics = {})

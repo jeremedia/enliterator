@@ -178,4 +178,69 @@
       </dl>
     </div>
   </div>
+
+  <!-- Neo4j GenAI Health -->
+  <div class="rounded-lg bg-white shadow">
+    <div class="px-4 py-5 sm:p-6">
+      <h3 class="text-base font-semibold leading-6 text-gray-900">Neo4j GenAI Health</h3>
+      <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-4">
+        <div class="rounded-md border p-3">
+          <div class="text-sm text-gray-500">Procedures</div>
+          <div class="mt-1 text-sm">
+            <% if @genai_status[:has_encode_batch] %>
+              <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">genai.vector.encodeBatch</span>
+            <% else %>
+              <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">encodeBatch missing</span>
+            <% end %>
+            <% if @genai_status[:has_config] %>
+              <span class="ml-2 inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">genai.config.*</span>
+            <% else %>
+              <span class="ml-2 inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">no config procs</span>
+            <% end %>
+          </div>
+        </div>
+        <div class="rounded-md border p-3">
+          <div class="text-sm text-gray-500">Providers</div>
+          <div class="mt-1 text-sm text-gray-900">
+            <% (@genai_status[:providers] || []).each do |p| %>
+              <span class="mr-1 inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700"><%= p %></span>
+            <% end %>
+          </div>
+        </div>
+        <div class="rounded-md border p-3">
+          <div class="text-sm text-gray-500">APOC</div>
+          <div class="mt-1 text-sm">
+            <% if @genai_status[:apoc] %>
+              <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">Installed</span>
+              <% if @genai_status[:apoc_merge_relationship] %>
+                <span class="ml-2 inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">apoc.merge.relationship</span>
+              <% end %>
+            <% else %>
+              <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">Not installed</span>
+            <% end %>
+          </div>
+        </div>
+        <div class="rounded-md border p-3">
+          <div class="text-sm text-gray-500">Embeddings</div>
+          <div class="mt-1 text-sm text-gray-900">
+            <div>EKN: <span class="font-medium"><%= @genai_status[:ekn_name] %></span></div>
+            <div>DB: <code class="text-xs"><%= @genai_status[:ekn_db] %></code></div>
+            <div class="mt-1">Nodes: <span class="font-medium"><%= @genai_status[:embedded_nodes] %></span>
+              <% if @genai_status[:avg_dims].to_f > 0 %>
+                <span class="ml-2 text-gray-500">avg dims <%= @genai_status[:avg_dims] %></span>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-4">
+        <pre class="rounded bg-gray-50 p-3 text-xs text-gray-600 overflow-auto">genai procedures: <%= (@genai_status[:procedures] || []).join(', ') %></pre>
+      </div>
+      <div class="mt-3">
+        <%= button_to "Run GenAI Diagnose", '#', disabled: true,
+              class: "inline-flex items-center justify-center rounded-md bg-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 cursor-not-allowed" %>
+        <span class="ml-2 text-xs text-gray-500">CLI: bin/rails ops:genai:diagnose['Meta-Enliterator']</span>
+      </div>
+    </div>
+  </div>
 </div>

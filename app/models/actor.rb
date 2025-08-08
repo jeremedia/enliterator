@@ -1,5 +1,29 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: actors
+#
+#  id                       :bigint           not null, primary key
+#  name                     :string           not null
+#  role                     :string
+#  description              :text
+#  capabilities             :jsonb
+#  affiliations             :jsonb
+#  repr_text                :text             not null
+#  provenance_and_rights_id :bigint           not null
+#  valid_time_start         :datetime         not null
+#  valid_time_end           :datetime
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#
+# Indexes
+#
+#  index_actors_on_name                                 (name)
+#  index_actors_on_provenance_and_rights_id             (provenance_and_rights_id)
+#  index_actors_on_role                                 (role)
+#  index_actors_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
+#
 # Actor Pool - Represents agents/actors who perform actions or have agency
 # Part of the optional pools that may or may not have content depending on the domain
 class Actor < ApplicationRecord

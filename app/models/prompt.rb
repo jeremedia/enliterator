@@ -1,3 +1,22 @@
+# == Schema Information
+#
+# Table name: prompts
+#
+#  id                 :bigint           not null, primary key
+#  key                :string
+#  name               :string
+#  description        :text
+#  category           :integer
+#  context            :integer
+#  active             :boolean
+#  current_version_id :integer
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#
+# Indexes
+#
+#  index_prompts_on_key  (key) UNIQUE
+#
 class Prompt < ApplicationRecord
   has_many :prompt_versions, dependent: :destroy
   belongs_to :current_version, class_name: 'PromptVersion', optional: true
@@ -6,7 +25,7 @@ class Prompt < ApplicationRecord
   validates :name, presence: true
   
   # Categories for different types of prompts
-  enum category: {
+  enum :category, {
     system: 0,        # Core system prompts
     interview: 1,     # Data collection prompts
     pipeline: 2,      # Pipeline operation prompts
@@ -17,7 +36,7 @@ class Prompt < ApplicationRecord
   }
   
   # Context where prompts are used
-  enum context: {
+  enum :context, {
     global: 0,        # Used everywhere
     intake: 1,        # Stage 1 specific
     rights: 2,        # Stage 2 specific

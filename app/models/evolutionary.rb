@@ -1,5 +1,35 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: evolutionaries
+#
+#  id                       :bigint           not null, primary key
+#  change_note              :text             not null
+#  prior_ref_type           :string
+#  prior_ref_id             :bigint
+#  version_id               :string
+#  refined_idea_id          :bigint
+#  manifest_version_id      :bigint
+#  provenance_and_rights_id :bigint           not null
+#  valid_time_start         :datetime         not null
+#  valid_time_end           :datetime
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#  repr_text                :text             not null
+#  change_summary           :text             not null
+#  delta_metrics            :jsonb
+#
+# Indexes
+#
+#  index_evolutionaries_on_manifest_version_id                  (manifest_version_id)
+#  index_evolutionaries_on_prior_ref                            (prior_ref_type,prior_ref_id)
+#  index_evolutionaries_on_prior_ref_type_and_prior_ref_id      (prior_ref_type,prior_ref_id)
+#  index_evolutionaries_on_provenance_and_rights_id             (provenance_and_rights_id)
+#  index_evolutionaries_on_refined_idea_id                      (refined_idea_id)
+#  index_evolutionaries_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
+#  index_evolutionaries_on_version_id                           (version_id)
+#
 # Evolutionary pool: versioning, iterations, and changes over time
 class Evolutionary < ApplicationRecord
   include HasRights

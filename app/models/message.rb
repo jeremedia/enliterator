@@ -1,3 +1,20 @@
+# == Schema Information
+#
+# Table name: messages
+#
+#  id              :bigint           not null, primary key
+#  conversation_id :bigint           not null
+#  role            :integer
+#  content         :text
+#  metadata        :jsonb
+#  tokens_used     :integer
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#
+# Indexes
+#
+#  index_messages_on_conversation_id  (conversation_id)
+#
 class Message < ApplicationRecord
   belongs_to :conversation
   belongs_to :prompt_version, optional: true
@@ -6,7 +23,7 @@ class Message < ApplicationRecord
   validates :content, presence: true
   
   # Message roles
-  enum role: { 
+  enum :role, { 
     user: 0, 
     assistant: 1, 
     system: 2,

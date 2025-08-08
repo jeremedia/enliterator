@@ -1,5 +1,28 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: prompt_templates
+#
+#  id                   :bigint           not null, primary key
+#  name                 :string           not null
+#  service_class        :string
+#  system_prompt        :text
+#  user_prompt_template :text
+#  variables            :jsonb
+#  metadata             :jsonb
+#  active               :boolean          default(TRUE)
+#  purpose              :string
+#  created_at           :datetime         not null
+#  updated_at           :datetime         not null
+#
+# Indexes
+#
+#  index_prompt_templates_on_active         (active)
+#  index_prompt_templates_on_name           (name) UNIQUE
+#  index_prompt_templates_on_purpose        (purpose)
+#  index_prompt_templates_on_service_class  (service_class)
+#
 class PromptTemplate < ApplicationRecord
   PURPOSES = %w[extraction conversation routing evaluation fine_tuning].freeze
   

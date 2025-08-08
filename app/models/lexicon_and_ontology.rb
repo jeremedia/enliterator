@@ -1,5 +1,36 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: lexicon_and_ontologies
+#
+#  id                       :bigint           not null, primary key
+#  term                     :string           not null
+#  definition               :text
+#  canonical_description    :text
+#  surface_forms            :jsonb
+#  negative_surface_forms   :jsonb
+#  type_mapping             :jsonb
+#  unit_system              :string
+#  schema_version           :string
+#  provenance_and_rights_id :bigint           not null
+#  valid_time_start         :datetime         not null
+#  valid_time_end           :datetime
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#  repr_text                :text             not null
+#  pool_association         :string           not null
+#  is_canonical             :boolean          default(FALSE), not null
+#  relations                :jsonb
+#
+# Indexes
+#
+#  idx_on_valid_time_start_valid_time_end_5b95b14d20         (valid_time_start,valid_time_end)
+#  index_lexicon_and_ontologies_on_negative_surface_forms    (negative_surface_forms) USING gin
+#  index_lexicon_and_ontologies_on_provenance_and_rights_id  (provenance_and_rights_id)
+#  index_lexicon_and_ontologies_on_surface_forms             (surface_forms) USING gin
+#  index_lexicon_and_ontologies_on_term                      (term) UNIQUE
+#
 # Lexicon and Ontology pool: canonical terms, definitions, and relationships
 class LexiconAndOntology < ApplicationRecord
   include HasRights

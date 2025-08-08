@@ -1,5 +1,35 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: fine_tune_jobs
+#
+#  id               :bigint           not null, primary key
+#  openai_job_id    :string           not null
+#  openai_file_id   :string
+#  base_model       :string           not null
+#  fine_tuned_model :string
+#  status           :string           not null
+#  hyperparameters  :jsonb
+#  training_metrics :jsonb
+#  trained_tokens   :integer
+#  training_cost    :decimal(10, 4)
+#  started_at       :datetime
+#  finished_at      :datetime
+#  error_message    :text
+#  ingest_batch_id  :bigint
+#  dataset_path     :string
+#  example_count    :integer
+#  created_at       :datetime         not null
+#  updated_at       :datetime         not null
+#
+# Indexes
+#
+#  index_fine_tune_jobs_on_fine_tuned_model  (fine_tuned_model)
+#  index_fine_tune_jobs_on_ingest_batch_id   (ingest_batch_id)
+#  index_fine_tune_jobs_on_openai_job_id     (openai_job_id) UNIQUE
+#  index_fine_tune_jobs_on_status            (status)
+#
 class FineTuneJob < ApplicationRecord
   STATUSES = %w[validating_files queued running succeeded failed cancelled].freeze
   

@@ -1,5 +1,32 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: manifests
+#
+#  id                       :bigint           not null, primary key
+#  label                    :string           not null
+#  manifest_type            :string
+#  components               :jsonb
+#  time_bounds              :jsonb
+#  spatial_ref              :string
+#  repr_text                :text             not null
+#  provenance_and_rights_id :bigint           not null
+#  valid_time_start         :datetime         not null
+#  valid_time_end           :datetime
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#
+# Indexes
+#
+#  index_manifests_on_components                           (components) USING gin
+#  index_manifests_on_label                                (label)
+#  index_manifests_on_label_trgm                           (label) USING gin
+#  index_manifests_on_manifest_type                        (manifest_type)
+#  index_manifests_on_provenance_and_rights_id             (provenance_and_rights_id)
+#  index_manifests_on_spatial_ref                          (spatial_ref)
+#  index_manifests_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
+#
 # Captures the "what" - concrete instances and artifacts
 class Manifest < ApplicationRecord
   include HasRights

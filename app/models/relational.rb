@@ -1,5 +1,34 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: relationals
+#
+#  id                       :bigint           not null, primary key
+#  relation_type            :string           not null
+#  source_type              :string           not null
+#  source_id                :bigint           not null
+#  target_type              :string           not null
+#  target_id                :bigint           not null
+#  strength                 :float
+#  period                   :jsonb
+#  provenance_and_rights_id :bigint           not null
+#  valid_time_start         :datetime         not null
+#  valid_time_end           :datetime
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#  repr_text                :text             not null
+#
+# Indexes
+#
+#  index_relationals_on_provenance_and_rights_id             (provenance_and_rights_id)
+#  index_relationals_on_relation_type                        (relation_type)
+#  index_relationals_on_source                               (source_type,source_id)
+#  index_relationals_on_source_type_and_source_id            (source_type,source_id)
+#  index_relationals_on_target                               (target_type,target_id)
+#  index_relationals_on_target_type_and_target_id            (target_type,target_id)
+#  index_relationals_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
+#
 # Relational pool: relationship instances between entities
 class Relational < ApplicationRecord
   include HasRights

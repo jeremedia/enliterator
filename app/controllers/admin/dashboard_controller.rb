@@ -12,6 +12,9 @@ module Admin
       
       # Calculate usage stats (placeholder for now)
       @usage_stats = calculate_usage_stats
+
+      # Neo4j GenAI health snapshot
+      @genai_status = genai_health
     end
     
     private
@@ -50,6 +53,53 @@ module Admin
         failed_requests: 0,
         avg_response_time: 0.0
       }
+    end
+
+    def genai_health
+      status = {
+        apoc: false,
+        apoc_merge_relationship: false,
+        procedures: [],
+        providers: [],
+        has_encode_batch: false,
+        has_config: false,
+        ekn_name: nil,
+        ekn_db: nil,
+        embedded_nodes: 0,
+        avg_dims: 0
+      }
+
+      driver = Graph::Connection.instance.driver
+      session = driver.session(database: 'neo4j')
+      procs = session.run("SHOW PROCEDURES YIELD name RETURN collect(name) AS names").single&.[]( :names ) || []
+      status[:procedures] = procs
+      status[:has_config] = procs.include?('genai.config.init')
+      status[:has_encode_batch] = procs.include?('genai.vector.encodeBatch')
+      status[:apoc] = procs.any? { |n| n.start_with?('apoc.') }
+      status[:apoc_merge_relationship] = procs.include?('apoc.merge.relationship')
+      begin
+        providers = session.run("CALL genai.vector.listEncodingProviders() YIELD name RETURN collect(name) AS providers").single&.[]( :providers ) || []
+        status[:providers] = providers
+      rescue
+        status[:providers] = []
+      ensure
+        session.close
+      end
+
+      if (ekn = Ekn.find_by(name: 'Meta-Enliterator') || Ekn.first)
+        status[:ekn_name] = ekn.name
+        status[:ekn_db] = ekn.neo4j_database_name
+        s2 = driver.session(database: status[:ekn_db])
+        row = s2.run("MATCH (n) WHERE n.embedding IS NOT NULL RETURN count(n) AS c, coalesce(avg(size(n.embedding)),0) AS dims").single
+        status[:embedded_nodes] = row && row[:c] || 0
+        status[:avg_dims] = row && row[:dims] || 0
+        s2.close
+      end
+
+      status
+    rescue => e
+      Rails.logger.warn "GenAI health check failed: #{e.message}"
+      status
     end
   end
 end

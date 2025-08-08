@@ -52,17 +52,16 @@ Enliterator is a Rails 8 application that transforms dropped data collections in
 - Comprehensive integrity verification
 
 #### Stage 6: Representations & Retrieval ✅
-- **Status**: COMPLETE with pgvector (2025-08-05)
-- **Implementation**: pgvector with HNSW indexing
+- **Status**: COMPLETE with Neo4j GenAI (2025-08-06)
+- **Implementation**: Neo4j GenAI embeddings + native vector indexes
 - **Features**:
-  - ✅ OpenAI Batch API integration (50% cost savings)
+  - ✅ Unified graph + vectors in Neo4j (no cross-DB sync)
   - ✅ Sub-second semantic search performance
   - ✅ Rights-aware filtering for training eligibility
   - ✅ Full test coverage
-- **Future Enhancement** (Optional):
-  - Neo4j GenAI migration considered (Issue #52)
-  - Proof-of-concept validated but not required
-  - Current pgvector solution meets all requirements
+- **Notes**:
+  - Migration from pgvector to Neo4j GenAI completed (see git log)
+  - Index creation and embedding generation handled in Stage 6 job
 
 #### Stage 7: Literacy Scoring & Gaps ✅
 - **Status**: COMPLETE (2025-08-05)
@@ -177,7 +176,7 @@ Enliterator is a Rails 8 application that transforms dropped data collections in
 ## Key Technical Components
 
 ### Infrastructure
-- **Database**: PostgreSQL with pgvector
+- **Database**: PostgreSQL (operational data)
 - **Graph DB**: Neo4j 
 - **Queue**: Solid Queue
 - **Cache**: Solid Cache
@@ -258,7 +257,7 @@ enliterator/
 │   │   └── rights/      # Rights assignment
 │   └── services/
 │       ├── deliverables/# Export and generation services ✨
-│       ├── embedding/   # pgvector embedding services
+│       ├── embedding/   # Neo4j GenAI embedding services
 │       ├── graph/       # Neo4j operations
 │       ├── literacy/    # Scoring and gap analysis
 │       ├── lexicon/     # Term processing

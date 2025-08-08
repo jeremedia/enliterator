@@ -68,7 +68,7 @@ User Query → Fine-Tuned Model → Graph Navigation → Grounded Response
 - [x] Let model handle all domain concepts without special cases - No more hardcoded handling
 
 ### 📈 Enhancements:
-- [ ] Connect pgvector semantic search (currently bypassed)
+- [ ] Connect Neo4j GenAI semantic search (currently bypassed)
 - [ ] Implement voice synthesis (Web Speech API ready but not connected)
 - [ ] Add dynamic UI generation from conversation (charts, graphs, timelines)
 - [ ] Implement MCP tools for structured operations

@@ -1,5 +1,38 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: ingest_batches
+#
+#  id                        :bigint           not null, primary key
+#  name                      :string           not null
+#  source_type               :string           not null
+#  status                    :integer          default("pending"), not null
+#  metadata                  :jsonb
+#  statistics                :jsonb
+#  started_at                :datetime
+#  completed_at              :datetime
+#  created_at                :datetime         not null
+#  updated_at                :datetime         not null
+#  graph_assembly_stats      :jsonb
+#  graph_assembled_at        :datetime
+#  deliverables_generated_at :datetime
+#  deliverables_path         :string
+#  deliverables_errors       :text
+#  literacy_score            :decimal(, )
+#  ekn_id                    :bigint
+#  literacy_gaps             :jsonb
+#  deliverables              :jsonb
+#  fine_tune_dataset_path    :string
+#  fine_tune_job_id          :string
+#
+# Indexes
+#
+#  index_ingest_batches_on_created_at   (created_at)
+#  index_ingest_batches_on_ekn_id       (ekn_id)
+#  index_ingest_batches_on_source_type  (source_type)
+#  index_ingest_batches_on_status       (status)
+#
 # Represents a batch of items being processed through the pipeline
 # NOW BELONGS TO AN EKN - no longer the top-level entity!
 class IngestBatch < ApplicationRecord
@@ -68,24 +101,7 @@ class IngestBatch < ApplicationRecord
     ApplicationRecord.connection.execute(<<-SQL)
       CREATE SCHEMA IF NOT EXISTS #{postgres_schema_name};
       
-      -- Create isolated embeddings table with pgvector
-      CREATE TABLE IF NOT EXISTS #{postgres_schema_name}.embeddings (
-        id BIGSERIAL PRIMARY KEY,
-        entity_id VARCHAR NOT NULL,
-        entity_type VARCHAR NOT NULL,
-        content TEXT,
-        embedding vector(1536),
-        metadata JSONB DEFAULT '{}',
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      );
-      
-      -- Create HNSW index for similarity search
-      CREATE INDEX IF NOT EXISTS idx_#{postgres_schema_name}_embeddings_hnsw 
-      ON #{postgres_schema_name}.embeddings 
-      USING hnsw (embedding vector_cosine_ops);
-      
-      -- Create documents table
+      -- Create documents table (operational metadata only; embeddings are stored in Neo4j GenAI)
       CREATE TABLE IF NOT EXISTS #{postgres_schema_name}.documents (
         id BIGSERIAL PRIMARY KEY,
         path VARCHAR NOT NULL,
@@ -97,7 +113,7 @@ class IngestBatch < ApplicationRecord
         created_at TIMESTAMP DEFAULT NOW()
       );
       
-      -- Create entities table
+      -- Create entities table (optional operational cache; canonical graph is Neo4j)
       CREATE TABLE IF NOT EXISTS #{postgres_schema_name}.entities (
         id BIGSERIAL PRIMARY KEY,
         neo4j_id VARCHAR,
@@ -108,7 +124,7 @@ class IngestBatch < ApplicationRecord
         created_at TIMESTAMP DEFAULT NOW()
       );
       
-      -- Create lexicon table
+      -- Create lexicon table (optional operational cache)
       CREATE TABLE IF NOT EXISTS #{postgres_schema_name}.lexicon_entries (
         id BIGSERIAL PRIMARY KEY,
         canonical_name VARCHAR NOT NULL,

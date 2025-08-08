@@ -1,3 +1,21 @@
+# == Schema Information
+#
+# Table name: prompt_versions
+#
+#  id                :bigint           not null, primary key
+#  prompt_id         :bigint           not null
+#  content           :text
+#  variables         :jsonb
+#  status            :integer
+#  version_number    :integer
+#  performance_score :float
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#
+# Indexes
+#
+#  index_prompt_versions_on_prompt_id  (prompt_id)
+#
 class PromptVersion < ApplicationRecord
   belongs_to :prompt
   has_many :messages
@@ -6,7 +24,7 @@ class PromptVersion < ApplicationRecord
   validates :content, presence: true
   validates :version_number, presence: true, uniqueness: { scope: :prompt_id }
   
-  enum status: {
+  enum :status, {
     draft: 0,
     testing: 1,
     active: 2,

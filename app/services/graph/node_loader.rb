@@ -415,6 +415,8 @@ module Graph
     
     def create_node(label, properties)
       # MERGE to handle potential duplicates
+      # Tag nodes with the current batch for downstream embedding selection
+      properties = properties.merge(batch_id: @batch.id)
       query = <<~CYPHER
         MERGE (n:#{label} {id: $id})
         SET n += $properties

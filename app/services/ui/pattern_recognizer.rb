@@ -1,6 +1,6 @@
 # Analyzes user requests to determine appropriate UI components
 # Part of Stage 9 - Dynamic UI Generation for Knowledge Navigator
-module UI
+module Ui
   class PatternRecognizer
     # Analyze user request to determine UI needs
     def analyze(user_request, context = {})

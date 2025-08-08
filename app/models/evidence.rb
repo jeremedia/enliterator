@@ -1,5 +1,28 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: evidences
+#
+#  id                       :bigint           not null, primary key
+#  evidence_type            :string           not null
+#  description              :text             not null
+#  source_refs              :jsonb
+#  confidence_score         :float
+#  corroboration            :jsonb
+#  repr_text                :text             not null
+#  provenance_and_rights_id :bigint           not null
+#  observed_at              :datetime         not null
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#
+# Indexes
+#
+#  index_evidences_on_confidence_score          (confidence_score)
+#  index_evidences_on_evidence_type             (evidence_type)
+#  index_evidences_on_observed_at               (observed_at)
+#  index_evidences_on_provenance_and_rights_id  (provenance_and_rights_id)
+#
 # Evidence Pool - Represents supporting evidence or proof
 # Used to track claims, assertions, and their supporting documentation
 class Evidence < ApplicationRecord

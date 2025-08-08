@@ -1,5 +1,29 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: practicals
+#
+#  id                       :bigint           not null, primary key
+#  goal                     :string           not null
+#  steps                    :jsonb
+#  prerequisites            :jsonb
+#  hazards                  :jsonb
+#  validation_refs          :jsonb
+#  repr_text                :text             not null
+#  provenance_and_rights_id :bigint           not null
+#  valid_time_start         :datetime         not null
+#  valid_time_end           :datetime
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#
+# Indexes
+#
+#  index_practicals_on_goal                                 (goal)
+#  index_practicals_on_provenance_and_rights_id             (provenance_and_rights_id)
+#  index_practicals_on_steps                                (steps) USING gin
+#  index_practicals_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
+#
 # Practical pool: how-to guides, instructions, and procedures
 class Practical < ApplicationRecord
   include HasRights

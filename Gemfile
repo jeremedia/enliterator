@@ -53,6 +53,7 @@ gem "thruster", require: false
 # gem "image_processing", "~> 1.2"
 
 # OpenAI integration - official OpenAI Ruby gem
+# OpenAI Ruby SDK (Responses API, streaming)
 gem "openai", "~> 0.16.0"
 
 # Neo4j for knowledge graph
@@ -164,9 +165,6 @@ end
 
 gem "activegraph", "~> 11.4"
 
-gem "annotate"
-
+gem "annotate", github: "jeremedia/annotate_models"
 # Pagination
 gem "kaminari"
-
-

@@ -3,24 +3,20 @@
 # Table name: log_items
 #
 #  id         :bigint           not null, primary key
-#  item_data  :jsonb
-#  log_label  :string
+#  uuid       :uuid             not null
+#  log_id     :bigint           not null
 #  num        :integer
+#  log_label  :string
 #  status     :string
 #  text       :text
-#  uuid       :uuid             not null
+#  item_data  :jsonb
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
-#  log_id     :bigint           not null
 #
 # Indexes
 #
 #  index_log_items_on_log_id  (log_id)
 #  index_log_items_on_uuid    (uuid) UNIQUE
-#
-# Foreign Keys
-#
-#  fk_rails_...  (log_id => logs.id)
 #
 class LogItem < ApplicationRecord
   include ActionView::RecordIdentifier

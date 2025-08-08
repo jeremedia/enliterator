@@ -1,5 +1,33 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: ideas
+#
+#  id                       :bigint           not null, primary key
+#  label                    :string           not null
+#  abstract                 :text             not null
+#  principle_tags           :jsonb
+#  authorship               :string
+#  inception_date           :date             not null
+#  repr_text                :text             not null
+#  is_canonical             :boolean          default(FALSE), not null
+#  provenance_and_rights_id :bigint           not null
+#  valid_time_start         :datetime         not null
+#  valid_time_end           :datetime
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#
+# Indexes
+#
+#  index_ideas_on_abstract_trgm                        (abstract) USING gin
+#  index_ideas_on_is_canonical                         (is_canonical)
+#  index_ideas_on_label                                (label)
+#  index_ideas_on_label_trgm                           (label) USING gin
+#  index_ideas_on_principle_tags                       (principle_tags) USING gin
+#  index_ideas_on_provenance_and_rights_id             (provenance_and_rights_id)
+#  index_ideas_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
+#
 # Captures the "why" - principles, theories, intents, design rationales
 class Idea < ApplicationRecord
   include HasRights

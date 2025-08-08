@@ -60,18 +60,24 @@ module Embedding
     private
     
     def use_neo4j_genai_embeddings?
-      # Check if we have OpenAI API key and Neo4j GenAI is available
+      # Require OpenAI API key
       return false unless ENV['OPENAI_API_KEY'].present?
-      
-      # Try to configure provider and verify it works
+
+      # Detect available GenAI procedures and attempt a probe
       database_name = @ekn.neo4j_database_name
       vector_service = Neo4j::VectorIndexService.new(database_name)
-      
+
+      info = vector_service.verify_provider
+      unless info && info[:has_encode_batch]
+        log_progress "Neo4j GenAI encodeBatch not available", level: :warn
+        return false
+      end
+
       if vector_service.configure_provider
-        log_progress "Neo4j GenAI provider configured successfully"
+        log_progress "Neo4j GenAI ready (config or per-call token)"
         true
       else
-        log_progress "Neo4j GenAI provider configuration failed", level: :warn
+        log_progress "Neo4j GenAI probe failed; will use fallback", level: :warn
         false
       end
     rescue => e
@@ -122,6 +128,9 @@ module Embedding
       # Verify embeddings
       stats = embedding_service.verify_embeddings
       log_progress "Embedding verification: #{stats}", level: :debug
+      # Surface metrics for status dashboards
+      track_metric :embedded_nodes, stats[:total_embeddings]
+      track_metric :embedding_avg_dims, stats[:avg_dimensions]
     end
     
     def configure_embedding_model(vector_service)
@@ -201,7 +210,9 @@ module Embedding
     def collect_stage_metrics
       {
         embeddings_created: @metrics[:embeddings_created] || 0,
-        embeddings_fallback_used: @metrics[:embeddings_fallback_used] || false
+        embeddings_fallback_used: @metrics[:embeddings_fallback_used] || false,
+        embedded_nodes: @metrics[:embedded_nodes] || 0,
+        embedding_avg_dims: @metrics[:embedding_avg_dims] || 0
       }
     end
   end

@@ -132,47 +132,23 @@ namespace :enliterator do
   end
   
   namespace :embed do
-    desc "Generate embeddings for all eligible entities and paths"
-    task :generate, [:batch_id, :mode] => :environment do |t, args|
-      mode = args[:mode] || 'auto'
-      puts "Generating embeddings (mode: #{mode})..."
-      
-      options = {
-        auto_advance: false,
-        search_quality: 'balanced'
-      }
-      
-      # Force specific mode if requested
-      case mode
-      when 'batch'
-        options[:use_batch_api] = true
-        puts "Using Batch API (50% cost savings, 24hr turnaround)"
-      when 'sync'
-        options[:use_batch_api] = false
-        puts "Using synchronous API (immediate results)"
-      else
-        puts "Auto-selecting based on data size and urgency"
+    desc "Generate embeddings for all eligible entities and paths (Neo4j GenAI)"
+    task :generate, [:batch_id] => :environment do |t, args|
+      unless args[:batch_id]
+        puts "Usage: rails enliterator:embed:generate[batch_id]"
+        exit 1
       end
-      
-      job = EmbeddingServices::BuilderJob.new
-      results = job.perform(
-        batch_id: args[:batch_id],
-        options: options
-      )
-      
+
+      puts "Generating embeddings in Neo4j for batch #{args[:batch_id]}..."
+      job = EmbeddingServices::Neo4jBuilderJob.new
+      results = job.perform(batch_id: args[:batch_id], options: { batch_size: 200 })
+
       if results[:status] == 'success'
-        if results[:mode] == 'batch_api'
-          puts "✅ Embeddings queued via Batch API"
-          puts "   Entities queued: #{results[:steps][:batch_api][:entities_queued]}"
-          puts "   Paths queued: #{results[:steps][:batch_api][:paths_queued]}"
-          puts "   Batches created: #{results[:steps][:batch_api][:batches_created].size}"
-          puts "   Est. cost savings: $#{results[:steps][:batch_api][:total_cost_savings]}"
-          puts "   Note: Results will be available within 24 hours"
-        else
-          puts "✅ Embeddings generated successfully"
-          puts "   Entities: #{results[:steps][:entity_embeddings][:processed]}"
-          puts "   Paths: #{results[:steps][:path_embeddings][:processed]}"
-        end
+        entity_info = results.dig(:steps, :entity_embeddings, :total_processed) || 0
+        path_info   = results.dig(:steps, :path_embeddings, :total_processed) || 0
+        puts "✅ Embeddings generated successfully"
+        puts "   Entities: #{entity_info}"
+        puts "   Paths: #{path_info}"
       else
         puts "❌ Embedding generation failed: #{results[:error]}"
       end
@@ -223,84 +199,81 @@ namespace :enliterator do
       puts "  Failed: #{results[:failed]}"
     end
     
-    desc "Refresh embeddings (regenerate all)"
-    task refresh: :environment do
-      puts "Refreshing all embeddings..."
-      
-      # Clear existing embeddings
-      Embedding.destroy_all
-      puts "Cleared existing embeddings"
-      
-      # Regenerate
-      Rake::Task['enliterator:embed:generate'].invoke
-    end
-    
-    desc "Build or rebuild vector indices"
-    task :reindex, [:type] => :environment do |t, args|
-      index_type = args[:type] || 'hnsw'
-      
-      puts "Building #{index_type} index..."
-      
-      builder = EmbeddingServices::IndexBuilder.new(
-        index_type: index_type,
-        force_rebuild: true
-      )
-      
-      results = builder.call
-      
-      puts "Index built: #{results[:status]}"
-      puts "Stats: #{results[:stats].inspect}"
-    end
-    
-    desc "Show embedding statistics"
-    task stats: :environment do
-      stats = Embedding.coverage_stats
-      
-      puts "\nEmbedding Statistics"
-      puts "=" * 40
-      puts "Total embeddings: #{stats[:total]}"
-      puts "\nBy type:"
-      stats[:by_type].each do |type, count|
-        puts "  #{type}: #{count}"
-      end
-      puts "\nBy pool:"
-      stats[:by_pool].each do |pool, count|
-        puts "  #{pool}: #{count}"
-      end
-      puts "\nRights:"
-      puts "  Publishable: #{stats[:publishable]}"
-      puts "  Training eligible: #{stats[:training_eligible]}"
-      puts "  Indexed: #{stats[:indexed]}"
-    end
-    
-    desc "Test similarity search"
-    task :search, [:query] => :environment do |t, args|
-      unless args[:query]
-        puts "Usage: rails enliterator:embed:search['your search query']"
+    desc "Refresh embeddings for a batch (clear + regenerate in Neo4j)"
+    task :refresh, [:batch_id] => :environment do |t, args|
+      unless args[:batch_id]
+        puts "Usage: rails enliterator:embed:refresh[batch_id]"
         exit 1
       end
-      
-      puts "Searching for: #{args[:query]}"
-      
-      # Generate embedding for query
-      response = OPENAI.embeddings.create(
-        input: args[:query],
-        model: ::Embedding::OPENAI_MODEL,
-        dimensions: ::Embedding::OPENAI_DIMENSIONS
-      )
-      
-      query_embedding = response.data.first.embedding
-      
-      # Search
-      results = Embedding.semantic_search(
-        query_embedding,
-        top_k: 10,
-        require_rights: 'public'
-      )
-      
-      puts "\nTop 10 results:"
-      results.each_with_index do |embed, i|
-        puts "#{i+1}. [#{embed.pool}] #{embed.source_text[0..100]}..."
+
+      batch = IngestBatch.find(args[:batch_id])
+      database_name = batch.neo4j_database_name
+      driver = Graph::Connection.instance.driver
+
+      puts "Clearing existing embeddings in Neo4j database: #{database_name}..."
+      session = driver.session(database: database_name)
+      begin
+        session.write_transaction do |tx|
+          tx.run("MATCH (n) WHERE exists(n.embedding) REMOVE n.embedding")
+          tx.run("MATCH ()-[r]-() WHERE exists(r.embedding) REMOVE r.embedding")
+        end
+      ensure
+        session.close
+      end
+      puts "Cleared embeddings. Regenerating..."
+
+      Rake::Task['enliterator:embed:generate'].invoke(args[:batch_id])
+    end
+    
+    desc "Build or rebuild Neo4j vector indexes for a batch's EKN"
+    task :reindex, [:batch_id] => :environment do |t, args|
+      unless args[:batch_id]
+        puts "Usage: rails enliterator:embed:reindex[batch_id]"
+        exit 1
+      end
+
+      batch = IngestBatch.find(args[:batch_id])
+      database_name = batch.neo4j_database_name
+      puts "Building vector indexes in Neo4j database: #{database_name}..."
+
+      vector_service = Neo4j::VectorIndexService.new(database_name)
+      vector_service.create_indexes
+      puts "✅ Vector indexes ensured/created"
+    end
+    
+    desc "Show embedding statistics (Neo4j)"
+    task :stats, [:batch_id] => :environment do |t, args|
+      unless args[:batch_id]
+        puts "Usage: rails enliterator:embed:stats[batch_id]"
+        exit 1
+      end
+
+      service = Neo4j::EmbeddingService.new(args[:batch_id])
+      stats = service.verify_embeddings
+
+      puts "\nEmbedding Statistics (Neo4j)"
+      puts "=" * 40
+      puts "Total embeddings: #{stats[:total_embeddings]}"
+      puts "Avg dimensions: #{stats[:avg_dimensions]}"
+      puts "Pools: #{Array(stats[:pools_with_embeddings]).join(', ')}"
+      puts "Status: #{stats[:status]}"
+      puts "Error: #{stats[:error]}" if stats[:status] == 'error'
+    end
+    
+    desc "Test semantic search via Neo4j (requires batch_id)"
+    task :search, [:batch_id, :query] => :environment do |t, args|
+      unless args[:batch_id] && args[:query]
+        puts "Usage: rails enliterator:embed:search[batch_id,'your search query']"
+        exit 1
+      end
+
+      puts "Searching in batch #{args[:batch_id]} for: #{args[:query]}"
+      service = Neo4j::EmbeddingService.new(args[:batch_id])
+      results = service.semantic_search(args[:query], limit: 10)
+
+      puts "\nTop results:"
+      results.each_with_index do |row, i|
+        puts "#{i+1}. [#{row['entity_type']}] #{row['entity_name']} (score: #{row['similarity']})"
       end
     end
   end
@@ -878,6 +851,77 @@ namespace :enliterator do
     end
     
     puts "\nEmbedding Count: #{Embedding.count}"
+  end
+end
+
+namespace :enliterator do
+  namespace :bundle do
+    desc "Build deterministic bundles: micro (10 files) or full"
+    task :build, [:mode] => :environment do |t, args|
+      mode = (args[:mode] || 'micro').to_s
+      bundles_dir = Rails.root.join('data', 'bundles')
+      FileUtils.mkdir_p(bundles_dir)
+
+      case mode
+      when 'micro'
+        seed = (ENV['SEED'] || '1337').to_i
+        files = []
+        files += Dir.glob(Rails.root.join('app', 'models', '**', '*.rb'))
+        files += Dir.glob(Rails.root.join('app', 'services', '**', '*.rb'))
+        files += Dir.glob(Rails.root.join('app', 'jobs', '**', '*.rb'))
+        files += Dir.glob(Rails.root.join('docs', '**', '*.md'))
+        files.uniq!
+        srand(seed)
+        pick = files.sample(10).sort
+        path = bundles_dir.join('micro.zip')
+        create_zip(path, pick)
+        puts "Built micro bundle: #{path} (#{pick.size} files)"
+      when 'full'
+        files = []
+        files += Dir.glob(Rails.root.join('app', '**', '*')).select { |f| File.file?(f) }
+        files += Dir.glob(Rails.root.join('docs', '**', '*')).select { |f| File.file?(f) }
+        %w[.git node_modules tmp log storage vendor/bundle].each do |skip|
+          files.reject! { |f| f.include?("/#{skip}/") }
+        end
+        files.uniq!
+        path = bundles_dir.join('enliterator-full.zip')
+        create_zip(path, files)
+        puts "Built full bundle: #{path} (#{files.size} files)"
+      else
+        abort "Unknown mode: #{mode}. Use micro or full."
+      end
+    end
+  end
+
+  namespace :acceptance do
+    desc "Run acceptance gates and print rubric"
+    task :verify, [:batch_id] => :environment do |t, args|
+      abort "Usage: rails enliterator:acceptance:verify[batch_id]" unless args[:batch_id]
+      runner = Acceptance::GateRunner.new(args[:batch_id])
+      result = runner.run_all
+      puts "\n=== Acceptance Rubric ==="
+      result[:checks].each do |c|
+        mark = c[:passed] ? '✅' : '❌'
+        puts "#{mark} #{c[:name]}"
+        if ENV['DETAILS'] == 'true' && c[:details]
+          puts "   details: #{c[:details].inspect}"
+        end
+      end
+      puts "\n#{result[:summary]}"
+      abort "Gates failed" unless result[:passed]
+    end
+  end
+end
+
+# Helper to zip files with relative paths from project root
+def create_zip(path, files)
+  require 'zip'
+  FileUtils.rm_f(path)
+  Zip::File.open(path, Zip::File::CREATE) do |zip|
+    files.each do |abs|
+      rel = Pathname.new(abs).relative_path_from(Rails.root).to_s
+      zip.add(rel, abs)
+    end
   end
 end
 

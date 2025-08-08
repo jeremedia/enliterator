@@ -45,7 +45,7 @@ Drop a data bundle and the system automatically:
 3. **Lexicon Bootstrap** - Creates canonical terms and normalizations
 4. **Pool Filling** - Extracts entities using the Ten Pool Canon
 5. **Graph Assembly** - Builds Neo4j knowledge graph
-6. **Retrieval Indices** - Creates pgvector embeddings
+6. **Representations & Retrieval** - Creates Neo4j GenAI embeddings (unified in graph)
 7. **Literacy Scoring** - Evaluates completeness and gaps
 8. **Deliverables** - Generates evaluation bundles
 
@@ -82,9 +82,9 @@ Transform grounded answers into:
 ## Technology Stack
 
 - **Rails 8** with Solid Queue, Solid Cache, Solid Cable
-- **PostgreSQL 16+** for operational data with pgvector extension
+- **PostgreSQL 16+** for operational data
 - **Neo4j Desktop** for knowledge graph (see `/docs/NEO4J.md` for configuration)
-- **pgvector** with neighbor gem for embeddings (HNSW index)
+- **Neo4j GenAI** for vector embeddings and similarity search (unified with graph)
 - **Redis** for caching and queue management
 - **OpenAI Ruby gem v0.16.0** with Responses API and Structured Outputs
 - **Docker Compose** for development services
@@ -251,11 +251,14 @@ See [CLAUDE.md](CLAUDE.md) for detailed implementation guidance.
 - `Pools/` - Ten Pool Canon models
 - `Graph/` - Neo4j operations and path textization
 - `Embedding/` - pgvector index management
+ - `Embedding/` - Neo4j GenAI vector management
 - `Runtime/` - Q&A orchestration and gap tracking
 - `MCP/` - Tool server implementation
 - `Models/` - Fine-tune dataset generation
 
 ## Contributing
+
+Note for contributors: Please read `AGENTS.md` (contributor guide) and `CLAUDE.md` (architecture + pipeline) before making changes.
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)

@@ -1,5 +1,44 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: intent_and_tasks
+#
+#  id                       :bigint           not null, primary key
+#  user_goal                :text             not null
+#  query_text               :text
+#  presentation_preference  :jsonb
+#  outcome_signal           :string
+#  success_criteria         :jsonb
+#  repr_text                :text             not null
+#  deliverable_type         :string
+#  modality                 :string
+#  constraints              :jsonb
+#  adapter_name             :string
+#  adapter_params           :jsonb
+#  evaluation               :jsonb
+#  observed_at              :datetime         not null
+#  provenance_and_rights_id :bigint           not null
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#  raw_intent               :text
+#  normalized_intent        :jsonb
+#  status                   :integer          default("pending"), not null
+#  resolved_at              :datetime
+#  metadata                 :jsonb
+#  user_session_id          :bigint
+#  valid_time_start         :datetime         not null
+#  valid_time_end           :datetime
+#
+# Indexes
+#
+#  index_intent_and_tasks_on_deliverable_type          (deliverable_type)
+#  index_intent_and_tasks_on_modality                  (modality)
+#  index_intent_and_tasks_on_observed_at               (observed_at)
+#  index_intent_and_tasks_on_provenance_and_rights_id  (provenance_and_rights_id)
+#  index_intent_and_tasks_on_resolved_at               (resolved_at)
+#  index_intent_and_tasks_on_status                    (status)
+#
 # Intent and Task pool: user intents, queries, and deliverable requests
 class IntentAndTask < ApplicationRecord
   include HasRights

@@ -1,5 +1,27 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: openai_settings
+#
+#  id          :bigint           not null, primary key
+#  key         :string           not null
+#  category    :string
+#  value       :text
+#  description :text
+#  model_type  :string
+#  metadata    :jsonb
+#  active      :boolean          default(TRUE)
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
+#
+# Indexes
+#
+#  index_openai_settings_on_active      (active)
+#  index_openai_settings_on_category    (category)
+#  index_openai_settings_on_key         (key) UNIQUE
+#  index_openai_settings_on_model_type  (model_type)
+#
 class OpenaiSetting < ApplicationRecord
   CATEGORIES = %w[model prompt temperature config].freeze
   MODEL_TYPES = %w[extraction answer routing fine_tune].freeze

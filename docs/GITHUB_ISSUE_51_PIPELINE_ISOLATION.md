@@ -38,10 +38,10 @@ Update all pipeline stages to use the database-per-EKN isolation architecture, t
 - [ ] Add comprehensive isolation tests
 
 #### Task 4: Update Stage 6 - Embeddings
-- [ ] Modify `Representations::BuilderJob` to use isolated schema
-- [ ] Update `Embedding` model to write to `batch.postgres_schema_name.embeddings`
-- [ ] Ensure pgvector operations are schema-aware
-- [ ] Update semantic search to query correct schema
+- [ ] Use Neo4j GenAI within each EKN database
+- [ ] Remove pgvector model/table usage (fully deprecated)
+- [ ] Ensure Neo4j vector index creation per EKN database
+- [ ] Update semantic search to query Neo4j via `Neo4j::EmbeddingService`
 
 #### Task 5: Update Stage 7 - Literacy Scoring
 - [ ] Ensure scoring reads from isolated database

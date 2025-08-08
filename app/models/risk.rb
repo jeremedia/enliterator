@@ -1,5 +1,31 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: risks
+#
+#  id                       :bigint           not null, primary key
+#  risk_type                :string           not null
+#  severity                 :string
+#  probability              :float
+#  description              :text             not null
+#  mitigations              :jsonb
+#  impacts                  :jsonb
+#  repr_text                :text             not null
+#  provenance_and_rights_id :bigint           not null
+#  valid_time_start         :datetime         not null
+#  valid_time_end           :datetime
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#
+# Indexes
+#
+#  index_risks_on_probability                          (probability)
+#  index_risks_on_provenance_and_rights_id             (provenance_and_rights_id)
+#  index_risks_on_risk_type                            (risk_type)
+#  index_risks_on_severity                             (severity)
+#  index_risks_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
+#
 # Risk Pool - Represents risks, hazards, or dangers
 # Used to track potential problems and their mitigations
 class Risk < ApplicationRecord

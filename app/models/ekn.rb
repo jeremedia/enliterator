@@ -1,3 +1,31 @@
+# == Schema Information
+#
+# Table name: ekns
+#
+#  id                  :bigint           not null, primary key
+#  name                :string           not null
+#  description         :text
+#  status              :string           default("initializing")
+#  domain_type         :string           default("general")
+#  personality         :string           default("friendly")
+#  session_id          :integer
+#  metadata            :jsonb
+#  settings            :jsonb
+#  total_nodes         :integer          default(0)
+#  total_relationships :integer          default(0)
+#  total_items         :integer          default(0)
+#  literacy_score      :float
+#  created_at          :datetime         not null
+#  updated_at          :datetime         not null
+#  slug                :string
+#
+# Indexes
+#
+#  index_ekns_on_metadata    (metadata) USING gin
+#  index_ekns_on_session_id  (session_id)
+#  index_ekns_on_slug        (slug) UNIQUE
+#  index_ekns_on_status      (status)
+#
 # app/models/ekn.rb
 # EKN (Enliterated Knowledge Navigator) - The persistent, growing knowledge domain
 # This is the TOP-LEVEL entity that owns IngestBatches, not the other way around!
@@ -50,7 +78,10 @@ class Ekn < ApplicationRecord
   
   # CRITICAL: Resource naming - SAME database for all batches!
   def neo4j_database_name
-    "ekn-#{id}"  # This NEVER changes for an EKN (dash for Neo4j)
+    # Prefer stable, human-readable slug for Neo4j database naming
+    # Fall back to id if slug is missing (e.g., before persistence)
+    suffix = slug.presence || id
+    "ekn-#{suffix}"
   end
   
   def postgres_schema_name

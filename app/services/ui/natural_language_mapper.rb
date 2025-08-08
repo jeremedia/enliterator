@@ -1,6 +1,6 @@
 # Maps natural language requests to UI specifications
 # This is how the Knowledge Navigator generates dynamic interfaces from conversation
-module UI
+module Ui
   class NaturalLanguageMapper
     def initialize(ekn = nil)
       @ekn = ekn

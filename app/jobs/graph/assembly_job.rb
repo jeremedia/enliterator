@@ -28,8 +28,19 @@ module Graph
         # Get Neo4j session with default database
         driver = Graph::Connection.instance.driver
         
-        # CRITICAL: Schema operations MUST be in completely separate session and transaction
-        # Neo4j does not allow schema changes and data changes in the same transaction
+        # CRITICAL: Backfill any data needed for upcoming constraints in a data-only tx
+        log_progress "Backfilling Lexicon canonical descriptions (pre-schema)..."
+        data_prep_session = driver.session(database: database_name)
+        begin
+          data_prep_session.write_transaction do |tx|
+            backfill_canonical_description(tx)
+          end
+        ensure
+          data_prep_session.close
+        end
+
+        # CRITICAL: Schema operations MUST be in a separate session/transaction
+        # Neo4j does not allow schema changes and data changes in the same transaction.
         log_progress "Setting up graph schema..."
         schema_session = driver.session(database: database_name)
         begin
@@ -116,6 +127,24 @@ module Graph
       deduplicator = Graph::Deduplicator.new(tx)
       result = deduplicator.resolve_all
       @stats[:duplicates_resolved] = result[:resolved_count]
+    end
+
+    def backfill_canonical_description(tx)
+      # Ensure any existing Lexicon nodes have canonical_description set
+      query = <<~CYPHER
+        MATCH (n:Lexicon)
+        WHERE n.canonical_description IS NULL AND n.definition IS NOT NULL
+        SET n.canonical_description = n.definition
+        RETURN count(n) as updated_count
+      CYPHER
+
+      result = tx.run(query)
+      record = result.single
+      count = record ? record[:updated_count] : 0
+      log_progress "Backfilled canonical_description on #{count} Lexicon nodes", level: :debug if count.to_i > 0
+    rescue => e
+      # Non-fatal: log and continue; constraint creation will surface issues otherwise
+      log_progress "Backfill canonical_description skipped: #{e.message}", level: :warn
     end
     
     def collect_stage_metrics

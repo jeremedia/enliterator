@@ -96,6 +96,19 @@ module ApiTracking
       end
 
       def execute_with_tracking
+        # Bypass tracking for typed SDK list endpoint that returns a paginated Page
+        # Some SDKs (like openai-ruby) expect an exact wire shape for list responses.
+        # Wrapping/marshalling can alter the shape and break the Page initializer.
+        # We therefore call the underlying client directly for models.list.
+        if @method_chain.join(".") == "models.list"
+          begin
+            return @client.models.list
+          rescue => e
+            # If the direct call fails, re-raise so callers can handle/log as usual
+            raise
+          end
+        end
+
         # Build the full endpoint name
         endpoint = @method_chain.join(".")
 

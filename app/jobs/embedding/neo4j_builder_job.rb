@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module EmbeddingServices
+module Embedding
   # Neo4j-based embedding builder job (replaces pgvector version)
   class Neo4jBuilderJob < ApplicationJob
     queue_as :embeddings

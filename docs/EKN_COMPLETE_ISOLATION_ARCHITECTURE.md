@@ -1,7 +1,7 @@
 # Complete EKN Data Isolation Architecture
 
 ## Executive Summary
-Each EKN must have COMPLETE isolation across all data layers: Neo4j graphs, PostgreSQL embeddings, source files, and derived artifacts. This document defines the production architecture for true multi-tenant isolation.
+Each EKN must have COMPLETE isolation across all data layers: Neo4j graphs (including vectors), PostgreSQL operational metadata, source files, and derived artifacts. This document defines the production architecture for true multi-tenant isolation.
 
 ## Current State vs Target State
 
@@ -9,14 +9,14 @@ Each EKN must have COMPLETE isolation across all data layers: Neo4j graphs, Post
 - Neo4j: Shared database with 280k mixed nodes
 - PostgreSQL: Shared tables with batch_id filtering
 - Files: Unknown/mixed storage
-- Embeddings: Shared pgvector table
+- Embeddings: Previously shared pgvector table (deprecated)
 - Security: No real isolation
 
 ### Target State (PRODUCTION-READY)
 - Neo4j: Database-per-EKN
 - PostgreSQL: Schema-per-EKN  
 - Files: Isolated storage per EKN
-- Embeddings: Isolated vector stores
+- Embeddings: Neo4j GenAI vectors stored within each EKN's Neo4j database
 - Security: Complete data isolation
 
 ## Recommended Architecture: Hybrid Isolation
@@ -39,7 +39,7 @@ While tempting, full containerization per EKN has significant drawbacks:
 │ Neo4j Database: ekn_42                                  │
 │ File Storage: /storage/ekn_42/ (or s3://ekns/42/)      │
 │ Redis Namespace: ekn:42:*                               │
-│ Embeddings: ekn_42.embeddings table                     │
+│ Embeddings: Neo4j GenAI vectors in DB                   │
 └─────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐
@@ -49,13 +49,13 @@ While tempting, full containerization per EKN has significant drawbacks:
 │ Neo4j Database: ekn_1                                   │
 │ File Storage: /storage/ekn_1/ (or s3://ekns/1/)        │
 │ Redis Namespace: ekn:1:*                                │
-│ Embeddings: ekn_1.embeddings table                      │
+│ Embeddings: Neo4j GenAI vectors in DB                   │
 └─────────────────────────────────────────────────────────┘
 ```
 
 ## Implementation Details
 
-### 1. PostgreSQL Schema Isolation
+### 1. PostgreSQL Schema Isolation (Operational Metadata Only)
 
 ```ruby
 # app/models/ingest_batch.rb
@@ -68,24 +68,7 @@ class IngestBatch < ApplicationRecord
     ApplicationRecord.connection.execute(<<-SQL)
       CREATE SCHEMA IF NOT EXISTS #{postgres_schema_name};
       
-      -- Create isolated embeddings table with pgvector
-      CREATE TABLE IF NOT EXISTS #{postgres_schema_name}.embeddings (
-        id BIGSERIAL PRIMARY KEY,
-        entity_id VARCHAR NOT NULL,
-        entity_type VARCHAR NOT NULL,
-        content TEXT,
-        embedding vector(1536),
-        metadata JSONB DEFAULT '{}',
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      );
-      
-      -- Create HNSW index for similarity search
-      CREATE INDEX IF NOT EXISTS idx_#{postgres_schema_name}_embeddings_hnsw 
-      ON #{postgres_schema_name}.embeddings 
-      USING hnsw (embedding vector_cosine_ops);
-      
-      -- Create other isolated tables
+      -- Create isolated operational tables (embeddings are in Neo4j GenAI)
       CREATE TABLE IF NOT EXISTS #{postgres_schema_name}.documents (
         id BIGSERIAL PRIMARY KEY,
         path VARCHAR NOT NULL,

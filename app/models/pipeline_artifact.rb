@@ -1,5 +1,22 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: pipeline_artifacts
+#
+#  id              :bigint           not null, primary key
+#  pipeline_run_id :bigint           not null
+#  artifact_type   :string           not null
+#  file_path       :string           not null
+#  metadata        :jsonb
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#
+# Indexes
+#
+#  index_pipeline_artifacts_on_artifact_type    (artifact_type)
+#  index_pipeline_artifacts_on_pipeline_run_id  (pipeline_run_id)
+#
 # Track artifacts generated during pipeline runs
 class PipelineArtifact < ApplicationRecord
   belongs_to :pipeline_run

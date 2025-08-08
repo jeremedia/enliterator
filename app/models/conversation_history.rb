@@ -1,3 +1,21 @@
+# == Schema Information
+#
+# Table name: conversation_histories
+#
+#  id              :bigint           not null, primary key
+#  conversation_id :string
+#  user_id         :string
+#  role            :string
+#  content         :text
+#  metadata        :jsonb
+#  position        :integer
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#
+# Indexes
+#
+#  index_conversation_histories_on_conversation_id  (conversation_id)
+#
 class ConversationHistory < ApplicationRecord
   # Store conversation messages in database to avoid cookie overflow
   validates :conversation_id, presence: true

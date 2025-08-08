@@ -94,7 +94,7 @@ module Graph
         session = driver.session(database: 'system')
         
         result = session.run(
-          "SHOW DATABASES WHERE name STARTS WITH 'ekn_'"
+          "SHOW DATABASES WHERE name STARTS WITH 'ekn-'"
         )
         
         databases = []
@@ -178,9 +178,15 @@ module Graph
       private
       
       def validate_database_name!(name)
-        # Allow ekn-{id} pattern, default neo4j database, and test databases
-        unless name =~ /^ekn-[0-9]+$/ || name == 'neo4j' || name =~ /^ekn-test-/
-          raise ArgumentError, "Invalid database name: #{name}. Must match pattern 'ekn-[0-9]+', 'ekn-test-*', or be 'neo4j'"
+        # Allow legacy numeric IDs and new slug-based names, plus default/test DBs
+        valid = (
+          name == 'neo4j' ||
+          name =~ /^ekn-[0-9]+$/ ||
+          name =~ /^ekn-[a-z0-9\-]+$/ ||
+          name =~ /^ekn-test-/
+        )
+        unless valid
+          raise ArgumentError, "Invalid database name: #{name}. Must match 'ekn-<slug|id>', 'ekn-test-*', or 'neo4j'"
         end
       end
       

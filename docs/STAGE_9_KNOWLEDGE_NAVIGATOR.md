@@ -88,7 +88,7 @@ User sees: "I found 47 items about Radical Inclusion. Let me show you the key co
 ┌─────────────────────────────────────────┐
 │  Technical Infrastructure (Stages 0-8)   │ ← Already built
 │  • Knowledge graph (Neo4j)               │
-│  • Embeddings (pgvector)                 │
+│  • Embeddings (Neo4j GenAI)              │
 │  • Fine-tuned model                      │
 │  • MCP tools                             │
 │  • Rights & provenance                   │

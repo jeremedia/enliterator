@@ -1,3 +1,17 @@
+# == Schema Information
+#
+# Table name: sessions
+#
+#  id                 :bigint           not null, primary key
+#  browser_session_id :string           not null
+#  metadata           :jsonb
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#
+# Indexes
+#
+#  index_sessions_on_browser_session_id  (browser_session_id) UNIQUE
+#
 # app/models/session.rb
 # Session model for tracking pre-auth ownership of EKNs and conversations
 # This allows users to create and manage EKNs before we add authentication

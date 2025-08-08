@@ -1,5 +1,30 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: method_pools
+#
+#  id                       :bigint           not null, primary key
+#  method_name              :string           not null
+#  category                 :string
+#  description              :text             not null
+#  steps                    :jsonb
+#  prerequisites            :jsonb
+#  outcomes                 :jsonb
+#  repr_text                :text             not null
+#  provenance_and_rights_id :bigint           not null
+#  valid_time_start         :datetime         not null
+#  valid_time_end           :datetime
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#
+# Indexes
+#
+#  index_method_pools_on_category                             (category)
+#  index_method_pools_on_method_name                          (method_name)
+#  index_method_pools_on_provenance_and_rights_id             (provenance_and_rights_id)
+#  index_method_pools_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
+#
 # MethodPool - Represents methods, procedures, or techniques
 # Named 'MethodPool' to avoid conflict with Ruby's built-in Method class
 # Used to track procedural knowledge and techniques
