@@ -18,7 +18,6 @@
 #  index_experience_emanations_on_experience_id                   (experience_id)
 #  index_experience_emanations_on_experience_id_and_emanation_id  (experience_id,emanation_id) UNIQUE
 #
-# Join table for Experiences and Emanations
 class ExperienceEmanation < ApplicationRecord
   belongs_to :experience
   belongs_to :emanation

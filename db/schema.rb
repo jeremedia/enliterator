@@ -10,11 +10,12 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_07_154247) do
+ActiveRecord::Schema[8.0].define(version: 2025_08_08_205235) do
   create_schema "ekn_11"
   create_schema "ekn_12"
   create_schema "ekn_13"
   create_schema "ekn_14"
+  create_schema "ekn_34"
   create_schema "ekn_7"
 
   # These are extensions that must be enabled in order to support this database
@@ -110,6 +111,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_07_154247) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "ekn_id"
+    t.string "response_type"
     t.index ["batch_id"], name: "index_api_calls_on_batch_id"
     t.index ["created_at"], name: "index_api_calls_on_created_at"
     t.index ["ekn_id", "created_at"], name: "index_api_calls_on_ekn_id_and_created_at"

@@ -18,8 +18,6 @@
 #
 #  index_negative_knowledges_on_batch_id  (batch_id)
 #
-# app/models/negative_knowledge.rb
-# Records what the system explicitly doesn't know to prevent overreach
 class NegativeKnowledge < ApplicationRecord
   belongs_to :batch, class_name: 'IngestBatch', optional: true
   

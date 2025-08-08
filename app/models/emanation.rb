@@ -25,7 +25,6 @@
 #  index_emanations_on_provenance_and_rights_id             (provenance_and_rights_id)
 #  index_emanations_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
 #
-# Emanation pool: influences, consequences, and effects
 class Emanation < ApplicationRecord
   include HasRights
   include TimeTrackable

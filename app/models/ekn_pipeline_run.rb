@@ -40,8 +40,6 @@
 #  index_ekn_pipeline_runs_on_ingest_batch_id        (ingest_batch_id)
 #  index_ekn_pipeline_runs_on_status                 (status)
 #
-# EknPipelineRun orchestrates the complete 9-stage pipeline for processing data into Knowledge Navigators
-# It provides state management, progress tracking, error recovery, and observability
 class EknPipelineRun < ApplicationRecord
   include AASM
   include Loggable

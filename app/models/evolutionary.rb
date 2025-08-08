@@ -30,7 +30,6 @@
 #  index_evolutionaries_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
 #  index_evolutionaries_on_version_id                           (version_id)
 #
-# Evolutionary pool: versioning, iterations, and changes over time
 class Evolutionary < ApplicationRecord
   include HasRights
   include TimeTrackable

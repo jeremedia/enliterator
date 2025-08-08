@@ -17,7 +17,6 @@
 #  index_pipeline_artifacts_on_artifact_type    (artifact_type)
 #  index_pipeline_artifacts_on_pipeline_run_id  (pipeline_run_id)
 #
-# Track artifacts generated during pipeline runs
 class PipelineArtifact < ApplicationRecord
   belongs_to :pipeline_run
   

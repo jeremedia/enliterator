@@ -24,7 +24,6 @@
 #  index_pipeline_runs_on_started_at        (started_at)
 #  index_pipeline_runs_on_status            (status)
 #
-# Track pipeline execution runs
 class PipelineRun < ApplicationRecord
   # Enums
   enum :status, {

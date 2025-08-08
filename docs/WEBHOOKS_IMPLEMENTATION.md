@@ -65,7 +65,7 @@ end
 ### Environment Variables
 ```bash
 # Webhook signing secret (stored in .env)
-OPENAI_WEBHOOK_SECRET="whsec_vgYpo3DivabKNmnCpncFefzwo03hJgCbpKpOI8jpKNU="
+OPENAI_WEBHOOK_SECRET="your_webhook_secret_here"
 ```
 
 ### OpenAI Dashboard Setup

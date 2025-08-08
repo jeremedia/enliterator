@@ -18,7 +18,6 @@
 #  index_idea_manifests_on_idea_id_and_manifest_id  (idea_id,manifest_id) UNIQUE
 #  index_idea_manifests_on_manifest_id              (manifest_id)
 #
-# Join table for Ideas and Manifests
 class IdeaManifest < ApplicationRecord
   belongs_to :idea
   belongs_to :manifest

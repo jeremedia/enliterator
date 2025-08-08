@@ -48,6 +48,7 @@
 #  created_at         :datetime         not null
 #  updated_at         :datetime         not null
 #  ekn_id             :bigint
+#  response_type      :string
 #
 # Indexes
 #
@@ -71,7 +72,6 @@
 #  index_api_calls_on_user_id                                 (user_id)
 #  index_api_calls_on_user_id_and_created_at                  (user_id,created_at)
 #
-# Tracks Anthropic (Claude) API calls with provider-specific pricing and features
 class AnthropicApiCall < ApiCall
   # Anthropic pricing (August 2025 estimates - update with actual pricing)
   # Prices are per 1M tokens

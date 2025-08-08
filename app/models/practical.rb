@@ -24,7 +24,6 @@
 #  index_practicals_on_steps                                (steps) USING gin
 #  index_practicals_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
 #
-# Practical pool: how-to guides, instructions, and procedures
 class Practical < ApplicationRecord
   include HasRights
   include TimeTrackable

@@ -23,8 +23,6 @@
 #  index_evidences_on_observed_at               (observed_at)
 #  index_evidences_on_provenance_and_rights_id  (provenance_and_rights_id)
 #
-# Evidence Pool - Represents supporting evidence or proof
-# Used to track claims, assertions, and their supporting documentation
 class Evidence < ApplicationRecord
   belongs_to :provenance_and_rights
   

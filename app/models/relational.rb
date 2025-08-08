@@ -29,7 +29,6 @@
 #  index_relationals_on_target_type_and_target_id            (target_type,target_id)
 #  index_relationals_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
 #
-# Relational pool: relationship instances between entities
 class Relational < ApplicationRecord
   include HasRights
   include TimeTrackable

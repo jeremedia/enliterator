@@ -18,7 +18,6 @@
 #  index_evidence_experiences_on_evidence_id_and_experience_id  (evidence_id,experience_id) UNIQUE
 #  index_evidence_experiences_on_experience_id                  (experience_id)
 #
-# Join table for Evidence-Experience relationships
 class EvidenceExperience < ApplicationRecord
   belongs_to :evidence
   belongs_to :experience

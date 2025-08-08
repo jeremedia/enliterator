@@ -18,7 +18,6 @@
 #  index_risk_practicals_on_risk_id                   (risk_id)
 #  index_risk_practicals_on_risk_id_and_practical_id  (risk_id,practical_id) UNIQUE
 #
-# Join table for Risk-Practical relationships
 class RiskPractical < ApplicationRecord
   belongs_to :risk
   belongs_to :practical

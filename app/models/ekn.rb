@@ -26,9 +26,6 @@
 #  index_ekns_on_slug        (slug) UNIQUE
 #  index_ekns_on_status      (status)
 #
-# app/models/ekn.rb
-# EKN (Enliterated Knowledge Navigator) - The persistent, growing knowledge domain
-# This is the TOP-LEVEL entity that owns IngestBatches, not the other way around!
 class Ekn < ApplicationRecord
   extend FriendlyId
   friendly_id :name, use: [:slugged, :finders, :history]

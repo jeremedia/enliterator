@@ -68,6 +68,16 @@ module ApiTracking
         @final_kwargs = {}
         @block = nil
       end
+      
+      # Prevent implicit conversion to Array which causes errors
+      def to_ary
+        nil
+      end
+      
+      # Add to_a method that returns nil to prevent array conversion
+      def to_a
+        nil
+      end
 
       def method_missing(method_name, *args, **kwargs, &block)
         @method_chain << method_name

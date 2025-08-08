@@ -18,7 +18,6 @@
 #  index_idea_practicals_on_idea_id_and_practical_id  (idea_id,practical_id) UNIQUE
 #  index_idea_practicals_on_practical_id              (practical_id)
 #
-# Join table for Ideas and Practicals (codifies relation)
 class IdeaPractical < ApplicationRecord
   belongs_to :idea
   belongs_to :practical

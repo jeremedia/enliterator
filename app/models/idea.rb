@@ -28,7 +28,6 @@
 #  index_ideas_on_provenance_and_rights_id             (provenance_and_rights_id)
 #  index_ideas_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
 #
-# Captures the "why" - principles, theories, intents, design rationales
 class Idea < ApplicationRecord
   include HasRights
   include TimeTrackable

@@ -33,8 +33,6 @@
 #  index_ingest_batches_on_source_type  (source_type)
 #  index_ingest_batches_on_status       (status)
 #
-# Represents a batch of items being processed through the pipeline
-# NOW BELONGS TO AN EKN - no longer the top-level entity!
 class IngestBatch < ApplicationRecord
   belongs_to :ekn  # CRITICAL: IngestBatch now belongs to an EKN
   has_many :ingest_items, dependent: :destroy

@@ -18,7 +18,6 @@
 #  index_manifest_spatials_on_manifest_id_and_spatial_id  (manifest_id,spatial_id) UNIQUE
 #  index_manifest_spatials_on_spatial_id                  (spatial_id)
 #
-# Join table for Manifest-Spatial relationships
 class ManifestSpatial < ApplicationRecord
   belongs_to :manifest
   belongs_to :spatial

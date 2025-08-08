@@ -140,7 +140,7 @@ WebhookEvent.by_type('fine_tuning.job.succeeded')
 ### Environment Variables
 ```bash
 OPENAI_API_KEY="your-key"
-OPENAI_WEBHOOK_SECRET="whsec_vgYpo3DivabKNmnCpncFefzwo03hJgCbpKpOI8jpKNU="
+OPENAI_WEBHOOK_SECRET="your_webhook_secret_here"
 ```
 
 ### Model Configuration

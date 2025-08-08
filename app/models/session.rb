@@ -12,9 +12,6 @@
 #
 #  index_sessions_on_browser_session_id  (browser_session_id) UNIQUE
 #
-# app/models/session.rb
-# Session model for tracking pre-auth ownership of EKNs and conversations
-# This allows users to create and manage EKNs before we add authentication
 class Session < ApplicationRecord
   # Associations
   has_many :ekns, dependent: :destroy

@@ -48,6 +48,7 @@
 #  created_at         :datetime         not null
 #  updated_at         :datetime         not null
 #  ekn_id             :bigint
+#  response_type      :string
 #
 # Indexes
 #
@@ -71,8 +72,6 @@
 #  index_api_calls_on_user_id                                 (user_id)
 #  index_api_calls_on_user_id_and_created_at                  (user_id,created_at)
 #
-# Base class for tracking all LLM API calls using STI
-# Subclasses: OpenaiApiCall, AnthropicApiCall, OllamaApiCall, etc.
 class ApiCall < ApplicationRecord
   include CurrentUserTrackable
   include CurrentEknTrackable

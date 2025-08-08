@@ -16,7 +16,8 @@
       "Bash(mv:*)",
       "Bash(rake:*)",
       "Bash(touch:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(bundle exec rake:*)"
     ],
     "deny": []
   }

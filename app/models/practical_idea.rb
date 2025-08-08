@@ -18,7 +18,6 @@
 #  index_practical_ideas_on_idea_id       (idea_id)
 #  index_practical_ideas_on_practical_id  (practical_id)
 #
-# Join table for Practical-Idea relationships (reverse of Idea->Practical)
 class PracticalIdea < ApplicationRecord
   belongs_to :practical
   belongs_to :idea

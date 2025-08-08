@@ -48,6 +48,7 @@
 #  created_at         :datetime         not null
 #  updated_at         :datetime         not null
 #  ekn_id             :bigint
+#  response_type      :string
 #
 # Indexes
 #
@@ -71,7 +72,6 @@
 #  index_api_calls_on_user_id                                 (user_id)
 #  index_api_calls_on_user_id_and_created_at                  (user_id,created_at)
 #
-# Tracks OpenAI API calls with provider-specific pricing and features
 class OpenaiApiCall < ApiCall
   # OpenAI-specific pricing (August 2025 - gpt-4.1 family)
   # Prices are per 1M tokens for text models, per image for image models

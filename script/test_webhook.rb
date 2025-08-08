@@ -10,7 +10,7 @@ require 'time'
 class WebhookTester
   def initialize
     @webhook_url = 'http://localhost:3000/webhooks/openai'
-    @webhook_secret = ENV['OPENAI_WEBHOOK_SECRET'] || 'whsec_vgYpo3DivabKNmnCpncFefzwo03hJgCbpKpOI8jpKNU='
+    @webhook_secret = ENV.fetch('OPENAI_WEBHOOK_SECRET')
   end
   
   def test_fine_tuning_webhook

@@ -18,7 +18,6 @@
 #  index_emanation_relationals_on_emanation_id_and_relational_id  (emanation_id,relational_id) UNIQUE
 #  index_emanation_relationals_on_relational_id                   (relational_id)
 #
-# Join table for Emanation-Relational relationships
 class EmanationRelational < ApplicationRecord
   belongs_to :emanation
   belongs_to :relational

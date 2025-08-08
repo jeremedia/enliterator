@@ -24,8 +24,6 @@
 #  index_actors_on_role                                 (role)
 #  index_actors_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
 #
-# Actor Pool - Represents agents/actors who perform actions or have agency
-# Part of the optional pools that may or may not have content depending on the domain
 class Actor < ApplicationRecord
   belongs_to :provenance_and_rights
   

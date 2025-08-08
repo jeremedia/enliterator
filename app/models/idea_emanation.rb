@@ -18,7 +18,6 @@
 #  index_idea_emanations_on_idea_id                   (idea_id)
 #  index_idea_emanations_on_idea_id_and_emanation_id  (idea_id,emanation_id) UNIQUE
 #
-# Join table for Ideas and Emanations (influences relation)
 class IdeaEmanation < ApplicationRecord
   belongs_to :idea
   belongs_to :emanation

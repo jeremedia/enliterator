@@ -31,7 +31,6 @@
 #  index_lexicon_and_ontologies_on_surface_forms             (surface_forms) USING gin
 #  index_lexicon_and_ontologies_on_term                      (term) UNIQUE
 #
-# Lexicon and Ontology pool: canonical terms, definitions, and relationships
 class LexiconAndOntology < ApplicationRecord
   include HasRights
   include TimeTrackable

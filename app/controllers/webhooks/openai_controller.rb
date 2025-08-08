@@ -38,7 +38,7 @@ module Webhooks
     
     def verify_signature
       # Get the webhook secret from environment or use the known value as fallback
-      webhook_secret = ENV['OPENAI_WEBHOOK_SECRET'] || 'whsec_vgYpo3DivabKNmnCpncFefzwo03hJgCbpKpOI8jpKNU='
+      webhook_secret = ENV['OPENAI_WEBHOOK_SECRET']
       
       if webhook_secret.blank?
         Rails.logger.error "OPENAI_WEBHOOK_SECRET not configured"

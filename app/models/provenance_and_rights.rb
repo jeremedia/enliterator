@@ -32,7 +32,6 @@
 #  index_provenance_and_rights_on_source_ids            (source_ids) USING gin
 #  index_provenance_and_rights_on_training_eligibility  (training_eligibility)
 #
-# Model for tracking source, attribution, consent, and derived rights
 class ProvenanceAndRights < ApplicationRecord
   include TimeTrackable
   

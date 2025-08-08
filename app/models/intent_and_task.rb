@@ -39,7 +39,6 @@
 #  index_intent_and_tasks_on_resolved_at               (resolved_at)
 #  index_intent_and_tasks_on_status                    (status)
 #
-# Intent and Task pool: user intents, queries, and deliverable requests
 class IntentAndTask < ApplicationRecord
   include HasRights
   include TimeTrackable

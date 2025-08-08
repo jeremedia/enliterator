@@ -18,7 +18,6 @@
 #  index_actor_experiences_on_actor_id_and_experience_id  (actor_id,experience_id) UNIQUE
 #  index_actor_experiences_on_experience_id               (experience_id)
 #
-# Join table for Actor-Experience relationships
 class ActorExperience < ApplicationRecord
   belongs_to :actor
   belongs_to :experience

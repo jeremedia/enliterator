@@ -27,7 +27,6 @@
 #  index_manifests_on_spatial_ref                          (spatial_ref)
 #  index_manifests_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
 #
-# Captures the "what" - concrete instances and artifacts
 class Manifest < ApplicationRecord
   include HasRights
   include TimeTrackable

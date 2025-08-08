@@ -18,7 +18,6 @@
 #  index_experience_practicals_on_experience_id  (experience_id)
 #  index_experience_practicals_on_practical_id   (practical_id)
 #
-# Join table for Experience-Practical relationships
 class ExperiencePractical < ApplicationRecord
   belongs_to :experience
   belongs_to :practical

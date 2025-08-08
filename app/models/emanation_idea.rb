@@ -18,7 +18,6 @@
 #  index_emanation_ideas_on_emanation_id  (emanation_id)
 #  index_emanation_ideas_on_idea_id       (idea_id)
 #
-# Join table for Emanation-Idea relationships
 class EmanationIdea < ApplicationRecord
   belongs_to :emanation
   belongs_to :idea

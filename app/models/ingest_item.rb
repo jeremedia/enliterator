@@ -49,7 +49,6 @@
 #  index_ingest_items_on_source_hash                      (source_hash) UNIQUE
 #  index_ingest_items_on_triage_status                    (triage_status)
 #
-# Represents an individual item in an ingest batch
 class IngestItem < ApplicationRecord
   belongs_to :ingest_batch
   belongs_to :provenance_and_rights, optional: true

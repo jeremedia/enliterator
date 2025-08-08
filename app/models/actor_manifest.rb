@@ -18,7 +18,6 @@
 #  index_actor_manifests_on_actor_id_and_manifest_id  (actor_id,manifest_id) UNIQUE
 #  index_actor_manifests_on_manifest_id               (manifest_id)
 #
-# Join table for Actor-Manifest relationships
 class ActorManifest < ApplicationRecord
   belongs_to :actor
   belongs_to :manifest

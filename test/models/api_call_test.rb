@@ -48,6 +48,7 @@
 #  created_at         :datetime         not null
 #  updated_at         :datetime         not null
 #  ekn_id             :bigint
+#  response_type      :string
 #
 # Indexes
 #

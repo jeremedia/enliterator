@@ -29,8 +29,6 @@
 #  index_spatials_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
 #  index_spatials_on_year                                 (year)
 #
-# Spatial Pool - Represents location and spatial information
-# Used for domains that have physical or conceptual spatial dimensions
 class Spatial < ApplicationRecord
   belongs_to :provenance_and_rights
   

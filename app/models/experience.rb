@@ -25,7 +25,6 @@
 #  index_experiences_on_provenance_and_rights_id  (provenance_and_rights_id)
 #  index_experiences_on_sentiment                 (sentiment)
 #
-# Captures lived outcomes and perceptions
 class Experience < ApplicationRecord
   include HasRights
   include TimeTrackable

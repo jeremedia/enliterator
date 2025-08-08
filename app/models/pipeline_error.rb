@@ -18,7 +18,6 @@
 #  index_pipeline_errors_on_pipeline_run_id  (pipeline_run_id)
 #  index_pipeline_errors_on_stage            (stage)
 #
-# Track errors that occur during pipeline runs
 class PipelineError < ApplicationRecord
   belongs_to :pipeline_run
   

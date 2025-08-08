@@ -25,9 +25,6 @@
 #  index_method_pools_on_provenance_and_rights_id             (provenance_and_rights_id)
 #  index_method_pools_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
 #
-# MethodPool - Represents methods, procedures, or techniques
-# Named 'MethodPool' to avoid conflict with Ruby's built-in Method class
-# Used to track procedural knowledge and techniques
 class MethodPool < ApplicationRecord
   belongs_to :provenance_and_rights
   

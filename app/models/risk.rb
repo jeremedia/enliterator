@@ -26,8 +26,6 @@
 #  index_risks_on_severity                             (severity)
 #  index_risks_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
 #
-# Risk Pool - Represents risks, hazards, or dangers
-# Used to track potential problems and their mitigations
 class Risk < ApplicationRecord
   belongs_to :provenance_and_rights
   
