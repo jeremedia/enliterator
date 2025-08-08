@@ -30,7 +30,7 @@ module Pools
           processed += 1
           
           if processed % 10 == 0
-            log_progress "Processed #{processed} items...", level: :debug
+            log_progress "Processed #{processed} IngestItems for Ten Pool Canon extraction...", level: :debug
           end
         rescue => e
           log_progress "Failed to process item #{item.id}: #{e.message}", level: :error
