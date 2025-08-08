@@ -1,4 +1,225 @@
-<div>
-  <h1 class="font-bold text-4xl">Admin::OpenaiSettings#edit</h1>
-  <p>Find me in app/views/admin/openai_settings/edit.html.erb</p>
+<div class="max-w-2xl mx-auto space-y-6">
+  <!-- Page header -->
+  <div>
+    <h1 class="text-2xl font-bold leading-6 text-gray-900">Edit OpenAI Setting</h1>
+    <p class="mt-2 text-sm text-gray-500">Update the configuration for <%= @setting.key.humanize %></p>
+  </div>
+
+  <!-- Edit form -->
+  <div class="rounded-lg bg-white shadow">
+    <div class="px-4 py-5 sm:p-6">
+      <%= form_with model: @setting, url: admin_openai_setting_path(@setting), local: true do |form| %>
+        <% if @setting.errors.any? %>
+          <div class="rounded-md bg-red-50 p-4 mb-6">
+            <div class="flex">
+              <div class="ml-3">
+                <h3 class="text-sm font-medium text-red-800">
+                  <%= pluralize(@setting.errors.count, "error") %> prohibited this setting from being saved:
+                </h3>
+                <div class="mt-2 text-sm text-red-700">
+                  <ul class="list-disc space-y-1 pl-5">
+                    <% @setting.errors.full_messages.each do |message| %>
+                      <li><%= message %></li>
+                    <% end %>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% end %>
+
+        <div class="space-y-6">
+          <!-- Key field (read-only) -->
+          <div>
+            <%= form.label :key, class: "block text-sm font-medium text-gray-700" %>
+            <div class="mt-1">
+              <%= form.text_field :key, 
+                  disabled: true,
+                  class: "block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+            </div>
+            <p class="mt-2 text-sm text-gray-500">This field cannot be changed</p>
+          </div>
+
+          <!-- Category field -->
+          <div>
+            <%= form.label :category, class: "block text-sm font-medium text-gray-700" %>
+            <div class="mt-1">
+              <%= form.select :category, 
+                  options_for_select([
+                    ['Model', 'model'],
+                    ['Temperature', 'temperature'],
+                    ['Config', 'config'],
+                    ['Fine-tune', 'fine_tune']
+                  ], @setting.category),
+                  {},
+                  class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+            </div>
+          </div>
+
+          <!-- Value field -->
+          <div>
+            <%= form.label :value, class: "block text-sm font-medium text-gray-700" %>
+            <div class="mt-1">
+              <% if @setting.key.include?('model') %>
+                <!-- Model selector for model settings -->
+                <%= form.select :value,
+                    options_for_select([
+                      ['--- GPT-5 Series (Latest) ---', '', disabled: true],
+                      ['GPT-5', 'gpt-5'],
+                      ['GPT-5 Mini', 'gpt-5-mini'],
+                      ['GPT-5 Nano', 'gpt-5-nano'],
+                      ['--- GPT-4.1 Series ---', '', disabled: true],
+                      ['GPT-4.1', 'gpt-4.1'],
+                      ['GPT-4.1 Mini', 'gpt-4.1-mini'],
+                      ['GPT-4.1 Nano', 'gpt-4.1-nano'],
+                      ['--- GPT-4o Series ---', '', disabled: true],
+                      ['GPT-4o Mini (Fine-tunable)', 'gpt-4o-mini'],
+                      ['GPT-4o', 'gpt-4o'],
+                      ['GPT-4o (2024-11-20)', 'gpt-4o-2024-11-20'],
+                      ['GPT-4o (2024-08-06)', 'gpt-4o-2024-08-06'],
+                      ['--- GPT-4 Series ---', '', disabled: true],
+                      ['GPT-4 Turbo', 'gpt-4-turbo'],
+                      ['GPT-4', 'gpt-4'],
+                      ['--- GPT-3.5 Series ---', '', disabled: true],
+                      ['GPT-3.5 Turbo (Fine-tunable)', 'gpt-3.5-turbo'],
+                      ['GPT-3.5 Turbo (16k)', 'gpt-3.5-turbo-16k'],
+                      ['--- O1 Series (Reasoning) ---', '', disabled: true],
+                      ['O1 Pro', 'o1-pro'],
+                      ['O1', 'o1'],
+                      ['O1 Mini', 'o1-mini']
+                    ], @setting.value),
+                    {},
+                    class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+                <p class="mt-2 text-sm text-gray-500">
+                  <% if @setting.key == 'model_fine_tune' %>
+                    <strong>Note:</strong> Fine-tuning is only supported on gpt-4o-mini and gpt-3.5-turbo models. GPT-5 models cannot be fine-tuned yet.
+                  <% else %>
+                    Select the OpenAI model to use for <%= @setting.key.gsub('model_', '').humanize.downcase %> tasks
+                  <% end %>
+                </p>
+              <% elsif @setting.key.include?('temperature') %>
+                <!-- Temperature slider for temperature settings -->
+                <div class="flex items-center space-x-3">
+                  <%= form.range_field :value,
+                      min: 0.0,
+                      max: 2.0,
+                      step: 0.1,
+                      value: @setting.value,
+                      class: "flex-1",
+                      oninput: "document.getElementById('temperature-value').innerText = this.value" %>
+                  <span id="temperature-value" class="text-lg font-semibold text-gray-900 w-12 text-right">
+                    <%= @setting.value %>
+                  </span>
+                </div>
+                <p class="mt-2 text-sm text-gray-500">
+                  Lower values (0.0-0.5) = more focused and deterministic<br>
+                  Higher values (1.0-2.0) = more creative and random
+                </p>
+              <% elsif @setting.value.in?(['true', 'false']) %>
+                <!-- Boolean toggle for true/false settings -->
+                <%= form.select :value,
+                    options_for_select([['Enabled', 'true'], ['Disabled', 'false']], @setting.value),
+                    {},
+                    class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+              <% else %>
+                <!-- Regular text field for other settings -->
+                <%= form.text_field :value, 
+                    class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+              <% end %>
+            </div>
+          </div>
+
+          <!-- Description field -->
+          <div>
+            <%= form.label :description, class: "block text-sm font-medium text-gray-700" %>
+            <div class="mt-1">
+              <%= form.text_area :description, 
+                  rows: 3,
+                  class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+            </div>
+            <p class="mt-2 text-sm text-gray-500">Optional description to explain what this setting does</p>
+          </div>
+
+          <!-- Active toggle -->
+          <div class="flex items-center">
+            <%= form.check_box :active, class: "h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" %>
+            <div class="ml-3">
+              <%= form.label :active, "Active", class: "text-sm font-medium text-gray-700" %>
+              <p class="text-sm text-gray-500">Only active settings are used by the system</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Form actions -->
+        <div class="mt-6 flex items-center justify-between">
+          <div>
+            <%= link_to "Cancel", admin_openai_settings_path, 
+                class: "text-sm text-gray-600 hover:text-gray-900" %>
+          </div>
+          <div class="flex space-x-3">
+            <button type="button" onclick="testCurrentSettings()" 
+                    class="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+              Test Settings
+            </button>
+            <%= form.submit "Save Changes", 
+                class: "inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Current Configuration Info -->
+  <div class="rounded-lg bg-gray-50 px-4 py-5 sm:p-6">
+    <h3 class="text-sm font-medium text-gray-900 mb-3">Current System Configuration</h3>
+    <dl class="space-y-2 text-sm">
+      <div class="flex justify-between">
+        <dt class="text-gray-500">Model for Extraction:</dt>
+        <dd class="font-mono text-gray-900"><%= OpenaiConfig::SettingsManager.model_for('extraction') %></dd>
+      </div>
+      <div class="flex justify-between">
+        <dt class="text-gray-500">Model for Generation:</dt>
+        <dd class="font-mono text-gray-900"><%= OpenaiConfig::SettingsManager.model_for('generation') %></dd>
+      </div>
+      <div class="flex justify-between">
+        <dt class="text-gray-500">Model for Fine-tuning:</dt>
+        <dd class="font-mono text-gray-900"><%= OpenaiConfig::SettingsManager.model_for('fine_tune') %></dd>
+      </div>
+    </dl>
+  </div>
 </div>
+
+<script>
+  function testCurrentSettings() {
+    const valueField = document.querySelector('#openai_setting_value');
+    const keyField = document.querySelector('#openai_setting_key');
+    
+    if (keyField.value.includes('model')) {
+      testModel(valueField.value, keyField.value.replace('model_', ''));
+    } else {
+      alert('Test is only available for model settings');
+    }
+  }
+  
+  function testModel(model, taskType) {
+    fetch('/admin/openai_settings/test_model', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+      },
+      body: JSON.stringify({ model: model, task_type: taskType })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert(`✅ ${data.message}`);
+      } else {
+        alert(`❌ Error: ${data.error}`);
+      }
+    })
+    .catch(error => {
+      alert(`❌ Network error: ${error}`);
+    });
+  }
+</script>

@@ -150,6 +150,49 @@ module OpenaiConfig
         refresh_available_models! || { all: [], gpt: [], fine_tunable: [] }
       end
       
+      # Display current configuration for debugging/documentation
+      def current_configuration
+        config = {
+          timestamp: Time.current.iso8601,
+          models: {
+            extraction: model_for(:extraction),
+            answer: model_for(:answer),
+            routing: model_for(:routing),
+            fine_tune: model_for(:fine_tune)
+          },
+          temperatures: {
+            extraction: temperature_for(:extraction),
+            answer: temperature_for(:answer),
+            routing: temperature_for(:routing)
+          },
+          settings_source: {},
+          environment_variables: {
+            'OPENAI_MODEL' => ENV['OPENAI_MODEL'] || 'NOT SET',
+            'OPENAI_MODEL_ANSWER' => ENV['OPENAI_MODEL_ANSWER'] || 'NOT SET',
+            'OPENAI_FT_BASE' => ENV['OPENAI_FT_BASE'] || 'NOT SET',
+            'OPENAI_API_KEY' => ENV['OPENAI_API_KEY'].present? ? 'SET (hidden)' : 'NOT SET'
+          },
+          batch_api: {
+            enabled: use_batch_api?,
+            threshold: batch_threshold
+          }
+        }
+        
+        # Determine source of each model setting
+        [:extraction, :answer, :routing, :fine_tune].each do |task|
+          setting = OpenaiSetting.active.find_by(key: "model_#{task}")
+          if setting&.value.present?
+            config[:settings_source][task] = 'database'
+          elsif ENV["OPENAI_MODEL"].present?
+            config[:settings_source][task] = 'environment'
+          else
+            config[:settings_source][task] = 'MISSING'
+          end
+        end
+        
+        config
+      end
+      
       def supported_models_for(task_type)
         case task_type.to_s
         when 'extraction'

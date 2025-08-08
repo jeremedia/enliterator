@@ -13,6 +13,12 @@ class LexiconAndOntology < ApplicationRecord
   validate :surface_forms_valid
   validate :relations_valid
 
+  # Callbacks
+  before_validation do
+    # Ensure canonical_description is always set (Neo4j requires it)
+    self.canonical_description ||= definition
+  end
+
   # Scopes
   scope :canonical, -> { where(is_canonical: true) }
   scope :by_pool, ->(pool) { where(pool_association: pool) }

@@ -15,7 +15,7 @@ module Navigator
       @ekn = ekn
       @client = OPENAI
       # IMPORTANT: Using nil for batch_id because Neo4j nodes don't have batch_id properties
-      # The graph has 280k+ nodes but they're not filtered by batch - see docs/NEO4J_SETUP.md
+      # The graph has 280k+ nodes but they're not filtered by batch - see /docs/NEO4J.md
       @graph_service = Graph::QueryService.new(nil)  # Query ALL Neo4j data
       @visualization_generator = VisualizationGenerator.new(ekn: ekn)
       @fine_tuned_model = get_ekn_model

@@ -10,7 +10,12 @@ module Graph
     end
     
     def setup
+      # NOTE: Neo4j often treats constraints and indexes as schema operations
+      # that cannot be mixed with data operations. We create them together
+      # but in a dedicated schema-only transaction.
       create_constraints
+      # Note: Indexes can sometimes be created in the same transaction as constraints
+      # but we keep them separate for safety
       create_indexes
       
       {
@@ -42,6 +47,8 @@ module Graph
           create_existence_constraint(label, 'publishability')
           create_existence_constraint(label, 'training_eligibility')
         when 'Lexicon'
+          # Backfill existing nodes before creating constraint
+          backfill_canonical_description
           create_existence_constraint(label, 'canonical_description')
         end
         
@@ -125,6 +132,25 @@ module Graph
       rescue Neo4j::Driver::Exceptions::ClientException => e
         # Constraint already exists or not supported in this Neo4j version
         Rails.logger.debug "Could not create existence constraint: #{label}.#{property} - #{e.message}"
+      end
+    end
+    
+    def backfill_canonical_description
+      # Backfill any existing Lexicon nodes that have definition but no canonical_description
+      query = <<~CYPHER
+        MATCH (n:Lexicon)
+        WHERE n.canonical_description IS NULL AND n.definition IS NOT NULL
+        SET n.canonical_description = n.definition
+        RETURN count(n) as updated_count
+      CYPHER
+      
+      begin
+        result = @tx.run(query)
+        record = result.single
+        count = record ? record[:updated_count] : 0
+        Rails.logger.info "Backfilled canonical_description for #{count} Lexicon nodes" if count > 0
+      rescue Neo4j::Driver::Exceptions::ClientException => e
+        Rails.logger.warn "Could not backfill canonical_description: #{e.message}"
       end
     end
     

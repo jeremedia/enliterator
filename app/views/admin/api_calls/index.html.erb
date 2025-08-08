@@ -1,0 +1,215 @@
+<div class="container mx-auto px-4 py-8">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-3xl font-bold text-gray-900">API Call Tracking</h1>
+    <div class="flex gap-2">
+      <%= link_to "Export CSV", admin_api_calls_path(format: :csv, **request.query_parameters), 
+          class: "px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700" %>
+      <%= link_to "Dashboard", admin_dashboard_path, 
+          class: "px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700" %>
+    </div>
+  </div>
+
+  <!-- Stats Summary -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-sm text-gray-600">Total Calls</div>
+      <div class="text-2xl font-bold"><%= @stats[:total_count] %></div>
+      <div class="text-xs text-gray-500">Success Rate: <%= @stats[:success_rate] %>%</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-sm text-gray-600">Total Cost</div>
+      <div class="text-2xl font-bold">$<%= @stats[:total_cost] %></div>
+      <div class="text-xs text-gray-500"><%= @stats[:total_tokens] %> tokens</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-sm text-gray-600">Avg Response Time</div>
+      <div class="text-2xl font-bold"><%= @stats[:avg_response_time] %>ms</div>
+      <div class="text-xs text-gray-500">Errors: <%= @stats[:error_count] %></div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-sm text-gray-600">Providers</div>
+      <div class="text-xs mt-1">
+        <% @stats[:providers].each do |provider, count| %>
+          <div><%= provider&.gsub('ApiCall', '') || 'Unknown' %>: <%= count %></div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="bg-white rounded-lg shadow p-4 mb-6">
+    <%= form_with url: admin_api_calls_path, method: :get, local: true, class: "space-y-4" do |f| %>
+      <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <!-- Search -->
+        <div>
+          <%= f.label :q, "Search", class: "block text-sm font-medium text-gray-700" %>
+          <%= f.text_field :q, value: params[:q], 
+              placeholder: "Service, endpoint, error...",
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" %>
+        </div>
+
+        <!-- Provider Filter -->
+        <div>
+          <%= f.label :provider, "Provider", class: "block text-sm font-medium text-gray-700" %>
+          <%= f.select :provider, 
+              options_for_select([['All Providers', '']] + @providers.map { |p| [p&.gsub('ApiCall', '') || 'Unknown', p] }, params[:provider]),
+              {}, 
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" %>
+        </div>
+
+        <!-- Model Filter -->
+        <div>
+          <%= f.label :model, "Model", class: "block text-sm font-medium text-gray-700" %>
+          <%= f.select :model, 
+              options_for_select([['All Models', '']] + @models.map { |m| [m, m] }, params[:model]),
+              {}, 
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" %>
+        </div>
+
+        <!-- Service Filter -->
+        <div>
+          <%= f.label :service, "Service", class: "block text-sm font-medium text-gray-700" %>
+          <%= f.select :service, 
+              options_for_select([['All Services', '']] + @services.map { |s| [s, s] }, params[:service]),
+              {}, 
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" %>
+        </div>
+
+        <!-- Status Filter -->
+        <div>
+          <%= f.label :status, "Status", class: "block text-sm font-medium text-gray-700" %>
+          <%= f.select :status, 
+              options_for_select([['All Statuses', ''], ['Success', 'success'], ['Failed', 'failed'], 
+                                 ['Rate Limited', 'rate_limited'], ['Timeout', 'timeout']], params[:status]),
+              {}, 
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" %>
+        </div>
+
+        <!-- Date From -->
+        <div>
+          <%= f.label :date_from, "From Date", class: "block text-sm font-medium text-gray-700" %>
+          <%= f.date_field :date_from, value: params[:date_from], 
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" %>
+        </div>
+
+        <!-- Date To -->
+        <div>
+          <%= f.label :date_to, "To Date", class: "block text-sm font-medium text-gray-700" %>
+          <%= f.date_field :date_to, value: params[:date_to], 
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" %>
+        </div>
+
+        <!-- Special Filters -->
+        <div>
+          <%= f.label :special_filter, "Quick Filter", class: "block text-sm font-medium text-gray-700" %>
+          <%= f.select :special_filter, 
+              options_for_select([['None', ''], ['Expensive (>$0.10)', 'expensive'], ['Slow (>5s)', 'slow'],
+                                 ['Failed', 'failed'], ['Cached', 'cached'], ['Today', 'today'],
+                                 ['Yesterday', 'yesterday'], ['This Week', 'this_week'], 
+                                 ['This Month', 'this_month']], params[:special_filter]),
+              {}, 
+              class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" %>
+        </div>
+      </div>
+
+      <div class="flex gap-2">
+        <%= f.submit "Apply Filters", class: "px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer" %>
+        <%= link_to "Clear Filters", admin_api_calls_path, 
+            class: "px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400" %>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Results Table -->
+  <div class="bg-white rounded-lg shadow overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <%= sort_link("created_at", "Time") %>
+          </th>
+          <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <%= sort_link("type", "Provider") %>
+          </th>
+          <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <%= sort_link("service_name", "Service") %>
+          </th>
+          <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <%= sort_link("model_used", "Model") %>
+          </th>
+          <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <%= sort_link("status", "Status") %>
+          </th>
+          <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <%= sort_link("total_tokens", "Tokens") %>
+          </th>
+          <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <%= sort_link("total_cost", "Cost") %>
+          </th>
+          <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <%= sort_link("response_time_ms", "MS") %>
+          </th>
+          <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+            Actions
+          </th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        <% @api_calls.each do |api_call| %>
+          <tr class="hover:bg-gray-50">
+            <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-900">
+              <%= api_call.created_at.strftime("%m/%d %H:%M") %>
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap text-xs">
+              <span class="px-1 inline-flex text-xs leading-5 font-semibold rounded-full 
+                         <%= provider_color_class(api_call.type) %>">
+                <%= api_call.type&.gsub('ApiCall', '') || 'Unknown' %>
+              </span>
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-900">
+              <%= truncate(api_call.service_name, length: 25) %>
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-900">
+              <%= api_call.model_used %>
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap">
+              <span class="px-1 inline-flex text-xs leading-4 font-semibold rounded-full 
+                         <%= status_color_class(api_call.status) %>">
+                <%= api_call.status %>
+              </span>
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-900">
+              <%= number_with_delimiter(api_call.total_tokens) %>
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap text-xs <%= cost_color_class(api_call.total_cost) %>">
+              $<%= api_call.total_cost ? sprintf("%.4f", api_call.total_cost) : "0.00" %>
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap text-xs <%= response_time_color_class(api_call.response_time_ms) %>">
+              <%= api_call.response_time_ms ? api_call.response_time_ms.round(0) : "-" %>
+            </td>
+            <td class="px-3 py-2 text-center whitespace-nowrap text-xs font-medium">
+              <%= link_to "View", admin_api_call_path(api_call), 
+                  class: "text-blue-600 hover:text-blue-900 underline" %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+
+    <% if @api_calls.empty? %>
+      <div class="text-center py-8 text-gray-500">
+        No API calls found matching your criteria.
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Pagination -->
+  <div class="mt-6 flex justify-between items-center">
+    <div class="text-sm text-gray-700">
+      Showing <%= @api_calls.offset_value + 1 %> to 
+      <%= [@api_calls.offset_value + @api_calls.limit_value, @api_calls.total_count].min %> 
+      of <%= @api_calls.total_count %> results
+    </div>
+    <%= paginate @api_calls %>
+  </div>
+</div>

@@ -11,8 +11,11 @@ class Ekn < ApplicationRecord
   
   # Associations - EKN owns everything
   has_many :ingest_batches, dependent: :destroy
+  has_many :ekn_pipeline_runs, dependent: :destroy  # Pipeline runs for this EKN
   has_many :conversations, dependent: :destroy
   has_many :ingest_items, through: :ingest_batches
+  has_many :api_calls, dependent: :nullify  # Track all API usage for this EKN
+  has_many :sessions, dependent: :destroy  # All conversations with this EKN
   belongs_to :session, optional: true  # For pre-auth ownership
   
   # Core identity validation
@@ -219,6 +222,56 @@ class Ekn < ApplicationRecord
   # Check if this is the Meta-Enliterator
   def is_meta?
     metadata&.dig('is_meta') == true
+  end
+  
+  # API Usage Analytics
+  def api_usage_summary(period = :all_time)
+    scope = case period
+            when :today then api_calls.today
+            when :this_week then api_calls.this_week
+            when :this_month then api_calls.this_month
+            else api_calls
+            end
+    
+    {
+      total_calls: scope.count,
+      total_cost: scope.sum(:total_cost).to_f.round(4),
+      total_tokens: scope.sum(:total_tokens),
+      by_model: scope.group(:model_used).sum(:total_cost),
+      by_endpoint: scope.group(:endpoint).count,
+      by_service: scope.group(:service_name).count,
+      success_rate: (scope.successful.count.to_f / scope.count * 100).round(2),
+      avg_response_time: scope.average(:response_time_ms).to_f.round(2)
+    }
+  end
+  
+  def api_cost_breakdown
+    {
+      total: api_calls.sum(:total_cost).to_f.round(4),
+      by_batch: ingest_batches.joins("INNER JOIN api_calls ON api_calls.trackable_id = ingest_batches.id AND api_calls.trackable_type = 'IngestBatch'")
+                              .group("ingest_batches.name")
+                              .sum("api_calls.total_cost"),
+      by_session: sessions.joins(:api_calls)
+                         .group("sessions.id")
+                         .sum("api_calls.total_cost"),
+      by_day: api_calls.group("DATE(created_at)").sum(:total_cost)
+    }
+  end
+  
+  def most_expensive_calls(limit = 10)
+    api_calls.order(total_cost: :desc).limit(limit)
+  end
+  
+  def api_usage_by_stage
+    # Group API calls by pipeline stage
+    {
+      intake: api_calls.by_service('Ingest%').count,
+      lexicon: api_calls.by_service('Lexicon%').count,
+      pools: api_calls.by_service('Pools%').count,
+      graph: api_calls.by_service('Graph%').count,
+      embedding: api_calls.by_service('Embedding%').count,
+      runtime: api_calls.by_service('Runtime%').count
+    }
   end
   
   private

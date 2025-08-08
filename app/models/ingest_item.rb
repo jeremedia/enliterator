@@ -18,6 +18,45 @@ class IngestItem < ApplicationRecord
     skipped: 'skipped'
   }, prefix: true
   
+  # CRITICAL: Pipeline stage status tracking
+  # Each stage has its own status field to track progress independently
+  
+  # Lexicon stage status
+  enum :lexicon_status, {
+    pending: 'pending',
+    in_progress: 'in_progress',
+    extracted: 'extracted',
+    failed: 'failed',
+    skipped: 'skipped'
+  }, prefix: true
+  
+  # Pool extraction stage status
+  enum :pool_status, {
+    pending: 'pending',
+    in_progress: 'in_progress',
+    extracted: 'extracted',
+    failed: 'failed',
+    skipped: 'skipped'
+  }, prefix: true
+  
+  # Graph assembly stage status
+  enum :graph_status, {
+    pending: 'pending',
+    in_progress: 'in_progress',
+    assembled: 'assembled',
+    failed: 'failed',
+    skipped: 'skipped'
+  }, prefix: true
+  
+  # Embedding stage status
+  enum :embedding_status, {
+    pending: 'pending',
+    in_progress: 'in_progress',
+    embedded: 'embedded',
+    failed: 'failed',
+    skipped: 'skipped'
+  }, prefix: true
+  
   # Media type categories
   # These types determine how content is processed through the pipeline
   enum :media_type, {

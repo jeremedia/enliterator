@@ -7,7 +7,7 @@ module Navigator
       @ekn = ekn
       # IMPORTANT: Passing nil instead of ekn.id because Neo4j nodes don't have batch_id
       # The graph contains 280k+ nodes but they're not filtered by batch
-      # See docs/NEO4J_SETUP.md for details
+      # See /docs/NEO4J.md for complete Neo4j documentation
       @graph_service = Graph::QueryService.new(nil)  # Query ALL data, not filtered by batch
       @intent_recognizer = VisualizationIntentRecognizer.new
     end

@@ -281,10 +281,8 @@ class PipelineFixer
           class AssemblyService
             def initialize(batch)
               @batch = batch
-              @driver = Neo4j::Driver::GraphDatabase.driver(
-                ENV['NEO4J_URL'] || 'bolt://localhost:7687',
-                Neo4j::Driver::AuthTokens.basic('neo4j', ENV['NEO4J_PASSWORD'] || 'cheese28')
-              )
+              # Use centralized connection from neo4j.rb
+              @driver = Graph::Connection.instance.driver
             end
             
             def call

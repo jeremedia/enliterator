@@ -1,0 +1,65 @@
+<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-md w-full space-y-8">
+    <div>
+      <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        Sign in to Enliterator Admin
+      </h2>
+      <% if Rails.env.development? %>
+        <p class="mt-2 text-center text-sm text-orange-600">
+          Development mode - Auto-login should be active
+        </p>
+      <% end %>
+    </div>
+    
+    <%= form_for(resource, as: resource_name, url: session_path(resource_name), html: { class: "mt-8 space-y-6", data: { turbo: false } }) do |f| %>
+      <div class="rounded-md shadow-sm -space-y-px">
+        <div>
+          <%= f.label :email, class: "sr-only" %>
+          <%= f.email_field :email, 
+              autofocus: true, 
+              autocomplete: "email",
+              required: true,
+              placeholder: "Email address",
+              class: "appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" %>
+        </div>
+        <div>
+          <%= f.label :password, class: "sr-only" %>
+          <%= f.password_field :password, 
+              autocomplete: "current-password",
+              required: true,
+              placeholder: "Password",
+              class: "appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" %>
+        </div>
+      </div>
+
+      <% if devise_mapping.rememberable? %>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <%= f.check_box :remember_me, class: "h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" %>
+            <%= f.label :remember_me, class: "ml-2 block text-sm text-gray-900" %>
+          </div>
+        </div>
+      <% end %>
+
+      <div>
+        <%= f.submit "Sign in", 
+            class: "group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+      </div>
+    <% end %>
+
+    <%= render "devise/shared/links" %>
+    
+    <% if Rails.env.development? %>
+      <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <h3 class="text-sm font-medium text-yellow-800">Development Credentials</h3>
+        <p class="mt-1 text-sm text-yellow-700">
+          Email: j@zinod.com<br>
+          Password: password123
+        </p>
+        <p class="mt-2 text-xs text-yellow-600">
+          Auto-login should normally work. If you see this page, try refreshing or check the logs.
+        </p>
+      </div>
+    <% end %>
+  </div>
+</div>

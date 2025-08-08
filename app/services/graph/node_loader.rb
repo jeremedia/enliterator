@@ -29,7 +29,7 @@ module Graph
       load_spatials if Spatial.table_exists?
       load_evidence if Evidence.table_exists?
       load_risks if Risk.table_exists?
-      load_methods if Method.table_exists?
+      load_methods if MethodPool.table_exists?
       
       {
         total_nodes: @node_counts.values.sum,
@@ -152,9 +152,9 @@ module Graph
     end
     
     def load_methods
-      Method.joins(:provenance_and_rights).find_each do |method|
+      MethodPool.joins(:provenance_and_rights).find_each do |method|
         properties = build_method_properties(method)
-        create_node('Method', properties)
+        create_node('MethodPool', properties)
         @node_counts[:methods] += 1
       end
     end
@@ -166,7 +166,8 @@ module Graph
         id: idea.id,
         label: idea.label,
         abstract: idea.abstract,
-        principle_tags: idea.principle_tags,
+        # Ensure arrays contain only primitive types for Neo4j
+        principle_tags: sanitize_for_neo4j(idea.principle_tags),
         authorship: idea.authorship,
         inception_date: idea.inception_date.to_s,
         valid_time_start: idea.valid_time_start.to_s,
@@ -183,7 +184,8 @@ module Graph
         id: manifest.id,
         label: manifest.label,
         type: manifest.manifest_type,
-        components: manifest.components,
+        # Ensure arrays/hashes are Neo4j-compatible
+        components: sanitize_for_neo4j(manifest.components),
         time_bounds_start: manifest.time_bounds_start.to_s,
         time_bounds_end: manifest.time_bounds_end&.to_s,
         valid_time_start: manifest.valid_time_start.to_s,
@@ -232,7 +234,9 @@ module Graph
       {
         id: evolutionary.id,
         change_note: evolutionary.change_note,
-        prior_ref: evolutionary.prior_ref,
+        # Split polymorphic reference into primitives
+        prior_ref_id: evolutionary.prior_ref_id,
+        prior_ref_type: evolutionary.prior_ref_type,
         version_id: evolutionary.version_id,
         valid_time_start: evolutionary.valid_time_start.to_s,
         valid_time_end: evolutionary.valid_time_end&.to_s,
@@ -246,10 +250,11 @@ module Graph
       {
         id: practical.id,
         goal: practical.goal,
-        steps: practical.steps,
-        prerequisites: practical.prerequisites,
-        hazards: practical.hazards,
-        validation_refs: practical.validation_refs,
+        # Sanitize potentially nested arrays
+        steps: sanitize_for_neo4j(practical.steps),
+        prerequisites: sanitize_for_neo4j(practical.prerequisites),
+        hazards: sanitize_for_neo4j(practical.hazards),
+        validation_refs: sanitize_for_neo4j(practical.validation_refs),
         valid_time_start: practical.valid_time_start.to_s,
         valid_time_end: practical.valid_time_end&.to_s,
         repr_text: practical.repr_text,
@@ -278,18 +283,20 @@ module Graph
     def build_rights_properties(rights)
       {
         id: rights.id,
-        source_ids: rights.source_ids,
-        collectors: rights.collectors,
-        method: rights.method,
-        license: rights.license,
-        consent: rights.consent,
-        embargo: rights.embargo,
+        # Ensure JSONB arrays are Neo4j-compatible
+        source_ids: sanitize_for_neo4j(rights.source_ids),
+        collectors: sanitize_for_neo4j(rights.collectors),
+        collection_method: rights.collection_method,
+        license: rights.license_type,
+        consent: rights.consent_status,
+        embargo: rights.embargo_until,
         publishability: rights.publishability,
         training_eligibility: rights.training_eligibility,
         valid_time_start: rights.valid_time_start.to_s,
         valid_time_end: rights.valid_time_end&.to_s,
         created_at: rights.created_at.to_s,
         updated_at: rights.updated_at.to_s
+        # NOTE: Excluding custom_terms as it's a hash/map
       }.compact
     end
     
@@ -298,10 +305,12 @@ module Graph
         id: lexicon.id,
         term: lexicon.term,
         definition: lexicon.definition,
-        canonical_description: lexicon.canonical_description,
-        surface_forms: lexicon.surface_forms,
-        negative_surface_forms: lexicon.negative_surface_forms,
-        type_mapping: lexicon.type_mapping,
+        # Provide default for required Neo4j constraint (use .presence to handle empty strings)
+        canonical_description: lexicon.canonical_description.presence || lexicon.definition.presence || "Extracted term",
+        # Sanitize JSONB arrays and hashes
+        surface_forms: sanitize_for_neo4j(lexicon.surface_forms),
+        negative_surface_forms: sanitize_for_neo4j(lexicon.negative_surface_forms),
+        type_mapping: sanitize_for_neo4j(lexicon.type_mapping),
         unit_system: lexicon.unit_system,
         schema_version: lexicon.schema_version,
         valid_time_start: lexicon.valid_time_start.to_s,
@@ -323,10 +332,11 @@ module Graph
         repr_text: intent.repr_text,
         deliverable_type: intent.deliverable_type,
         modality: intent.modality,
-        constraints: intent.constraints,
+        # Sanitize JSON fields
+        constraints: sanitize_for_neo4j(intent.constraints),
         adapter_name: intent.adapter_name,
-        adapter_params: intent.adapter_params,
-        evaluation: intent.evaluation,
+        adapter_params: sanitize_for_neo4j(intent.adapter_params),
+        evaluation: sanitize_for_neo4j(intent.evaluation),
         created_at: intent.created_at.to_s,
         updated_at: intent.updated_at.to_s
       }.compact
@@ -337,7 +347,8 @@ module Graph
         id: actor.id,
         name: actor.name,
         role: actor.role,
-        permissions: actor.permissions,
+        # Sanitize JSON array
+        permissions: sanitize_for_neo4j(actor.permissions),
         rights_id: actor.provenance_and_rights_id,
         created_at: actor.created_at.to_s,
         updated_at: actor.updated_at.to_s
@@ -351,7 +362,8 @@ module Graph
         sector: spatial.sector,
         portal: spatial.portal,
         year: spatial.year,
-        coordinates: spatial.coordinates,
+        # Sanitize coordinates array/hash
+        coordinates: sanitize_for_neo4j(spatial.coordinates),
         rights_id: spatial.provenance_and_rights_id,
         created_at: spatial.created_at.to_s,
         updated_at: spatial.updated_at.to_s
@@ -362,7 +374,8 @@ module Graph
       {
         id: evidence.id,
         observation: evidence.observation,
-        measurement: evidence.measurement,
+        # Sanitize measurement data
+        measurement: sanitize_for_neo4j(evidence.measurement),
         timestamp: evidence.timestamp.to_s,
         rights_id: evidence.provenance_and_rights_id,
         created_at: evidence.created_at.to_s,
@@ -385,9 +398,15 @@ module Graph
     def build_method_properties(method)
       {
         id: method.id,
-        name: method.name,
-        methodology: method.methodology,
-        evaluation_pattern: method.evaluation_pattern,
+        name: method.method_name,
+        category: method.category,
+        description: method.description,
+        steps: method.steps,
+        prerequisites: method.prerequisites,
+        outcomes: method.outcomes,
+        repr_text: method.repr_text,
+        valid_time_start: method.valid_time_start.to_s,
+        valid_time_end: method.valid_time_end&.to_s,
         rights_id: method.provenance_and_rights_id,
         created_at: method.created_at.to_s,
         updated_at: method.updated_at.to_s
@@ -402,6 +421,28 @@ module Graph
       CYPHER
       
       @tx.run(query, id: properties[:id], properties: properties)
+    end
+    
+    # Helper to ensure values are Neo4j-compatible
+    def sanitize_for_neo4j(value)
+      case value
+      when Array
+        # If array contains hashes/complex objects, convert to JSON string
+        if value.any? { |v| v.is_a?(Hash) || v.is_a?(Array) }
+          value.to_json
+        else
+          # Array of primitives is OK for Neo4j
+          value
+        end
+      when Hash
+        # Hashes must be converted to JSON strings
+        value.to_json
+      when nil
+        nil
+      else
+        # Primitives are OK
+        value
+      end
     end
   end
 end

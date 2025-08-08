@@ -27,13 +27,13 @@ puts "Status: #{run.status}"
 
 puts "\n=== CHECKING NEO4J NODES ==="
 begin
-  driver = Neo4j::Driver::GraphDatabase.driver(ENV['NEO4J_URL'], Neo4j::Driver::AuthTokens.basic('neo4j', 'cheese28'))
+  # Use centralized connection from neo4j.rb
+  driver = Graph::Connection.instance.driver
   session = driver.session
   result = session.run('MATCH (n) RETURN count(n) as total')
   total_nodes = result.single.first
   puts "Total nodes in Neo4j: #{total_nodes}"
   session.close
-  driver.close
 rescue => e
   puts "Neo4j error: #{e.message}"
 end

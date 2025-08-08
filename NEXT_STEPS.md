@@ -336,7 +336,7 @@ NEO4J_PASSWORD=...
 REDIS_URL=redis://...
 
 # Optional but recommended
-OPENAI_MODEL=gpt-4o-mini-2024-07-18
+OPENAI_MODEL=gpt-4.1-2025-04-14
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 MONTHLY_REFRESH_BUDGET=100
 BATCH_API_ENABLED=true

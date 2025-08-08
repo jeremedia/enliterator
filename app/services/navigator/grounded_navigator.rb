@@ -26,7 +26,7 @@ module Navigator
     
     def get_ekn_model
       job = FineTuneJob.find_by(ingest_batch_id: @ekn.id, status: 'succeeded')
-      job&.fine_tuned_model || 'gpt-4o-mini' # Fallback for testing
+      job&.fine_tuned_model || ENV.fetch('OPENAI_MODEL', 'gpt-4.1-2025-04-14') # Fallback to configured model
     end
     
     def search_for_entities(text)

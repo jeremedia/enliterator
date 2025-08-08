@@ -22,7 +22,8 @@ begin
   puts "Assembly stats: #{batch.graph_assembly_stats}"
   
   # Check Neo4j nodes were created
-  driver = Neo4j::Driver::GraphDatabase.driver(ENV['NEO4J_URL'], Neo4j::Driver::AuthTokens.basic('neo4j', 'cheese28'))
+  # Use centralized connection from neo4j.rb
+  driver = Graph::Connection.instance.driver
   session = driver.session
   node_count = session.run('MATCH (n) RETURN count(n) as total').single.first
   puts "\nTotal nodes in Neo4j: #{node_count}"
@@ -41,7 +42,6 @@ begin
   end
   
   session.close
-  driver.close
   
 rescue => e
   puts "ERROR in graph assembly: #{e.message}"

@@ -11,13 +11,13 @@ class EknPipelineRun < ApplicationRecord
   
   # Pipeline stages in order (0-9)
   PIPELINE_STAGES = {
-    0 => { name: 'initialized', job: nil, description: 'Pipeline created, ready to start' },
+    0 => { name: 'initialized', job: nil, description: 'Frame the mission - Configuration and goal setting' },
     1 => { name: 'intake', job: 'Pipeline::IntakeJob', description: 'Bundle discovery and file processing' },
     2 => { name: 'rights', job: 'Rights::TriageJob', description: 'Rights assignment and quarantine' },
     3 => { name: 'lexicon', job: 'Lexicon::BootstrapJob', description: 'Term extraction and canonical forms' },
     4 => { name: 'pools', job: 'Pools::ExtractionJob', description: 'Ten Pool Canon entity extraction' },
     5 => { name: 'graph', job: 'Graph::AssemblyJob', description: 'Neo4j knowledge graph construction' },
-    6 => { name: 'embeddings', job: 'Embedding::Neo4jBuilderJob', description: 'Generate vector embeddings' },
+    6 => { name: 'embeddings', job: 'Embedding::RepresentationJob', description: 'Generate vector embeddings' },
     7 => { name: 'literacy', job: 'Literacy::ScoringJob', description: 'Calculate enliteracy score' },
     8 => { name: 'deliverables', job: 'Deliverables::GenerationJob', description: 'Generate export artifacts' },
     9 => { name: 'fine_tuning', job: 'FineTune::DatasetBuilderJob', description: 'Build fine-tuning dataset' }
@@ -31,11 +31,17 @@ class EknPipelineRun < ApplicationRecord
     state :completed
     state :failed
     state :retrying
+    state :cancelled
     
     event :start do
       transitions from: [:initialized, :paused, :failed], to: :running
       after do
         update!(started_at: Time.current) if started_at.nil?
+        
+        # Mark Stage 0 (initialized/frame) as completed since we're starting
+        stage_statuses['initialized'] = 'completed'
+        save!
+        
         log_info("🚀 PIPELINE STARTED for EKN: #{ekn.name}", label: "pipeline")
         advance_to_next_stage!
       end
@@ -83,6 +89,15 @@ class EknPipelineRun < ApplicationRecord
         resume_from_failed_stage!
       end
     end
+    
+    event :cancel do
+      transitions from: [:running, :paused, :retrying, :initialized], to: :cancelled
+      after do
+        log_warn("⛔ Pipeline cancelled at stage #{current_stage}", label: "pipeline")
+        cancel_pending_jobs!
+        notify_cancellation!
+      end
+    end
   end
   
   # Guard methods
@@ -119,14 +134,39 @@ class EknPipelineRun < ApplicationRecord
     if stage_info[:job].present?
       log_info("Queuing job: #{stage_info[:job]}", label: "stage_#{next_stage_num}")
       job_class = stage_info[:job].constantize
-      job_class.perform_later(self.id)
+      
+      # Queue the job and verify it was created
+      job = job_class.perform_later(self.id)
+      
+      # Verify job was actually created in database
+      if job && job.job_id
+        log_info("Job queued successfully with ID: #{job.job_id}", label: "stage_#{next_stage_num}")
+        
+        # Double-check job exists in Solid Queue
+        if defined?(SolidQueue::Job)
+          queue_job = SolidQueue::Job.where("arguments LIKE ?", "%#{job.job_id}%").first
+          if queue_job
+            log_debug("Verified job in queue: #{queue_job.class_name}", label: "stage_#{next_stage_num}")
+          else
+            log_warn("⚠️ Job #{job.job_id} not found in Solid Queue!", label: "errors")
+          end
+        end
+      else
+        log_error("❌ Failed to queue job for stage #{next_stage_num}!", label: "errors")
+        fail!("Failed to queue job: #{stage_info[:job]}")
+      end
     end
     
     broadcast_stage_change!
   end
   
   def mark_stage_complete!(metrics = {})
-    duration = (Time.current - stage_started_at).round(2)
+    # Calculate duration if stage_started_at is set
+    duration = if stage_started_at
+      (Time.current - stage_started_at).round(2)
+    else
+      0 # If no start time, assume instant completion
+    end
     stage_name = current_stage
     
     # Log completion with metrics
@@ -141,7 +181,7 @@ class EknPipelineRun < ApplicationRecord
     
     # Log summary
     Rails.logger.info "=" * 80
-    Rails.logger.info "✅ Stage #{current_stage_number}: #{stage_name.upcase} COMPLETED"
+    Rails.logger.info "✅ Stage #{current_stage_number}: #{stage_name&.upcase || 'UNKNOWN'} COMPLETED"
     Rails.logger.info "   Duration: #{duration}s"
     Rails.logger.info "   Metrics: #{metrics.to_json}"
     Rails.logger.info "=" * 80
@@ -171,7 +211,17 @@ class EknPipelineRun < ApplicationRecord
     Rails.logger.error "   Error: #{error.message}"
     Rails.logger.error "=" * 80
     
-    fail!(error)
+    # FIXED: Check if we can transition before calling fail!
+    if aasm.may_fire_event?(:fail)
+      fail!(error)
+    elsif !failed?
+      # If not in failed state and can't transition, force it
+      update_column(:status, 'failed')
+      update!(error_message: error.is_a?(Exception) ? error.message : error.to_s)
+    else
+      # Already failed, just update the error message
+      update!(error_message: error.is_a?(Exception) ? error.message : error.to_s)
+    end
   end
   
   # Observable status for monitoring
@@ -261,12 +311,30 @@ class EknPipelineRun < ApplicationRecord
         "Max retries reached. Manual intervention required."
       end
     when 'running'
-      "Monitoring... Current stage: #{current_stage}"
+      if stage_stuck?
+        "⚠️ Stage appears stuck! Consider cancelling and restarting. Stage running for #{stage_duration_minutes} minutes."
+      else
+        "Monitoring... Current stage: #{current_stage}"
+      end
     when 'completed'
       "Pipeline complete! Literacy score: #{literacy_score}"
+    when 'cancelled'
+      "Pipeline was cancelled. Start a new run to process this EKN."
     else
       "Unknown status"
     end
+  end
+  
+  def stage_stuck?
+    return false unless running? && stage_started_at
+    
+    # Consider stage stuck if running for more than 30 minutes
+    stage_duration_minutes > 30
+  end
+  
+  def stage_duration_minutes
+    return 0 unless stage_started_at
+    ((Time.current - stage_started_at) / 60).round
   end
   
   private
@@ -294,6 +362,33 @@ class EknPipelineRun < ApplicationRecord
     Rails.logger.error detailed_status.to_json
     
     # Could send alerts
+  end
+  
+  def notify_cancellation!
+    Rails.logger.info "⛔ PIPELINE CANCELLED for EKN #{ekn.name}"
+    Rails.logger.info detailed_status.to_json
+    
+    # Could send notifications
+  end
+  
+  def cancel_pending_jobs!
+    # Cancel any pending jobs for this pipeline run
+    job_count = 0
+    
+    # Find all jobs with this pipeline run ID in arguments
+    begin
+      SolidQueue::Job.where('arguments LIKE ?', "%\"#{id}\"%").each do |job|
+        unless job.finished?
+          Rails.logger.info "Cancelling job #{job.id} (#{job.class_name})"
+          job.destroy
+          job_count += 1
+        end
+      end
+      
+      log_info("Cancelled #{job_count} pending jobs", label: "pipeline")
+    rescue => e
+      log_error("Error cancelling jobs: #{e.message}", label: "errors")
+    end
   end
   
   def resume_from_failed_stage!

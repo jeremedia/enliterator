@@ -1,0 +1,153 @@
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">EKN API Usage</h1>
+    <p class="mt-2 text-gray-600">Monitor API usage and costs for each Knowledge Navigator</p>
+  </div>
+
+  <!-- Overall Statistics -->
+  <div class="bg-white rounded-lg shadow mb-8 p-6">
+    <h2 class="text-xl font-semibold mb-4">Overall Statistics</h2>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div>
+        <div class="text-sm text-gray-500">Total EKNs</div>
+        <div class="text-2xl font-bold"><%= @total_stats[:total_ekns] %></div>
+      </div>
+      <div>
+        <div class="text-sm text-gray-500">Total API Calls</div>
+        <div class="text-2xl font-bold"><%= number_with_delimiter(@total_stats[:total_calls]) %></div>
+      </div>
+      <div>
+        <div class="text-sm text-gray-500">Total Cost</div>
+        <div class="text-2xl font-bold">$<%= @total_stats[:total_cost] %></div>
+      </div>
+      <div>
+        <div class="text-sm text-gray-500">Calls with EKN</div>
+        <div class="text-2xl font-bold text-green-600"><%= number_with_delimiter(@total_stats[:calls_with_ekn]) %></div>
+      </div>
+      <div>
+        <div class="text-sm text-gray-500">Calls without EKN</div>
+        <div class="text-2xl font-bold text-red-600"><%= number_with_delimiter(@total_stats[:calls_without_ekn]) %></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EKN List -->
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            EKN Name
+          </th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            Total Calls
+          </th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            Total Cost
+          </th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            Total Tokens
+          </th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            Success Rate
+          </th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            Last Activity
+          </th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            Actions
+          </th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        <% @ekn_summaries.each do |summary| %>
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="text-sm font-medium text-gray-900">
+                <%= link_to summary[:ekn].name, admin_ekn_usage_path(summary[:ekn]), 
+                    class: "text-indigo-600 hover:text-indigo-900" %>
+              </div>
+              <div class="text-sm text-gray-500">ID: <%= summary[:ekn].id %></div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              <%= number_with_delimiter(summary[:total_calls]) %>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              <% if summary[:total_cost] > 0 %>
+                <span class="font-mono">$<%= '%.4f' % summary[:total_cost] %></span>
+              <% else %>
+                <span class="text-gray-400">$0.00</span>
+              <% end %>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              <%= number_with_delimiter(summary[:total_tokens]) %>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <% if summary[:total_calls] > 0 %>
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                       <%= summary[:success_rate] > 90 ? 'bg-green-100 text-green-800' : 
+                           summary[:success_rate] > 70 ? 'bg-yellow-100 text-yellow-800' : 
+                           'bg-red-100 text-red-800' %>">
+                  <%= summary[:success_rate] %>%
+                </span>
+              <% else %>
+                <span class="text-gray-400 text-sm">N/A</span>
+              <% end %>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <% if summary[:last_call] %>
+                <%= time_ago_in_words(summary[:last_call]) %> ago
+              <% else %>
+                Never
+              <% end %>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+              <%= link_to "View Details", admin_ekn_usage_path(summary[:ekn]), 
+                  class: "text-indigo-600 hover:text-indigo-900" %>
+              |
+              <%= link_to "API Calls", admin_api_calls_path(ekn_id: summary[:ekn].id), 
+                  class: "text-indigo-600 hover:text-indigo-900" %>
+            </td>
+          </tr>
+        <% end %>
+        
+        <% if @ekn_summaries.empty? %>
+          <tr>
+            <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+              No EKNs found
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Untracked API Calls Warning -->
+  <% if @total_stats[:calls_without_ekn] > 0 %>
+    <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+          </svg>
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-yellow-800">
+            Untracked API Calls
+          </h3>
+          <div class="mt-2 text-sm text-yellow-700">
+            <p>
+              There are <%= number_with_delimiter(@total_stats[:calls_without_ekn]) %> API calls 
+              not associated with any EKN. These may be system calls or calls made outside of the 
+              pipeline context.
+            </p>
+            <p class="mt-2">
+              <%= link_to "View untracked calls →", admin_api_calls_path(without_ekn: true), 
+                  class: "font-medium underline" %>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>

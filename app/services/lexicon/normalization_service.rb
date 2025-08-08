@@ -61,6 +61,19 @@ module Lexicon
 
       # Merge metadata
       metadata = merge_metadata(term_group)
+      
+      # Choose provenance_and_rights_id deterministically
+      # Select the most frequent rights_id among the term_group
+      rights_ids = term_group.map { |t| t[:provenance_and_rights_id] }.compact
+      chosen_rights_id = if rights_ids.any?
+        # Group by ID and count occurrences, then pick the most frequent
+        rights_ids.group_by(&:itself)
+                  .max_by { |_id, occurrences| occurrences.size }
+                  &.first
+      end
+      
+      # Collect all contributing source item IDs
+      source_item_ids = term_group.map { |t| t[:source_item_id] }.compact.uniq
 
       {
         canonical_term: canonical_term,
@@ -68,7 +81,9 @@ module Lexicon
         negative_surface_forms: unique_negative_forms,
         canonical_description: canonical_description,
         term_type: term_type,
-        metadata: metadata
+        metadata: metadata,
+        provenance_and_rights_id: chosen_rights_id,
+        source_item_ids: source_item_ids
       }
     end
 

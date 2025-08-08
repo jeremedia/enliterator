@@ -1,0 +1,255 @@
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <!-- Header -->
+  <div class="mb-8">
+    <div class="flex justify-between items-start">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900"><%= @ekn.name %> - API Usage</h1>
+        <p class="mt-2 text-gray-600">Detailed API usage analytics for this Knowledge Navigator</p>
+      </div>
+      <div>
+        <%= link_to "← Back to EKN List", admin_ekn_usage_index_path, 
+            class: "inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50" %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Usage Summary Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <!-- All Time -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h3 class="text-sm font-medium text-gray-500 mb-2">All Time</h3>
+      <div class="text-2xl font-bold text-gray-900">$<%= '%.4f' % @usage_summary[:total_cost] %></div>
+      <div class="text-sm text-gray-600 mt-1"><%= number_with_delimiter(@usage_summary[:total_calls]) %> calls</div>
+      <div class="text-sm text-gray-600"><%= number_with_delimiter(@usage_summary[:total_tokens]) %> tokens</div>
+    </div>
+
+    <!-- This Month -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h3 class="text-sm font-medium text-gray-500 mb-2">This Month</h3>
+      <div class="text-2xl font-bold text-gray-900">$<%= '%.4f' % @usage_this_month[:total_cost] %></div>
+      <div class="text-sm text-gray-600 mt-1"><%= number_with_delimiter(@usage_this_month[:total_calls]) %> calls</div>
+      <div class="text-sm text-gray-600"><%= number_with_delimiter(@usage_this_month[:total_tokens]) %> tokens</div>
+    </div>
+
+    <!-- This Week -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h3 class="text-sm font-medium text-gray-500 mb-2">This Week</h3>
+      <div class="text-2xl font-bold text-gray-900">$<%= '%.4f' % @usage_this_week[:total_cost] %></div>
+      <div class="text-sm text-gray-600 mt-1"><%= number_with_delimiter(@usage_this_week[:total_calls]) %> calls</div>
+      <div class="text-sm text-gray-600"><%= number_with_delimiter(@usage_this_week[:total_tokens]) %> tokens</div>
+    </div>
+
+    <!-- Today -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h3 class="text-sm font-medium text-gray-500 mb-2">Today</h3>
+      <div class="text-2xl font-bold text-gray-900">$<%= '%.4f' % @usage_today[:total_cost] %></div>
+      <div class="text-sm text-gray-600 mt-1"><%= number_with_delimiter(@usage_today[:total_calls]) %> calls</div>
+      <div class="text-sm text-gray-600"><%= number_with_delimiter(@usage_today[:total_tokens]) %> tokens</div>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    <!-- Daily Costs Chart -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h3 class="text-lg font-medium text-gray-900 mb-4">Daily Costs (Last 30 Days)</h3>
+      <canvas id="dailyCostsChart" width="400" height="200"></canvas>
+    </div>
+
+    <!-- Daily Calls Chart -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h3 class="text-lg font-medium text-gray-900 mb-4">Daily API Calls (Last 30 Days)</h3>
+      <canvas id="dailyCallsChart" width="400" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- Detailed Breakdowns -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    <!-- Usage by Model -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h3 class="text-lg font-medium text-gray-900 mb-4">Cost by Model</h3>
+      <div class="space-y-2">
+        <% @usage_summary[:by_model].sort_by { |_, cost| -cost }.each do |model, cost| %>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600"><%= model || 'Unknown' %></span>
+            <span class="text-sm font-mono font-medium">$<%= '%.4f' % cost %></span>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Usage by Stage -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h3 class="text-lg font-medium text-gray-900 mb-4">Calls by Pipeline Stage</h3>
+      <div class="space-y-2">
+        <% @usage_by_stage.sort_by { |_, count| -count }.each do |stage, count| %>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600 capitalize"><%= stage %></span>
+            <span class="text-sm font-medium"><%= number_with_delimiter(count) %> calls</span>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Most Expensive Calls -->
+  <div class="bg-white rounded-lg shadow mb-8">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h3 class="text-lg font-medium text-gray-900">Most Expensive API Calls</h3>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Endpoint</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tokens</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% @expensive_calls.each do |call| %>
+            <tr>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <%= call.created_at.strftime("%Y-%m-%d %H:%M") %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <%= call.service_name %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <%= call.endpoint %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <%= call.model_used %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <%= number_with_delimiter(call.total_tokens) %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-mono font-medium">
+                $<%= '%.4f' % (call.total_cost || 0) %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <%= link_to "View", admin_api_call_path(call), 
+                    class: "text-indigo-600 hover:text-indigo-900" %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Recent API Calls -->
+  <div class="bg-white rounded-lg shadow">
+    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+      <h3 class="text-lg font-medium text-gray-900">Recent API Calls</h3>
+      <%= link_to "View All →", admin_api_calls_path(ekn_id: @ekn.id), 
+          class: "text-sm text-indigo-600 hover:text-indigo-900" %>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Endpoint</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Response Time</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% @recent_calls.each do |call| %>
+            <tr>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <%= time_ago_in_words(call.created_at) %> ago
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <%= call.service_name %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <%= call.endpoint %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                       <%= call.status == 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' %>">
+                  <%= call.status %>
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <%= call.response_time_ms %>ms
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-mono">
+                $<%= '%.6f' % (call.total_cost || 0) %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Daily Costs Chart
+  const costsCtx = document.getElementById('dailyCostsChart').getContext('2d');
+  new Chart(costsCtx, {
+    type: 'line',
+    data: {
+      labels: <%= @daily_costs.map(&:first).to_json.html_safe %>,
+      datasets: [{
+        label: 'Daily Cost ($)',
+        data: <%= @daily_costs.map(&:last).to_json.html_safe %>,
+        borderColor: 'rgb(99, 102, 241)',
+        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+        tension: 0.1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return '$' + value.toFixed(4);
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // Daily Calls Chart
+  const callsCtx = document.getElementById('dailyCallsChart').getContext('2d');
+  new Chart(callsCtx, {
+    type: 'bar',
+    data: {
+      labels: <%= @daily_calls.map(&:first).to_json.html_safe %>,
+      datasets: [{
+        label: 'API Calls',
+        data: <%= @daily_calls.map(&:last).to_json.html_safe %>,
+        backgroundColor: 'rgba(34, 197, 94, 0.5)',
+        borderColor: 'rgb(34, 197, 94)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1
+          }
+        }
+      }
+    }
+  });
+</script>

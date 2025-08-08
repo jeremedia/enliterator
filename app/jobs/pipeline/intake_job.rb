@@ -34,7 +34,7 @@ module Pipeline
         rescue => e
           log_progress "Failed to process item #{item.id}: #{e.message}", level: :warn
           failed += 1
-          item.update!(triage_status: 'failed', error_message: e.message)
+          item.update!(triage_status: 'failed', triage_error: e.message)
         end
       end
       
@@ -52,8 +52,8 @@ module Pipeline
     private
     
     def process_item(item)
-      # Determine media type if not set
-      if item.media_type.blank?
+      # Determine media type if not set or still default
+      if item.media_type.blank? || item.media_type == 'unknown'
         item.media_type = detect_media_type(item.file_path)
       end
       
@@ -64,7 +64,7 @@ module Pipeline
       
       # Get file size and content
       if File.exist?(item.file_path)
-        item.file_size = File.size(item.file_path)
+        item.size_bytes = File.size(item.file_path)
         
         # Read file content for rights inference and lexicon extraction
         begin
@@ -78,8 +78,8 @@ module Pipeline
         end
       end
       
-      # Mark as ready for triage
-      item.triage_status = 'ready'
+      # Mark as pending for rights triage
+      item.triage_status = 'pending'
       item.save!
       
       log_progress "Item #{item.id}: #{File.basename(item.file_path)} ready for triage", level: :debug

@@ -1,0 +1,15 @@
+<%# Partial for rendering individual log lines from LogItem model %>
+<%# This partial is used by the Loggable concern for broadcasting updates %>
+<%# The local variable is passed as 'log_item' not 'log_line' %>
+<div id="<%= dom_id(log_item) %>" class="log-line mb-1 text-sm font-mono">
+  <span class="text-gray-500"><%= log_item.created_at.strftime("%H:%M:%S") %></span>
+  <span class="text-gray-600">[<%= log_item.status&.upcase || 'INFO' %>]</span>
+  <span class="<%= log_status_color_class(log_item.status) %>">
+    <%= log_item.text %>
+  </span>
+  <% if log_item.item_data.present? && log_item.item_data.any? %>
+    <span class="text-gray-400 ml-2">
+      <%= log_item.item_data.to_json %>
+    </span>
+  <% end %>
+</div>

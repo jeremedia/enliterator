@@ -38,7 +38,7 @@ class OpenaiSetting < ApplicationRecord
   
   def self.model_for(task)
     key = "model_#{task}"
-    get(key) || ENV.fetch("OPENAI_MODEL", "gpt-4o-2024-08-06")
+    get(key) || ENV.fetch("OPENAI_MODEL")
   end
   
   def self.temperature_for(task)
@@ -49,10 +49,10 @@ class OpenaiSetting < ApplicationRecord
   
   def self.supported_models
     {
-      extraction: ["gpt-4o-2024-08-06", "gpt-4o-mini-2024-07-18"],
-      answer: ["gpt-4o-2024-08-06", "gpt-4o-mini-2024-07-18", "gpt-4-turbo-preview"],
-      routing: ["gpt-4o-mini-2024-07-18", "gpt-3.5-turbo"],
-      fine_tune: ["gpt-4o-mini-2024-07-18", "gpt-3.5-turbo"]
+      extraction: ["gpt-4.1", "gpt-4.1-mini"],
+      answer: ["gpt-4.1", "gpt-4.1-mini"],
+      routing: ["gpt-4.1-nano", "gpt-4.1-mini"],
+      fine_tune: ["gpt-4.1-mini", "gpt-4.1-nano"]
     }
   end
   

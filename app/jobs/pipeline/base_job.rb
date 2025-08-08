@@ -3,6 +3,13 @@
 module Pipeline
   # Base class for all pipeline jobs with orchestration, error handling, and logging
   # All pipeline stage jobs should inherit from this class
+  #
+  # CRITICAL: This class uses around_perform to wrap job execution
+  # Child classes should:
+  #   1. NEVER call super in their perform method
+  #   2. Implement collect_stage_metrics to return a hash of metrics
+  #   3. Use log_progress for all logging
+  #   4. Use track_metric to record metrics
   class BaseJob < ApplicationJob
     queue_as :pipeline
     
@@ -22,28 +29,36 @@ module Pipeline
       @ekn = @pipeline_run.ekn
       
       log_stage_start
+      log_progress("Job started: #{self.class.name} for pipeline ##{@pipeline_run.id}")
       start_time = Time.current
       
-      begin
-        # Execute the actual job
-        block.call
-        
-        # Calculate duration
-        duration = Time.current - start_time
-        
-        # Collect stage-specific metrics
-        metrics = collect_stage_metrics
-        metrics[:duration] = duration.round(2)
-        
-        # Mark stage as complete
-        @pipeline_run.mark_stage_complete!(metrics)
-        
-        log_stage_complete(duration, metrics)
-        
-      rescue => e
-        log_stage_error(e)
-        @pipeline_run.mark_stage_failed!(e)
-        raise # Re-raise for job retry mechanisms
+      # Set EKN context for API tracking
+      ApiCall.with_ekn_context(@ekn) do
+        begin
+          # Execute the actual job
+          block.call
+          
+          # Calculate duration
+          duration = Time.current - start_time
+          
+          # Collect stage-specific metrics
+          metrics = collect_stage_metrics
+          metrics[:duration] = duration.round(2)
+          metrics[:job_id] = job.job_id if job.respond_to?(:job_id)
+          
+          # Validate that the stage actually did something
+          validate_stage_completion(metrics)
+          
+          # Mark stage as complete
+          @pipeline_run.mark_stage_complete!(metrics)
+          
+          log_stage_complete(duration, metrics)
+          
+        rescue => e
+          log_stage_error(e)
+          @pipeline_run.mark_stage_failed!(e)
+          raise # Re-raise for job retry mechanisms
+        end
       end
     end
     
@@ -89,6 +104,32 @@ module Pipeline
     # Override in subclasses to return stage-specific metrics
     def collect_stage_metrics
       @metrics || {}
+    end
+    
+    # Validate that the stage actually processed something
+    def validate_stage_completion(metrics)
+      # Skip validation for stages that don't process items directly
+      return if self.class.name.include?("Assembly") || self.class.name.include?("Generation")
+      
+      # Check for common indicators that nothing was processed
+      if metrics[:items_processed] == 0 && metrics[:items_completed] == 0
+        # Check if there were items to process
+        if @batch.ingest_items.count > 0
+          raise Pipeline::InvalidDataError, "Stage #{stage_name} completed but processed 0 items! Metrics: #{metrics.to_json}"
+        end
+      end
+      
+      # Stage-specific validations
+      case self.class.name
+      when "Rights::TriageJob"
+        if metrics[:training_eligible] == 0 && metrics[:publishable] == 0 && @batch.ingest_items.count > 0
+          log_progress "⚠️ WARNING: Rights stage found no training eligible or publishable items", level: :warn
+        end
+      when "Lexicon::BootstrapJob"
+        if metrics[:terms_extracted] == 0 && @batch.ingest_items.count > 0
+          raise Pipeline::InvalidDataError, "Lexicon stage extracted 0 terms from #{@batch.ingest_items.count} items!"
+        end
+      end
     end
     
     # Helper methods for pipeline jobs
@@ -137,10 +178,24 @@ module Pipeline
       Rails.logger.error "\n" + "="*80
       Rails.logger.error "💥 Error in Stage #{stage_number}: #{stage_name}"
       Rails.logger.error "   Error: #{error.class} - #{error.message}"
+      Rails.logger.error "   Pipeline: ##{@pipeline_run.id}"
+      Rails.logger.error "   Batch: ##{@batch.id}"
+      Rails.logger.error "   EKN: #{@ekn.name}"
+      Rails.logger.error "   Stage duration: #{(Time.current - @pipeline_run.stage_started_at).round(2)}s" if @pipeline_run.stage_started_at
       Rails.logger.error "   Backtrace: #{error.backtrace.first(5).join("\n")}"
       Rails.logger.error "="*80
       
       @pipeline_run.log_error("Exception: #{error.class} - #{error.message}", label: "errors")
+      @pipeline_run.log_error("Context: Pipeline ##{@pipeline_run.id}, Batch ##{@batch.id}", label: "errors")
+      
+      # Check for common issues
+      if error.message.include?("queue") || error.message.include?("job")
+        @pipeline_run.log_error("⚠️ This appears to be a job queueing issue. Check Solid Queue workers.", label: "errors")
+      elsif error.message.include?("Neo4j") || error.message.include?("database")
+        @pipeline_run.log_error("⚠️ Database connection issue. Check Neo4j status.", label: "errors")
+      elsif error.message.include?("OpenAI") || error.message.include?("API")
+        @pipeline_run.log_error("⚠️ OpenAI API issue. Check API key and rate limits.", label: "errors")
+      end
     end
   end
   

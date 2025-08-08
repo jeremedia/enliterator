@@ -24,12 +24,12 @@ begin
     puts "Result: #{result}"
     
     # Verify nodes were created
-    driver = Neo4j::Driver::GraphDatabase.driver(ENV['NEO4J_URL'], Neo4j::Driver::AuthTokens.basic('neo4j', 'cheese28'))
+    # Use centralized connection from neo4j.rb
+    driver = Graph::Connection.instance.driver
     session = driver.session
     node_count = session.run('MATCH (n) RETURN count(n) as total').single.first
     puts "Total nodes in Neo4j after assembly: #{node_count}"
     session.close
-    driver.close
     
     # Update pipeline status
     run.update!(current_stage: 'embeddings', current_stage_number: 6)

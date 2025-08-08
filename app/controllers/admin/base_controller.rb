@@ -2,6 +2,7 @@
 
 module Admin
   class BaseController < ApplicationController
+    before_action :authenticate_user!
     before_action :ensure_admin_access
     
     layout 'admin'
@@ -9,9 +10,7 @@ module Admin
     private
     
     def ensure_admin_access
-      # For now, just ensure we're in development
-      # In production, implement proper authentication
-      unless Rails.env.development? || Rails.env.test?
+      unless current_user&.admin?
         redirect_to root_path, alert: 'Admin access required'
       end
     end

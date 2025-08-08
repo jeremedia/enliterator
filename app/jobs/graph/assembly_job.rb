@@ -1,72 +1,86 @@
 # frozen_string_literal: true
 
-module Graph
-  # Orchestrates the graph assembly stage of the enliteration pipeline
-  # Loads nodes and edges to Neo4j with constraint enforcement and deduplication
-  class AssemblyJob < ApplicationJob
-    queue_as :default
+# PURPOSE: Stage 5 of the 9-stage pipeline - Graph Assembly
+# Loads nodes and edges to Neo4j with constraint enforcement
+# and deduplication.
+#
+# Inputs: Extracted pool entities and relations
+# Outputs: Neo4j knowledge graph
 
-    def perform(ingest_batch_id)
-      @batch = IngestBatch.find(ingest_batch_id)
+module Graph
+  class AssemblyJob < Pipeline::BaseJob
+    queue_as :pipeline
+    
+    def perform(pipeline_run_id)
+      # BaseJob sets up @pipeline_run, @batch, @ekn via around_perform
+      # Do NOT call super - BaseJob uses around_perform to wrap this method
+      
       @stats = initialize_stats
+      # Use the EKN's dedicated database for isolation
+      database_name = @ekn.neo4j_database_name
       
-      # Ensure isolated database exists for this EKN
-      @batch.ensure_neo4j_database_exists!
-      database_name = @batch.neo4j_database_name
+      # Ensure the database exists
+      Graph::DatabaseManager.ensure_database_exists(database_name)
       
-      Rails.logger.info "Starting graph assembly for batch #{@batch.id} in database: #{database_name}"
-      @batch.update!(status: 'graph_assembly_in_progress')
+      log_progress "Starting graph assembly in database: #{database_name}"
       
-      ActiveRecord::Base.transaction do
-        # Use the isolated database for this EKN
+      begin
+        # Get Neo4j session with default database
         driver = Graph::Connection.instance.driver
-        session = driver.session(database: database_name)
         
-        session.write_transaction do |tx|
-          # 1. Setup Neo4j constraints and indexes
-          setup_graph_schema(tx)
-          
-          # 2. Load nodes from all pools
-          load_pool_nodes(tx)
-          
-          # 3. Load edges with verb glossary
-          load_relationships(tx)
-          
-          # 4. Resolve duplicates
-          resolve_duplicates(tx)
-          
-          # 5. Remove orphaned nodes
-          remove_orphans(tx)
-          
-          # 6. Verify graph integrity
-          verify_graph_integrity(tx)
+        # CRITICAL: Schema operations MUST be in completely separate session and transaction
+        # Neo4j does not allow schema changes and data changes in the same transaction
+        log_progress "Setting up graph schema..."
+        schema_session = driver.session(database: database_name)
+        begin
+          schema_session.write_transaction do |tx|
+            setup_graph_schema(tx)
+          end
+        ensure
+          schema_session.close
         end
         
-        session.close
+        # Wait a moment for schema changes to propagate
+        sleep(0.5)
+        
+        # Now perform data operations in a new session
+        log_progress "Loading graph data..."
+        data_session = driver.session(database: database_name)
+        begin
+          data_session.write_transaction do |tx|
+            load_pool_nodes(tx)
+            load_relationships(tx)
+            resolve_duplicates(tx)
+          end
+        ensure
+          data_session.close
+        end
+        
+        log_progress "✅ Graph assembly complete: #{@stats[:nodes_created]} nodes, #{@stats[:edges_created]} edges"
+        
+        # Track metrics
+        track_metric :nodes_created, @stats[:nodes_created]
+        track_metric :edges_created, @stats[:edges_created]
+        track_metric :duplicates_resolved, @stats[:duplicates_resolved]
+        
+        # CRITICAL: Update IngestItems to mark them as assembled
+        # This prepares them for the embedding stage
+        @batch.ingest_items
+          .where(pool_status: 'extracted')
+          .where(graph_status: ['pending', nil])
+          .update_all(
+            graph_status: 'assembled',
+            embedding_status: 'pending',  # Ready for embedding
+            graph_metadata: { assembled_at: Time.current }
+          )
         
         # Update batch status
-        @batch.update!(
-          status: 'graph_assembly_completed',
-          graph_assembly_stats: @stats,
-          graph_assembled_at: Time.current
-        )
+        @batch.update!(status: 'graph_assembly_completed')
+        
+      rescue => e
+        log_progress "Graph assembly failed: #{e.message}", level: :error
+        raise
       end
-      
-      Rails.logger.info "Graph assembly completed: #{@stats.inspect}"
-      
-      # Trigger next stage: Representation & Retrieval
-      # Embedding::RepresentationJob.perform_later(@batch.id)
-      
-    rescue StandardError => e
-      Rails.logger.error "Graph assembly failed: #{e.message}"
-      Rails.logger.error e.backtrace.join("\n")
-      
-      @batch.update!(
-        status: 'graph_assembly_failed',
-        graph_assembly_stats: @stats.merge(error: e.message)
-      )
-      
-      raise
     end
     
     private
@@ -75,77 +89,37 @@ module Graph
       {
         nodes_created: 0,
         edges_created: 0,
-        duplicates_resolved: 0,
-        orphans_removed: 0,
-        constraints_created: 0,
-        indexes_created: 0,
-        errors: []
+        duplicates_resolved: 0
       }
     end
     
     def setup_graph_schema(tx)
-      Rails.logger.info "Setting up Neo4j constraints and indexes"
-      
       schema_manager = Graph::SchemaManager.new(tx)
       result = schema_manager.setup
-      
       @stats[:constraints_created] = result[:constraints_created]
       @stats[:indexes_created] = result[:indexes_created]
     end
     
     def load_pool_nodes(tx)
-      Rails.logger.info "Loading nodes from all pools"
-      
       node_loader = Graph::NodeLoader.new(tx, @batch)
       result = node_loader.load_all
-      
       @stats[:nodes_created] = result[:total_nodes]
-      @stats[:nodes_by_pool] = result[:by_pool]
     end
     
     def load_relationships(tx)
-      Rails.logger.info "Loading relationships with verb glossary"
-      
       edge_loader = Graph::EdgeLoader.new(tx, @batch)
       result = edge_loader.load_all
-      
       @stats[:edges_created] = result[:total_edges]
-      @stats[:edges_by_verb] = result[:by_verb]
-      @stats[:reverse_edges_created] = result[:reverse_edges]
     end
     
     def resolve_duplicates(tx)
-      Rails.logger.info "Resolving duplicate nodes"
-      
       deduplicator = Graph::Deduplicator.new(tx)
       result = deduplicator.resolve_all
-      
       @stats[:duplicates_resolved] = result[:resolved_count]
-      @stats[:duplicate_merge_details] = result[:merge_details]
     end
     
-    def remove_orphans(tx)
-      Rails.logger.info "Removing orphaned nodes"
-      
-      orphan_remover = Graph::OrphanRemover.new(tx)
-      result = orphan_remover.remove_all
-      
-      @stats[:orphans_removed] = result[:removed_count]
-      @stats[:orphan_details] = result[:details]
-    end
-    
-    def verify_graph_integrity(tx)
-      Rails.logger.info "Verifying graph integrity"
-      
-      verifier = Graph::IntegrityVerifier.new(tx)
-      result = verifier.verify_all
-      
-      unless result[:valid]
-        @stats[:errors].concat(result[:errors])
-        raise "Graph integrity check failed: #{result[:errors].join(', ')}"
-      end
-      
-      @stats[:integrity_check] = result[:summary]
+    def collect_stage_metrics
+      @stats
     end
   end
 end

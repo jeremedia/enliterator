@@ -101,12 +101,43 @@ module OpenaiConfig
     private
     
     def call_structured_api(messages, response_class)
-      response = OPENAI.responses.create(
-        model: model_for_task,
-        input: messages,
-        text: response_class,
-        temperature: temperature_for_task
+      # Create API tracking record
+      request_params = {
+        messages: messages.map { |m| m.except(:content).merge(content: m[:content]&.truncate(100)) },
+        response_class: response_class.name
+      }
+      
+      # GPT-5 models don't support temperature parameter
+      unless model_for_task.to_s.include?('gpt-5')
+        request_params[:temperature] = temperature_for_task
+      end
+      
+      api_call = OpenaiApiCall.create!(
+        service_name: self.class.name,
+        endpoint: 'responses.create',
+        model_used: model_for_task,
+        request_params: request_params,
+        trackable: trackable_object,
+        session_id: session_id,
+        status: 'pending'
       )
+      
+      # Execute and track the API call
+      response = api_call.track_execution do |call|
+        # GPT-5 models don't support temperature parameter
+        params = {
+          model: model_for_task,
+          input: messages,
+          text: response_class
+        }
+        
+        # Only add temperature for non-GPT-5 models
+        unless model_for_task.to_s.include?('gpt-5')
+          params[:temperature] = temperature_for_task
+        end
+        
+        OPENAI.responses.create(**params)
+      end
       
       process_response(response)
     rescue => e
@@ -116,7 +147,9 @@ module OpenaiConfig
     
     def process_response(response)
       # Extract the parsed content from the response
+      # GPT-5 includes ResponseReasoningItem which we need to skip
       result = response.output
+        .select { |output| output.respond_to?(:content) }
         .flat_map { |output| output.content }
         .grep_v(OpenAI::Models::Responses::ResponseOutputRefusal)
         .first
@@ -193,6 +226,16 @@ module OpenaiConfig
     # Override in subclasses to determine batch eligibility
     def batch_eligible?
       false
+    end
+    
+    # Helper to get trackable object (override in subclasses)
+    def trackable_object
+      nil  # Override in subclasses to return the object being processed
+    end
+    
+    # Helper to get session ID for grouping related calls
+    def session_id
+      Thread.current[:api_session_id] ||= SecureRandom.uuid
     end
   end
 end

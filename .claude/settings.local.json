@@ -7,7 +7,16 @@
       "Bash(gh issue create:*)",
       "Bash(rails generate model:*)",
       "Bash(rails:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(bundle show:*)",
+      "Bash(bundle open:*)",
+      "WebFetch(domain:gemdocs.org)",
+      "WebFetch(domain:platform.openai.com)",
+      "Bash(bundle install:*)",
+      "Bash(mv:*)",
+      "Bash(rake:*)",
+      "Bash(touch:*)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }

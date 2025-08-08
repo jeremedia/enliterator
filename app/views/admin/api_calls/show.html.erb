@@ -1,0 +1,315 @@
+<div class="container mx-auto px-4 py-8">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-3xl font-bold text-gray-900">API Call Details #<%= @api_call.id %></h1>
+    <div class="flex gap-2">
+      <%= link_to "← Back to List", admin_api_calls_path, 
+          class: "px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700" %>
+      <% if @api_call.failed? %>
+        <%= link_to "Retry", retry_admin_api_call_path(@api_call), method: :post,
+            class: "px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700",
+            data: { confirm: "Retry this API call?" } %>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Main Info Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Basic Information -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-xl font-semibold mb-4">Basic Information</h2>
+      <dl class="space-y-2">
+        <div class="flex justify-between">
+          <dt class="text-gray-600">Provider:</dt>
+          <dd class="font-medium"><%= @api_call.type&.gsub('ApiCall', '') || 'Unknown' %></dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-gray-600">Service:</dt>
+          <dd class="font-medium"><%= @api_call.service_name %></dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-gray-600">Endpoint:</dt>
+          <dd class="font-medium"><%= @api_call.endpoint %></dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-gray-600">Model:</dt>
+          <dd class="font-medium"><%= @api_call.model_used || 'N/A' %></dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-gray-600">Status:</dt>
+          <dd>
+            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                       <%= status_color_class(@api_call.status) %>">
+              <%= @api_call.status %>
+            </span>
+          </dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-gray-600">Created:</dt>
+          <dd class="font-medium"><%= @api_call.created_at.strftime("%Y-%m-%d %H:%M:%S %Z") %></dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-gray-600">Environment:</dt>
+          <dd class="font-medium"><%= @api_call.environment || Rails.env %></dd>
+        </div>
+        <% if @api_call.user %>
+          <div class="flex justify-between">
+            <dt class="text-gray-600">User:</dt>
+            <dd class="font-medium"><%= @api_call.user.display_name %> (<%= @api_call.user.email %>)</dd>
+          </div>
+        <% end %>
+      </dl>
+    </div>
+
+    <!-- Performance & Cost -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-xl font-semibold mb-4">Performance & Cost</h2>
+      <dl class="space-y-2">
+        <div class="flex justify-between">
+          <dt class="text-gray-600">Response Time:</dt>
+          <dd class="font-medium <%= response_time_color_class(@api_call.response_time_ms) %>">
+            <%= @api_call.response_time_ms ? "#{number_with_delimiter(@api_call.response_time_ms.round(2))} ms" : "N/A" %>
+          </dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-gray-600">Processing Time:</dt>
+          <dd class="font-medium">
+            <%= @api_call.processing_time_ms ? "#{number_with_delimiter(@api_call.processing_time_ms.round(2))} ms" : "N/A" %>
+          </dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-gray-600">Queue Time:</dt>
+          <dd class="font-medium">
+            <%= @api_call.queue_time_ms ? "#{number_with_delimiter(@api_call.queue_time_ms.round(2))} ms" : "N/A" %>
+          </dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-gray-600">Retry Count:</dt>
+          <dd class="font-medium"><%= @api_call.retry_count || 0 %></dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-gray-600">Cached Response:</dt>
+          <dd class="font-medium">
+            <% if @api_call.cached_response %>
+              <span class="text-green-600">Yes</span>
+            <% else %>
+              <span class="text-gray-400">No</span>
+            <% end %>
+          </dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+
+  <!-- Token Usage & Costs -->
+  <div class="bg-white rounded-lg shadow p-6 mb-6">
+    <h2 class="text-xl font-semibold mb-4">Token Usage & Costs</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- Token Usage -->
+      <div>
+        <h3 class="font-medium text-gray-700 mb-2">Token Usage</h3>
+        <dl class="space-y-1 text-sm">
+          <div class="flex justify-between">
+            <dt class="text-gray-600">Prompt Tokens:</dt>
+            <dd class="font-medium"><%= number_with_delimiter(@api_call.prompt_tokens || 0) %></dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-gray-600">Completion Tokens:</dt>
+            <dd class="font-medium"><%= number_with_delimiter(@api_call.completion_tokens || 0) %></dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-gray-600">Total Tokens:</dt>
+            <dd class="font-bold"><%= number_with_delimiter(@api_call.total_tokens || 0) %></dd>
+          </div>
+          <% if @api_call.cached_tokens && @api_call.cached_tokens > 0 %>
+            <div class="flex justify-between">
+              <dt class="text-gray-600">Cached Tokens:</dt>
+              <dd class="font-medium text-green-600"><%= number_with_delimiter(@api_call.cached_tokens) %></dd>
+            </div>
+          <% end %>
+          <% if @api_call.reasoning_tokens && @api_call.reasoning_tokens > 0 %>
+            <div class="flex justify-between">
+              <dt class="text-gray-600">Reasoning Tokens:</dt>
+              <dd class="font-medium"><%= number_with_delimiter(@api_call.reasoning_tokens) %></dd>
+            </div>
+          <% end %>
+        </dl>
+      </div>
+
+      <!-- Cost Breakdown -->
+      <div>
+        <h3 class="font-medium text-gray-700 mb-2">Cost Breakdown</h3>
+        <dl class="space-y-1 text-sm">
+          <div class="flex justify-between">
+            <dt class="text-gray-600">Input Cost:</dt>
+            <dd class="font-medium">$<%= sprintf("%.6f", @api_call.input_cost || 0) %></dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-gray-600">Output Cost:</dt>
+            <dd class="font-medium">$<%= sprintf("%.6f", @api_call.output_cost || 0) %></dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-gray-600">Total Cost:</dt>
+            <dd class="font-bold <%= cost_color_class(@api_call.total_cost) %>">
+              $<%= sprintf("%.6f", @api_call.total_cost || 0) %>
+            </dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-gray-600">Cost/1k Tokens:</dt>
+            <dd class="font-medium">$<%= sprintf("%.6f", @cost_per_token) %></dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-gray-600">Currency:</dt>
+            <dd class="font-medium"><%= @api_call.currency || 'USD' %></dd>
+          </div>
+        </dl>
+      </div>
+
+      <!-- Media Specific -->
+      <div>
+        <% if @api_call.image_count || @api_call.audio_duration %>
+          <h3 class="font-medium text-gray-700 mb-2">Media Information</h3>
+          <dl class="space-y-1 text-sm">
+            <% if @api_call.image_count %>
+              <div class="flex justify-between">
+                <dt class="text-gray-600">Images:</dt>
+                <dd class="font-medium"><%= @api_call.image_count %></dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-gray-600">Size:</dt>
+                <dd class="font-medium"><%= @api_call.image_size %></dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-gray-600">Quality:</dt>
+                <dd class="font-medium"><%= @api_call.image_quality %></dd>
+              </div>
+            <% end %>
+            <% if @api_call.audio_duration %>
+              <div class="flex justify-between">
+                <dt class="text-gray-600">Duration:</dt>
+                <dd class="font-medium"><%= @api_call.audio_duration %>s</dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-gray-600">Voice:</dt>
+                <dd class="font-medium"><%= @api_call.voice_id %></dd>
+              </div>
+            <% end %>
+          </dl>
+        <% else %>
+          <h3 class="font-medium text-gray-700 mb-2">Tracking Information</h3>
+          <dl class="space-y-1 text-sm">
+            <% if @api_call.request_id %>
+              <div class="flex justify-between">
+                <dt class="text-gray-600">Request ID:</dt>
+                <dd class="font-mono text-xs"><%= @api_call.request_id %></dd>
+              </div>
+            <% end %>
+            <% if @api_call.batch_id %>
+              <div class="flex justify-between">
+                <dt class="text-gray-600">Batch ID:</dt>
+                <dd class="font-mono text-xs"><%= @api_call.batch_id %></dd>
+              </div>
+            <% end %>
+            <% if @api_call.session_id %>
+              <div class="flex justify-between">
+                <dt class="text-gray-600">Session ID:</dt>
+                <dd class="font-mono text-xs"><%= @api_call.session_id %></dd>
+              </div>
+            <% end %>
+            <% if @api_call.response_cache_key %>
+              <div class="flex justify-between">
+                <dt class="text-gray-600">Cache Key:</dt>
+                <dd class="font-mono text-xs" title="<%= @api_call.response_cache_key %>">
+                  <%= truncate(@api_call.response_cache_key, length: 20) %>
+                </dd>
+              </div>
+            <% end %>
+          </dl>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error Information -->
+  <% if @api_call.error_code || @api_call.error_message %>
+    <div class="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4 text-red-800">Error Information</h2>
+      <dl class="space-y-2">
+        <% if @api_call.error_code %>
+          <div>
+            <dt class="text-red-700 font-medium">Error Code:</dt>
+            <dd class="mt-1 text-red-900"><%= @api_call.error_code %></dd>
+          </div>
+        <% end %>
+        <% if @api_call.error_message %>
+          <div>
+            <dt class="text-red-700 font-medium">Error Message:</dt>
+            <dd class="mt-1 text-red-900"><%= @api_call.error_message %></dd>
+          </div>
+        <% end %>
+        <% if @error_details && @error_details.any? %>
+          <div>
+            <dt class="text-red-700 font-medium">Error Details:</dt>
+            <dd class="mt-1">
+              <pre class="bg-white p-3 rounded text-xs overflow-x-auto"><%= JSON.pretty_generate(@error_details) %></pre>
+            </dd>
+          </div>
+        <% end %>
+      </dl>
+    </div>
+  <% end %>
+
+  <!-- Related Record -->
+  <% if @trackable %>
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4 text-blue-800">Related Record</h2>
+      <dl class="space-y-2">
+        <div class="flex justify-between">
+          <dt class="text-blue-700">Type:</dt>
+          <dd class="font-medium"><%= @api_call.trackable_type %></dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-blue-700">ID:</dt>
+          <dd class="font-medium"><%= @api_call.trackable_id %></dd>
+        </div>
+        <% if @trackable.respond_to?(:name) %>
+          <div class="flex justify-between">
+            <dt class="text-blue-700">Name:</dt>
+            <dd class="font-medium"><%= @trackable.name %></dd>
+          </div>
+        <% end %>
+      </dl>
+    </div>
+  <% end %>
+
+  <!-- Request Parameters -->
+  <% if @request_params && @request_params.any? %>
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">Request Parameters</h2>
+      <pre class="bg-gray-50 p-4 rounded text-xs overflow-x-auto"><%= JSON.pretty_generate(@request_params) %></pre>
+    </div>
+  <% end %>
+
+  <!-- Response Data -->
+  <% if @response_data && @response_data.any? %>
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">Response Data</h2>
+      <pre class="bg-gray-50 p-4 rounded text-xs overflow-x-auto max-h-96 overflow-y-auto"><%= JSON.pretty_generate(@response_data) %></pre>
+    </div>
+  <% end %>
+
+  <!-- Response Headers -->
+  <% if @api_call.response_headers && @api_call.response_headers.any? %>
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">Response Headers</h2>
+      <pre class="bg-gray-50 p-4 rounded text-xs overflow-x-auto"><%= JSON.pretty_generate(@api_call.response_headers) %></pre>
+    </div>
+  <% end %>
+
+  <!-- Metadata -->
+  <% if @metadata && @metadata.any? %>
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">Additional Metadata</h2>
+      <pre class="bg-gray-50 p-4 rounded text-xs overflow-x-auto"><%= JSON.pretty_generate(@metadata) %></pre>
+    </div>
+  <% end %>
+</div>

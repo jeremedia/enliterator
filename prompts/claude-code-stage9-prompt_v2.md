@@ -86,7 +86,7 @@ dataset = builder.call
 # Train the model on this REAL data
 trainer = FineTune::Trainer.new(
   dataset_path: dataset[:path],
-  base_model: 'gpt-4o-mini-2024-07-18',
+  base_model: 'gpt-4.1-mini',
   suffix: 'meta-enliterator-v1'
 )
 job = trainer.call

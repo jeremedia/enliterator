@@ -19,9 +19,9 @@ end
 # OpenAI model configuration
 Rails.application.config.openai = {
   # Models that support Structured Outputs (Responses API)
-  extraction_model: ENV.fetch("OPENAI_MODEL", "gpt-4o-2024-08-06"),
-  answer_model: ENV.fetch("OPENAI_MODEL_ANSWER", "gpt-4o-2024-08-06"),
-  fine_tune_base: ENV.fetch("OPENAI_FT_BASE", "gpt-4o-mini-2024-07-18"),
+  extraction_model: ENV.fetch("OPENAI_MODEL"),
+  answer_model: ENV.fetch("OPENAI_MODEL_ANSWER"),
+  fine_tune_base: ENV.fetch("OPENAI_FT_BASE"),
   fine_tune_model: ENV.fetch("OPENAI_FT_MODEL", nil),
   
   # Temperature settings - MUST be 0 for extraction
@@ -34,7 +34,7 @@ Rails.application.config.openai = {
   # Structured output settings
   structured_outputs: {
     strict: true,  # Enforce schema compliance
-    supported_models: ["gpt-4o-2024-08-06", "gpt-4o-mini-2024-07-18", "gpt-4.1-2025-04-14", "gpt-4.1-mini-2025-04-14"]
+    supported_models: ["gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano"]
   }
 }
 

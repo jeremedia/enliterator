@@ -1,5 +1,9 @@
 Rails.application.routes.draw do
+  devise_for :users
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
+  
+  # Mission Control - Jobs monitoring UI
+  mount MissionControl::Jobs::Engine => "/jobs"
 
   # Webhook endpoints
   namespace :webhooks do
@@ -17,6 +21,10 @@ Rails.application.routes.draw do
   # Defines the root path route ("/")
   root "navigator#index"  # Changed to Knowledge Navigator as main interface
   
+  # Public splash and deep overview
+  get "/public", to: "public#index"
+  get "/public/more", to: "public#more", as: :public_more
+  
   # Knowledge Navigator - The main user interface
   namespace :navigator do
     get '/', to: 'conversation#index'
@@ -33,17 +41,18 @@ Rails.application.routes.draw do
   # Legacy welcome page (remove after transition)
   get "welcome" => "welcome#index"
   
-  # Pipeline Runs monitoring
-  resources :pipeline_runs, only: [:index, :show, :new, :create] do
-    member do
-      post :resume
-      post :pause
-      get :logs
-    end
-  end
-  
   # Admin interface
   namespace :admin do
+    # Pipeline Runs monitoring
+    resources :pipeline_runs, only: [:index, :show, :new, :create] do
+      member do
+        post :resume
+        post :pause
+        post :cancel
+        get :logs
+      end
+    end
+    
     resources :openai_settings do
       collection do
         post :test_model
@@ -68,6 +77,18 @@ Rails.application.routes.draw do
         post :evaluate_message
       end
     end
+    
+    resources :api_calls, only: [:index, :show] do
+      member do
+        post :retry
+      end
+      collection do
+        get :export
+      end
+    end
+    
+    # EKN API Usage Analytics
+    resources :ekn_usage, only: [:index, :show]
     
     # Admin dashboard
     get '/', to: 'dashboard#index', as: :dashboard

@@ -113,10 +113,9 @@ begin
 rescue => e
   puts "❌ Error: #{e.message}"
   puts "\nTroubleshooting:"
-  puts "1. Check if Neo4j is running: brew services list | grep neo4j"
-  puts "2. Start Neo4j if needed: brew services start neo4j"
-  puts "3. Verify credentials in config/initializers/neo4j.rb"
-  puts "   - URL: bolt://127.0.0.1:7687"
-  puts "   - Username: neo4j"
-  puts "   - Password: cheese28"
+  puts "1. Check if Neo4j Desktop is running (not Homebrew)"
+  puts "2. Verify configuration in config/initializers/neo4j.rb"
+  puts "   - URL: bolt://100.104.170.10:8687"
+  puts "   - Authentication: DISABLED (uses AuthTokens.none)"
+  puts "3. Test connection: rails runner 'puts Graph::Connection.instance.driver.verify_connectivity'"
 end

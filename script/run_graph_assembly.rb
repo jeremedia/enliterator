@@ -17,7 +17,8 @@ begin
   puts "Graph assembly completed successfully!"
   
   # Check Neo4j nodes were created
-  driver = Neo4j::Driver::GraphDatabase.driver(ENV['NEO4J_URL'], Neo4j::Driver::AuthTokens.basic('neo4j', 'cheese28'))
+  # Use centralized connection from neo4j.rb
+  driver = Graph::Connection.instance.driver
   session = driver.session
   node_count = session.run('MATCH (n) RETURN count(n) as total').single.first
   puts "Total nodes in Neo4j: #{node_count}"
@@ -28,7 +29,6 @@ begin
   type_result.each { |record| puts "  #{record[:label]}: #{record[:count]}" }
   
   session.close
-  driver.close
   
   if node_count > 0
     # Update pipeline

@@ -46,3 +46,5 @@ pin "robust-predicates" # @3.0.2
 pin_all_from "app/javascript/navigator", under: "navigator"
 
 pin "hotwire-spark", to: "hotwire-spark.js", preload: true
+# Ensure Turbo can import ActionCable src entry
+pin "@rails/actioncable/src", to: "@rails--actioncable--src.js" # pinned for turbo-rails

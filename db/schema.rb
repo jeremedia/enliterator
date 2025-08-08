@@ -10,11 +10,12 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_06_231125) do
+ActiveRecord::Schema[8.0].define(version: 2025_08_07_154247) do
   create_schema "ekn_11"
   create_schema "ekn_12"
   create_schema "ekn_13"
   create_schema "ekn_14"
+  create_schema "ekn_7"
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gin"
@@ -22,6 +23,113 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_231125) do
   enable_extension "pg_trgm"
   enable_extension "pgcrypto"
   enable_extension "vector"
+
+  create_table "actor_experiences", force: :cascade do |t|
+    t.bigint "actor_id", null: false
+    t.bigint "experience_id", null: false
+    t.string "relation_type", default: "participates_in"
+    t.float "strength"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["actor_id", "experience_id"], name: "index_actor_experiences_on_actor_id_and_experience_id", unique: true
+    t.index ["actor_id"], name: "index_actor_experiences_on_actor_id"
+    t.index ["experience_id"], name: "index_actor_experiences_on_experience_id"
+  end
+
+  create_table "actor_manifests", force: :cascade do |t|
+    t.bigint "actor_id", null: false
+    t.bigint "manifest_id", null: false
+    t.string "relation_type", default: "interacts_with"
+    t.float "strength"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["actor_id", "manifest_id"], name: "index_actor_manifests_on_actor_id_and_manifest_id", unique: true
+    t.index ["actor_id"], name: "index_actor_manifests_on_actor_id"
+    t.index ["manifest_id"], name: "index_actor_manifests_on_manifest_id"
+  end
+
+  create_table "actors", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "role"
+    t.text "description"
+    t.jsonb "capabilities", default: []
+    t.jsonb "affiliations", default: []
+    t.text "repr_text", null: false
+    t.bigint "provenance_and_rights_id", null: false
+    t.datetime "valid_time_start", null: false
+    t.datetime "valid_time_end"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_actors_on_name"
+    t.index ["provenance_and_rights_id"], name: "index_actors_on_provenance_and_rights_id"
+    t.index ["role"], name: "index_actors_on_role"
+    t.index ["valid_time_start", "valid_time_end"], name: "index_actors_on_valid_time_start_and_valid_time_end"
+  end
+
+  create_table "api_calls", force: :cascade do |t|
+    t.string "type", null: false
+    t.string "service_name", null: false
+    t.string "endpoint", null: false
+    t.string "model_used"
+    t.string "model_version"
+    t.jsonb "request_params", default: {}
+    t.jsonb "response_data", default: {}
+    t.jsonb "response_headers", default: {}
+    t.integer "prompt_tokens"
+    t.integer "completion_tokens"
+    t.integer "total_tokens"
+    t.integer "cached_tokens"
+    t.integer "reasoning_tokens"
+    t.integer "image_count"
+    t.string "image_size"
+    t.string "image_quality"
+    t.float "audio_duration"
+    t.string "voice_id"
+    t.decimal "input_cost", precision: 12, scale: 8
+    t.decimal "output_cost", precision: 12, scale: 8
+    t.decimal "total_cost", precision: 12, scale: 8
+    t.string "currency", default: "USD"
+    t.float "response_time_ms"
+    t.float "processing_time_ms"
+    t.integer "retry_count", default: 0
+    t.float "queue_time_ms"
+    t.string "status", default: "pending", null: false
+    t.string "error_code"
+    t.text "error_message"
+    t.jsonb "error_details", default: {}
+    t.string "trackable_type"
+    t.bigint "trackable_id"
+    t.bigint "user_id"
+    t.string "request_id"
+    t.string "batch_id"
+    t.string "response_cache_key"
+    t.string "session_id"
+    t.jsonb "metadata", default: {}
+    t.boolean "cached_response", default: false
+    t.string "environment"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "ekn_id"
+    t.index ["batch_id"], name: "index_api_calls_on_batch_id"
+    t.index ["created_at"], name: "index_api_calls_on_created_at"
+    t.index ["ekn_id", "created_at"], name: "index_api_calls_on_ekn_id_and_created_at"
+    t.index ["ekn_id", "endpoint"], name: "index_api_calls_on_ekn_id_and_endpoint"
+    t.index ["ekn_id"], name: "index_api_calls_on_ekn_id"
+    t.index ["model_used"], name: "index_api_calls_on_model_used"
+    t.index ["request_id"], name: "index_api_calls_on_request_id"
+    t.index ["service_name", "status", "created_at"], name: "index_api_calls_on_service_name_and_status_and_created_at"
+    t.index ["service_name"], name: "index_api_calls_on_service_name"
+    t.index ["session_id", "created_at"], name: "index_api_calls_on_session_id_and_created_at"
+    t.index ["session_id"], name: "index_api_calls_on_session_id"
+    t.index ["status"], name: "index_api_calls_on_status"
+    t.index ["trackable_type", "trackable_id"], name: "idx_api_calls_trackable"
+    t.index ["trackable_type", "trackable_id"], name: "index_api_calls_on_trackable"
+    t.index ["type", "created_at"], name: "index_api_calls_on_type_and_created_at"
+    t.index ["type", "model_used", "created_at"], name: "index_api_calls_on_type_and_model_used_and_created_at"
+    t.index ["type"], name: "index_api_calls_on_type"
+    t.index ["user_id", "created_at"], name: "index_api_calls_on_user_id_and_created_at"
+    t.index ["user_id"], name: "index_api_calls_on_user_id"
+  end
 
   create_table "conversation_histories", force: :cascade do |t|
     t.string "conversation_id"
@@ -44,6 +152,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_231125) do
     t.datetime "last_activity_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "ekn_id"
+    t.index ["ekn_id"], name: "index_conversations_on_ekn_id"
     t.index ["ingest_batch_id"], name: "index_conversations_on_ingest_batch_id"
     t.index ["last_activity_at"], name: "index_conversations_on_last_activity_at"
     t.index ["status"], name: "index_conversations_on_status"
@@ -151,6 +261,35 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_231125) do
 # Could not dump table "embeddings" because of following StandardError
 #   Unknown type 'vector(1536)' for column 'embedding'
 
+
+  create_table "evidence_experiences", force: :cascade do |t|
+    t.bigint "evidence_id", null: false
+    t.bigint "experience_id", null: false
+    t.string "relation_type", default: "supports"
+    t.float "strength"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["evidence_id", "experience_id"], name: "index_evidence_experiences_on_evidence_id_and_experience_id", unique: true
+    t.index ["evidence_id"], name: "index_evidence_experiences_on_evidence_id"
+    t.index ["experience_id"], name: "index_evidence_experiences_on_experience_id"
+  end
+
+  create_table "evidences", force: :cascade do |t|
+    t.string "evidence_type", null: false
+    t.text "description", null: false
+    t.jsonb "source_refs", default: []
+    t.float "confidence_score"
+    t.jsonb "corroboration", default: []
+    t.text "repr_text", null: false
+    t.bigint "provenance_and_rights_id", null: false
+    t.datetime "observed_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["confidence_score"], name: "index_evidences_on_confidence_score"
+    t.index ["evidence_type"], name: "index_evidences_on_evidence_type"
+    t.index ["observed_at"], name: "index_evidences_on_observed_at"
+    t.index ["provenance_and_rights_id"], name: "index_evidences_on_provenance_and_rights_id"
+  end
 
   create_table "evolutionaries", force: :cascade do |t|
     t.text "change_note", null: false
@@ -329,6 +468,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_231125) do
     t.text "deliverables_errors"
     t.decimal "literacy_score"
     t.bigint "ekn_id"
+    t.jsonb "literacy_gaps"
+    t.jsonb "deliverables"
+    t.string "fine_tune_dataset_path"
+    t.string "fine_tune_job_id"
     t.index ["created_at"], name: "index_ingest_batches_on_created_at"
     t.index ["ekn_id"], name: "index_ingest_batches_on_ekn_id"
     t.index ["source_type"], name: "index_ingest_batches_on_source_type"
@@ -358,6 +501,16 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_231125) do
     t.text "content"
     t.string "pool_status", default: "pending"
     t.jsonb "pool_metadata", default: {}
+    t.string "graph_status"
+    t.jsonb "graph_metadata"
+    t.string "embedding_status"
+    t.jsonb "embedding_metadata"
+    t.boolean "training_eligible"
+    t.boolean "publishable"
+    t.boolean "quarantined"
+    t.string "quarantine_reason"
+    t.string "file_hash"
+    t.integer "file_size"
     t.index ["ingest_batch_id"], name: "index_ingest_items_on_ingest_batch_id"
     t.index ["lexicon_status"], name: "index_ingest_items_on_lexicon_status"
     t.index ["media_type"], name: "index_ingest_items_on_media_type"
@@ -473,6 +626,18 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_231125) do
     t.index ["manifest_id"], name: "index_manifest_experiences_on_manifest_id"
   end
 
+  create_table "manifest_spatials", force: :cascade do |t|
+    t.bigint "manifest_id", null: false
+    t.bigint "spatial_id", null: false
+    t.string "relation_type", default: "located_at"
+    t.float "strength"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["manifest_id", "spatial_id"], name: "index_manifest_spatials_on_manifest_id_and_spatial_id", unique: true
+    t.index ["manifest_id"], name: "index_manifest_spatials_on_manifest_id"
+    t.index ["spatial_id"], name: "index_manifest_spatials_on_spatial_id"
+  end
+
   create_table "manifests", force: :cascade do |t|
     t.string "label", null: false
     t.string "manifest_type"
@@ -503,6 +668,37 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_231125) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["conversation_id"], name: "index_messages_on_conversation_id"
+  end
+
+  create_table "method_pool_practicals", force: :cascade do |t|
+    t.bigint "method_pool_id", null: false
+    t.bigint "practical_id", null: false
+    t.string "relation_type", default: "implements"
+    t.float "strength"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["method_pool_id", "practical_id"], name: "idx_on_method_pool_id_practical_id_0f0229a2ca", unique: true
+    t.index ["method_pool_id"], name: "index_method_pool_practicals_on_method_pool_id"
+    t.index ["practical_id"], name: "index_method_pool_practicals_on_practical_id"
+  end
+
+  create_table "method_pools", force: :cascade do |t|
+    t.string "method_name", null: false
+    t.string "category"
+    t.text "description", null: false
+    t.jsonb "steps", default: []
+    t.jsonb "prerequisites", default: []
+    t.jsonb "outcomes", default: []
+    t.text "repr_text", null: false
+    t.bigint "provenance_and_rights_id", null: false
+    t.datetime "valid_time_start", null: false
+    t.datetime "valid_time_end"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["category"], name: "index_method_pools_on_category"
+    t.index ["method_name"], name: "index_method_pools_on_method_name"
+    t.index ["provenance_and_rights_id"], name: "index_method_pools_on_provenance_and_rights_id"
+    t.index ["valid_time_start", "valid_time_end"], name: "index_method_pools_on_valid_time_start_and_valid_time_end"
   end
 
   create_table "negative_knowledges", force: :cascade do |t|
@@ -706,12 +902,81 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_231125) do
     t.index ["valid_time_start", "valid_time_end"], name: "index_relationals_on_valid_time_start_and_valid_time_end"
   end
 
+  create_table "risk_practicals", force: :cascade do |t|
+    t.bigint "risk_id", null: false
+    t.bigint "practical_id", null: false
+    t.string "relation_type", default: "mitigated_by"
+    t.float "strength"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["practical_id"], name: "index_risk_practicals_on_practical_id"
+    t.index ["risk_id", "practical_id"], name: "index_risk_practicals_on_risk_id_and_practical_id", unique: true
+    t.index ["risk_id"], name: "index_risk_practicals_on_risk_id"
+  end
+
+  create_table "risks", force: :cascade do |t|
+    t.string "risk_type", null: false
+    t.string "severity"
+    t.float "probability"
+    t.text "description", null: false
+    t.jsonb "mitigations", default: []
+    t.jsonb "impacts", default: []
+    t.text "repr_text", null: false
+    t.bigint "provenance_and_rights_id", null: false
+    t.datetime "valid_time_start", null: false
+    t.datetime "valid_time_end"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["probability"], name: "index_risks_on_probability"
+    t.index ["provenance_and_rights_id"], name: "index_risks_on_provenance_and_rights_id"
+    t.index ["risk_type"], name: "index_risks_on_risk_type"
+    t.index ["severity"], name: "index_risks_on_severity"
+    t.index ["valid_time_start", "valid_time_end"], name: "index_risks_on_valid_time_start_and_valid_time_end"
+  end
+
   create_table "sessions", force: :cascade do |t|
     t.string "browser_session_id", null: false
     t.jsonb "metadata", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["browser_session_id"], name: "index_sessions_on_browser_session_id", unique: true
+  end
+
+  create_table "spatials", force: :cascade do |t|
+    t.string "location_name", null: false
+    t.string "sector"
+    t.string "portal"
+    t.integer "year"
+    t.jsonb "coordinates", default: {}
+    t.jsonb "neighbors", default: []
+    t.string "placement_type"
+    t.text "description"
+    t.text "repr_text", null: false
+    t.bigint "provenance_and_rights_id", null: false
+    t.datetime "valid_time_start", null: false
+    t.datetime "valid_time_end"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["location_name"], name: "index_spatials_on_location_name"
+    t.index ["portal"], name: "index_spatials_on_portal"
+    t.index ["provenance_and_rights_id"], name: "index_spatials_on_provenance_and_rights_id"
+    t.index ["sector"], name: "index_spatials_on_sector"
+    t.index ["valid_time_start", "valid_time_end"], name: "index_spatials_on_valid_time_start_and_valid_time_end"
+    t.index ["year"], name: "index_spatials_on_year"
+  end
+
+  create_table "users", force: :cascade do |t|
+    t.string "email", default: "", null: false
+    t.string "encrypted_password", default: "", null: false
+    t.string "reset_password_token"
+    t.datetime "reset_password_sent_at"
+    t.datetime "remember_created_at"
+    t.string "name"
+    t.boolean "admin", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
   end
 
   create_table "webhook_events", force: :cascade do |t|
@@ -739,6 +1004,13 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_231125) do
     t.index ["webhook_id"], name: "index_webhook_events_on_webhook_id"
   end
 
+  add_foreign_key "actor_experiences", "actors"
+  add_foreign_key "actor_experiences", "experiences"
+  add_foreign_key "actor_manifests", "actors"
+  add_foreign_key "actor_manifests", "manifests"
+  add_foreign_key "actors", "provenance_and_rights", column: "provenance_and_rights_id"
+  add_foreign_key "api_calls", "ekns"
+  add_foreign_key "conversations", "ekns"
   add_foreign_key "conversations", "ingest_batches"
   add_foreign_key "ekn_pipeline_runs", "ekns"
   add_foreign_key "ekn_pipeline_runs", "ingest_batches"
@@ -747,6 +1019,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_231125) do
   add_foreign_key "emanation_relationals", "emanations"
   add_foreign_key "emanation_relationals", "relationals"
   add_foreign_key "emanations", "provenance_and_rights", column: "provenance_and_rights_id"
+  add_foreign_key "evidence_experiences", "evidences"
+  add_foreign_key "evidence_experiences", "experiences"
+  add_foreign_key "evidences", "provenance_and_rights", column: "provenance_and_rights_id"
   add_foreign_key "evolutionaries", "ideas", column: "refined_idea_id"
   add_foreign_key "evolutionaries", "manifests", column: "manifest_version_id"
   add_foreign_key "evolutionaries", "provenance_and_rights", column: "provenance_and_rights_id"
@@ -770,8 +1045,13 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_231125) do
   add_foreign_key "log_items", "logs"
   add_foreign_key "manifest_experiences", "experiences"
   add_foreign_key "manifest_experiences", "manifests"
+  add_foreign_key "manifest_spatials", "manifests"
+  add_foreign_key "manifest_spatials", "spatials"
   add_foreign_key "manifests", "provenance_and_rights", column: "provenance_and_rights_id"
   add_foreign_key "messages", "conversations"
+  add_foreign_key "method_pool_practicals", "method_pools"
+  add_foreign_key "method_pool_practicals", "practicals"
+  add_foreign_key "method_pools", "provenance_and_rights", column: "provenance_and_rights_id"
   add_foreign_key "negative_knowledges", "ingest_batches", column: "batch_id"
   add_foreign_key "pipeline_artifacts", "pipeline_runs"
   add_foreign_key "pipeline_errors", "pipeline_runs"
@@ -780,4 +1060,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_231125) do
   add_foreign_key "practicals", "provenance_and_rights", column: "provenance_and_rights_id"
   add_foreign_key "prompt_versions", "prompts"
   add_foreign_key "relationals", "provenance_and_rights", column: "provenance_and_rights_id"
+  add_foreign_key "risk_practicals", "practicals"
+  add_foreign_key "risk_practicals", "risks"
+  add_foreign_key "risks", "provenance_and_rights", column: "provenance_and_rights_id"
+  add_foreign_key "spatials", "provenance_and_rights", column: "provenance_and_rights_id"
 end

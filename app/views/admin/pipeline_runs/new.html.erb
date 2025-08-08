@@ -1,0 +1,114 @@
+<div class="container mx-auto px-4 py-8">
+  <div class="mb-8">
+    <%= link_to "← Back to Pipeline Runs", admin_pipeline_runs_path, 
+                class: "text-blue-600 hover:text-blue-800" %>
+  </div>
+
+  <div class="bg-white rounded-lg shadow-lg p-6">
+    <h1 class="text-3xl font-bold mb-6">Start New Pipeline Run</h1>
+    
+    <%= form_with url: admin_pipeline_runs_path, local: true do |form| %>
+      <div class="space-y-6">
+        <!-- EKN Selection -->
+        <div>
+          <%= form.label :ekn_id, "Select EKN", class: "block text-sm font-medium text-gray-700 mb-2" %>
+          <%= form.select :ekn_id, 
+                          options_from_collection_for_select(@ekns, :id, :name, @ekn&.id),
+                          { prompt: "Choose an EKN..." },
+                          class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" %>
+        </div>
+
+        <!-- Batch Name -->
+        <div>
+          <%= form.label :batch_name, "Batch Name", class: "block text-sm font-medium text-gray-700 mb-2" %>
+          <%= form.text_field :batch_name, 
+                              placeholder: "Optional batch name",
+                              class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" %>
+        </div>
+
+        <!-- Source Type -->
+        <div>
+          <%= form.label :source_type, "Data Source", class: "block text-sm font-medium text-gray-700 mb-2" %>
+          <div class="space-y-2">
+            <label class="flex items-center">
+              <%= form.radio_button :source_type, "directory", checked: true, class: "mr-2" %>
+              <span>Directory Path</span>
+            </label>
+            <label class="flex items-center">
+              <%= form.radio_button :source_type, "upload", class: "mr-2" %>
+              <span>Upload Files</span>
+            </label>
+            <label class="flex items-center">
+              <%= form.radio_button :source_type, "meta_enliterator", class: "mr-2" %>
+              <span>Meta-Enliterator (Process Codebase)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Directory Path (shown when directory is selected) -->
+        <div id="directory-input" class="space-y-2">
+          <%= form.label :directory_path, "Directory Path", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.text_field :directory_path, 
+                              placeholder: "/path/to/data/files",
+                              class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" %>
+        </div>
+
+        <!-- File Upload (shown when upload is selected) -->
+        <div id="upload-input" class="space-y-2 hidden">
+          <%= form.label :files, "Select Files", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.file_field :files, 
+                              multiple: true,
+                              class: "block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" %>
+        </div>
+
+        <!-- Auto-advance -->
+        <div class="flex items-center">
+          <%= form.check_box :auto_advance, checked: true, class: "mr-2" %>
+          <%= form.label :auto_advance, "Auto-advance through stages", class: "text-sm text-gray-700" %>
+        </div>
+
+        <!-- Submit Buttons -->
+        <div class="flex gap-4">
+          <%= form.submit "Start Pipeline", 
+                          class: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" %>
+          <%= link_to "Cancel", admin_pipeline_runs_path, 
+                      class: "bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded" %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+  // Toggle input fields based on source type selection
+  document.addEventListener('DOMContentLoaded', function() {
+    const directoryRadio = document.querySelector('input[value="directory"]');
+    const uploadRadio = document.querySelector('input[value="upload"]');
+    const metaRadio = document.querySelector('input[value="meta_enliterator"]');
+    const directoryInput = document.getElementById('directory-input');
+    const uploadInput = document.getElementById('upload-input');
+
+    function toggleInputs() {
+      if (uploadRadio.checked) {
+        directoryInput.classList.add('hidden');
+        uploadInput.classList.remove('hidden');
+      } else {
+        directoryInput.classList.remove('hidden');
+        uploadInput.classList.add('hidden');
+      }
+      
+      // Hide both for meta_enliterator
+      if (metaRadio.checked) {
+        directoryInput.classList.add('hidden');
+        uploadInput.classList.add('hidden');
+      }
+    }
+
+    directoryRadio.addEventListener('change', toggleInputs);
+    uploadRadio.addEventListener('change', toggleInputs);
+    metaRadio.addEventListener('change', toggleInputs);
+    
+    // Initial state
+    toggleInputs();
+  });
+</script>

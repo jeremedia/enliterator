@@ -17,8 +17,8 @@ module Pools
   end
 
   class RelationExtractionResult < OpenAI::Helpers::StructuredOutput::BaseModel
-    required :relations, Array, doc: "List of extracted relations"
-    required :unmapped_relations, Array, doc: "Relations found but not matching glossary"
+    required :relations, OpenAI::ArrayOf[ExtractedRelation], doc: "List of extracted relations"
+    required :unmapped_relations, OpenAI::ArrayOf[String], doc: "Relations found but not matching glossary"
   end
 
   # Service to extract relations between entities using the Relation Verb Glossary

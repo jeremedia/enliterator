@@ -1,210 +1,199 @@
-# frozen_string_literal: true
+require 'set'
+
+# PURPOSE: Stage 3 of the 9-stage pipeline - Lexicon Bootstrap
+# Extracts canonical terms, surface forms, and builds the lexicon
+# from content that has passed rights triage.
+#
+# Inputs: IngestItems with completed rights triage
+# Outputs: LexiconAndOntology entries with canonical terms and surface forms
 
 module Lexicon
-  # Job to bootstrap the lexicon from triaged data items
-  # This is Stage 3 of the Zero-touch Pipeline
-  # - Extracts canonical terms from content
-  # - Generates surface forms and negative surface forms
-  # - Creates canonical descriptions
-  # - Normalizes names and casing
-  class BootstrapJob < ApplicationJob
+  class BootstrapJob < Pipeline::BaseJob
     queue_as :pipeline
     
-    # Process items in batches to avoid timeouts
-    BATCH_SIZE = 10
-    MAX_CONCURRENT_REQUESTS = 3
-
-    def perform(ingest_batch_id)
-      @batch = IngestBatch.find(ingest_batch_id)
+    def perform(pipeline_run_id)
+      # BaseJob sets up @pipeline_run, @batch, @ekn via around_perform
+      # Do NOT call super - BaseJob uses around_perform to wrap this method
+      
       @extracted_terms = []
-      @terms_mutex = Mutex.new
-
-      Rails.logger.info "Starting lexicon bootstrap for batch #{@batch.id}"
-
-      # Update batch status
-      @batch.update!(status: 'lexicon_in_progress')
-
-      # Process items that have completed rights triage in batches
-      items_to_process = @batch.ingest_items.where(triage_status: 'completed')
-      total_items = items_to_process.count
+      items = items_to_process
       
-      Rails.logger.info "Processing #{total_items} items in batches of #{BATCH_SIZE}"
+      log_progress "Starting lexicon bootstrap for #{items.count} items"
       
-      items_to_process.find_in_batches(batch_size: BATCH_SIZE) do |item_batch|
-        process_item_batch(item_batch)
+      processed = 0
+      failed = 0
+      
+      items.find_each do |item|
+        begin
+          process_item(item)
+          processed += 1
+          
+          if processed % 10 == 0
+            log_progress "Processed #{processed} items...", level: :debug
+          end
+        rescue => e
+          log_progress "Failed to process item #{item.id}: #{e.message}", level: :error
+          failed += 1
+          item.update!(lexicon_status: 'failed', lexicon_metadata: { error: e.message })
+        end
       end
-
-      # Deduplicate and normalize extracted terms
-      normalized_terms = normalize_and_deduplicate_terms
       
-      # Create or update lexicon entries
-      create_lexicon_entries(normalized_terms)
-
-      finalize_batch_lexicon
-    rescue StandardError => e
-      Rails.logger.error "Failed to bootstrap lexicon for batch #{@batch.id}: #{e.message}"
-      @batch.update!(status: 'failed', metadata: @batch.metadata.merge(
-        lexicon_error: { message: e.message, backtrace: e.backtrace.first(5) }
-      ))
-      raise
+      # Create lexicon entries
+      create_lexicon_entries
+      
+      log_progress "✅ Lexicon bootstrap complete: #{processed} processed, #{failed} failed"
+      
+      # Track metrics
+      track_metric :items_processed, processed
+      track_metric :items_failed, failed
+      track_metric :terms_extracted, @extracted_terms.size
+      track_metric :lexicon_entries, LexiconAndOntology.count
+      
+      # Update batch status
+      @batch.update!(status: 'lexicon_completed')
     end
-
+    
     private
     
-    def process_item_batch(items)
-      Rails.logger.info "Processing batch of #{items.size} items"
-      
-      # Process items in parallel using threads for better performance
-      threads = items.map do |item|
-        Thread.new { extract_terms_from_item(item) }
-      end
-      
-      # Wait for all threads to complete with a timeout
-      threads.each do |thread|
-        thread.join(30) # 30 second timeout per thread
-      end
-      
-      Rails.logger.info "Batch processing complete"
-    rescue StandardError => e
-      Rails.logger.error "Error processing batch: #{e.message}"
-      # Continue processing even if some items fail
+    def items_to_process
+      # CRITICAL: Items must have completed rights triage AND be ready for lexicon processing
+      # Check both triage_status (from Rights stage) and lexicon_status
+      @batch.ingest_items
+        .where(triage_status: 'completed')
+        .where(lexicon_status: ['pending', nil])  # Ready for lexicon extraction
+        .where(quarantined: [false, nil])
     end
-
-    def extract_terms_from_item(item)
+    
+    def process_item(item)
       return if item.content.blank?
-
-      # Use the term extraction service with OpenAI Structured Outputs
-      extraction_result = Lexicon::TermExtractionService.new(
+      
+      # Use the term extraction service
+      result = Lexicon::TermExtractionService.new(
         content: item.content,
-        source_type: item.source_type,
         metadata: item.metadata
       ).extract
-
-      if extraction_result[:success]
-        @terms_mutex.synchronize do
-          @extracted_terms.concat(extraction_result[:terms])
+      
+      if result[:success]
+        # Add provenance_and_rights_id and source_item_id from item to each extracted term
+        terms_with_rights = result[:terms].map do |term|
+          term.merge(
+            provenance_and_rights_id: item.provenance_and_rights_id,
+            source_item_id: item.id
+          )
         end
         
-        # Update item with extraction metadata
+        @extracted_terms.concat(terms_with_rights)
+        
         item.update!(
           lexicon_status: 'extracted',
-          lexicon_metadata: {
-            terms_count: extraction_result[:terms].size,
-            extraction_confidence: extraction_result[:confidence],
-            extracted_at: Time.current
+          lexicon_metadata: { 
+            terms_count: result[:terms].size,
+            extracted_at: Time.current 
           }
+          # Note: pool_status: 'pending' moved to after successful lexicon entry creation
         )
       else
-        Rails.logger.warn "Failed to extract terms from item #{item.id}: #{extraction_result[:error]}"
-        item.update!(
-          lexicon_status: 'failed',
-          lexicon_metadata: { error: extraction_result[:error] }
-        )
+        raise result[:error]
       end
-    rescue StandardError => e
-      Rails.logger.error "Error processing item #{item.id}: #{e.message}"
-      item.update!(
-        lexicon_status: 'failed',
-        lexicon_metadata: { error: e.message }
-      )
     end
-
-    def normalize_and_deduplicate_terms
+    
+    def create_lexicon_entries
+      # Normalize and deduplicate terms
       service = Lexicon::NormalizationService.new(@extracted_terms)
-      service.normalize_and_deduplicate
-    end
-
-    def create_lexicon_entries(normalized_terms)
-      normalized_terms.each do |term_data|
-        # Find or create the lexicon entry
-        lexicon_entry = LexiconAndOntology.find_or_initialize_by(
-          term: term_data[:canonical_term]
-        )
-
-        # Merge surface forms
-        existing_surface_forms = lexicon_entry.surface_forms || []
-        new_surface_forms = (existing_surface_forms + term_data[:surface_forms]).uniq
-
-        # Merge negative surface forms
-        existing_negative_forms = lexicon_entry.negative_surface_forms || []
-        new_negative_forms = (existing_negative_forms + term_data[:negative_surface_forms]).uniq
-
-        # Ensure ProvenanceAndRights is attached for new records
-        if lexicon_entry.new_record? || lexicon_entry.provenance_and_rights.nil?
-          lexicon_entry.provenance_and_rights = create_lexicon_provenance
-        end
-
-        # Update the entry
-        lexicon_entry.update!(
-          definition: term_data[:canonical_description] || lexicon_entry.definition || 'Term extracted from content',
-          canonical_description: term_data[:canonical_description] || lexicon_entry.canonical_description,
-          surface_forms: new_surface_forms,
-          negative_surface_forms: new_negative_forms,
-          pool_association: term_data[:term_type] || lexicon_entry.pool_association || 'general',
-          type_mapping: merge_type_mapping(lexicon_entry.type_mapping, term_data[:metadata]),
-          is_canonical: true,
-          # repr_text will be auto-generated by the model's callback
-          valid_time_start: Time.current
-        )
-      end
-    end
-
-    def merge_type_mapping(existing, new_metadata)
-      existing ||= {}
-      new_metadata ||= {}
+      normalized_terms = service.normalize_and_deduplicate
       
+      # Track which items actually contributed to persisted entries
+      contributing_item_ids = Set.new
+      
+      # Use transaction to ensure atomicity
+      ApplicationRecord.transaction do
+        normalized_terms.each do |term_data|
+          lexicon_entry = LexiconAndOntology.find_or_initialize_by(
+            term: term_data[:canonical_term]
+          )
+          
+          # Get rights_id from term data or use batch fallback
+          rights_id = term_data[:provenance_and_rights_id] || batch_rights_fallback&.id
+          
+          if rights_id.nil?
+            raise Pipeline::MissingRightsError, 
+                  "No provenance_and_rights available for term '#{term_data[:canonical_term]}'. " \
+                  "Ensure all IngestItems have associated ProvenanceAndRights records."
+          end
+          
+          # Log which rights_id was chosen
+          if term_data[:provenance_and_rights_id]
+            log_progress "Using rights_id #{rights_id} for term '#{term_data[:canonical_term]}'", level: :debug
+          else
+            log_progress "Using batch fallback rights_id #{rights_id} for term '#{term_data[:canonical_term]}'", level: :debug
+          end
+          
+          # Merge surface forms
+          existing_surface = lexicon_entry.surface_forms || []
+          new_surface = (existing_surface + (term_data[:surface_forms] || [])).uniq
+          
+          lexicon_entry.update!(
+            provenance_and_rights_id: rights_id,
+            definition: term_data[:canonical_description] || 'Extracted term',
+            surface_forms: new_surface,
+            pool_association: (term_data[:term_type].presence || 'general'),  # Fixed: use term_type
+            is_canonical: true,
+            valid_time_start: Time.current
+          )
+          
+          # Record contributing items only after successful persistence
+          (term_data[:source_item_ids] || []).each { |sid| contributing_item_ids << sid }
+        end
+        
+        # Mark only contributing items as pool-ready
+        if contributing_item_ids.any?
+          @batch.ingest_items
+            .where(id: contributing_item_ids.to_a)
+            .where(lexicon_status: 'extracted')
+            .update_all(pool_status: 'pending')
+        end
+        
+        # Track why items weren't marked pool-ready
+        non_contributing_items = @batch.ingest_items
+          .where(lexicon_status: 'extracted')
+          .where.not(id: contributing_item_ids.to_a)
+        
+        if non_contributing_items.any?
+          non_contributing_items.each do |item|
+            reason = "All #{item.lexicon_metadata['terms_count']} terms were duplicates of already-processed terms"
+            item.update!(
+              pool_status: 'skipped',
+              pool_metadata: { 
+                skip_reason: reason,
+                skipped_at: Time.current
+              }
+            )
+          end
+          log_progress "Skipped #{non_contributing_items.count} items (all terms were duplicates)", level: :info
+        end
+      end
+      
+      log_progress "Marked #{contributing_item_ids.size} items as pool-ready", level: :debug
+    end
+    
+    def collect_stage_metrics
       {
-        sources: ((existing['sources'] || []) + (new_metadata['sources'] || [])).uniq,
-        confidence_scores: ((existing['confidence_scores'] || []) + [new_metadata['confidence']]).compact,
-        extraction_count: (existing['extraction_count'] || 0) + 1,
-        last_extracted_at: Time.current.iso8601
+        items_processed: @metrics[:items_processed] || 0,
+        items_failed: @metrics[:items_failed] || 0,
+        terms_extracted: @metrics[:terms_extracted] || 0,
+        lexicon_entries: @metrics[:lexicon_entries] || 0
       }
     end
-
-    def create_lexicon_provenance
-      ProvenanceAndRights.create!(
-        source_ids: ["lexicon_bootstrap_#{@batch.id}"],
-        collectors: ['Enliterator Lexicon Bootstrap'],
-        collection_method: 'automated_extraction',
-        consent_status: 'implicit_consent',
-        license_type: 'cc0',
-        source_owner: 'Enliterator System',
-        custom_terms: {
-          system_generated: true,
-          batch_id: @batch.id,
-          generated_at: Time.current
-        },
-        valid_time_start: Time.current
-      )
-    end
-
-    def finalize_batch_lexicon
-      # Count results
-      successful_items = @batch.ingest_items.where(lexicon_status: 'extracted').count
-      failed_items = @batch.ingest_items.where(lexicon_status: 'failed').count
-      total_terms = LexiconAndOntology.count
-
-      # Update batch metadata
-      @batch.update!(
-        status: 'lexicon_completed',
-        metadata: @batch.metadata.merge(
-          lexicon_results: {
-            successful_items: successful_items,
-            failed_items: failed_items,
-            total_terms_extracted: @extracted_terms.size,
-            unique_canonical_terms: total_terms,
-            completed_at: Time.current
-          }
-        )
-      )
-
-      Rails.logger.info "Lexicon bootstrap completed for batch #{@batch.id}: #{successful_items} items processed, #{total_terms} terms in lexicon"
-
-      # Trigger next stage if successful
-      if failed_items == 0 || failed_items < successful_items * 0.1 # Less than 10% failed
-        # TODO: Trigger Stage 4 - Pool Filling
-        # Pools::ExtractionJob.perform_later(@batch.id)
-        Rails.logger.info "Batch #{@batch.id} ready for pool filling stage"
+    
+    def batch_rights_fallback
+      # Memoize the batch-level fallback rights record
+      @batch_rights_fallback ||= begin
+        # Find the first ingest item with a provenance_and_rights record
+        @batch.ingest_items
+          .includes(:provenance_and_rights)
+          .map(&:provenance_and_rights)
+          .compact
+          .first
       end
     end
   end

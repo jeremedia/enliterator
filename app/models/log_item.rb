@@ -38,7 +38,11 @@ class LogItem < ApplicationRecord
   after_create :broadcast_create
 
   def broadcast_create
-    broadcast_prepend_later_to :general, inserts_by: :prepend, target: dom_id(log, :log_items), partial: "shared/log_line"
+    broadcast_prepend_later_to "pipeline_run_#{log.loggable_id}_logs",
+      inserts_by: :prepend,
+      target: dom_id(log, :log_items),
+      partial: "shared/log_line",
+      locals: { log_item: self }
   end
 
   def set_defaults

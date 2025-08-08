@@ -1,0 +1,67 @@
+<div class="container mx-auto px-4 py-8">
+  <div class="flex justify-between items-center mb-8">
+    <h1 class="text-3xl font-bold">Pipeline Run #<%= @pipeline_run.id %> Logs</h1>
+    <div class="flex gap-2">
+      <%= link_to "Back to Run", admin_pipeline_run_path(@pipeline_run), 
+                  class: "bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded" %>
+      <%= link_to "All Runs", admin_pipeline_runs_path, 
+                  class: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" %>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-lg shadow p-6 mb-6">
+    <div class="grid grid-cols-2 gap-4 text-sm">
+      <div>
+        <span class="text-gray-600">EKN:</span>
+        <span class="font-medium"><%= @pipeline_run.ekn.name %></span>
+      </div>
+      <div>
+        <span class="text-gray-600">Status:</span>
+        <span class="font-medium <%= status_color_class(@pipeline_run.status) %>">
+          <%= @pipeline_run.status.upcase %>
+        </span>
+      </div>
+      <div>
+        <span class="text-gray-600">Current Stage:</span>
+        <span class="font-medium">
+          <%= @pipeline_run.current_stage_number %>/9 - <%= @pipeline_run.current_stage&.humanize %>
+        </span>
+      </div>
+      <div>
+        <span class="text-gray-600">Duration:</span>
+        <span class="font-medium"><%= @pipeline_run.duration_so_far %>s</span>
+      </div>
+    </div>
+  </div>
+
+  <%= turbo_stream_from "pipeline_run_#{@pipeline_run.id}_logs" %>
+
+  <% if @logs.any? %>
+    <% @logs.each do |log| %>
+      <div class="bg-white rounded-lg shadow mb-4">
+        <div class="bg-gray-100 px-4 py-3 border-b">
+          <h3 class="font-semibold text-lg">
+            <%= log_label_icon(log.label) %> <%= log.label.humanize %>
+          </h3>
+        </div>
+        
+        <div class="p-4">
+          <div id="<%= dom_id(log, :log_items) %>" class="space-y-2">
+            <% if log.log_items.any? %>
+              <% log.log_items.order(created_at: :desc).limit(50).each do |item| %>
+                <%= render partial: "shared/log_line", locals: { log_item: item } %>
+              <% end %>
+            <% else %>
+              <p class="text-gray-500 italic">No log entries yet</p>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="bg-white rounded-lg shadow p-8 text-center">
+      <p class="text-gray-500">No logs available for this pipeline run</p>
+    </div>
+  <% end %>
+</div>
+

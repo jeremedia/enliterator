@@ -178,8 +178,9 @@ module Graph
       private
       
       def validate_database_name!(name)
-        unless name =~ /^ekn-[0-9]+$/
-          raise ArgumentError, "Invalid database name: #{name}. Must match pattern 'ekn-[0-9]+'"
+        # Allow ekn-{id} pattern, default neo4j database, and test databases
+        unless name =~ /^ekn-[0-9]+$/ || name == 'neo4j' || name =~ /^ekn-test-/
+          raise ArgumentError, "Invalid database name: #{name}. Must match pattern 'ekn-[0-9]+', 'ekn-test-*', or be 'neo4j'"
         end
       end
       

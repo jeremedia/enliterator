@@ -37,6 +37,9 @@ gem "solid_cache"
 gem "solid_queue"
 gem "solid_cable"
 
+# Mission Control for monitoring jobs
+gem "mission_control-jobs"
+
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
 
@@ -162,5 +165,8 @@ end
 gem "activegraph", "~> 11.4"
 
 gem "annotate"
+
+# Pagination
+gem "kaminari"
 
 

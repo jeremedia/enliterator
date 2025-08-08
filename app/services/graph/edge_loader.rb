@@ -31,8 +31,8 @@ module Graph
       'measures' => { source: 'Evidence', target: 'Manifest', reverse: 'measured_by' },
       'requires_mitigation' => { source: 'Risk', target: 'Practical', reverse: 'mitigates' },
       'constrains' => { source: 'Governance', target: 'ProvenanceAndRights', reverse: 'constrained_by' },
-      'produces' => { source: 'Method', target: 'Evidence', reverse: 'produced_by' },
-      'standardizes' => { source: 'Method', target: 'Practical', reverse: 'standardized_by' },
+      'produces' => { source: 'MethodPool', target: 'Evidence', reverse: 'produced_by' },
+      'standardizes' => { source: 'MethodPool', target: 'Practical', reverse: 'standardized_by' },
       'normalizes' => { source: 'Lexicon', target: '*', reverse: 'normalized_by' },
       'disambiguates' => { source: 'Lexicon', target: '*', reverse: 'disambiguated_by' },
       'requests' => { source: 'Intent', target: 'Relational', reverse: 'requested_by' },
@@ -67,7 +67,7 @@ module Graph
       load_spatial_relationships if Spatial.table_exists?
       load_evidence_relationships if Evidence.table_exists?
       load_risk_relationships if Risk.table_exists?
-      load_method_relationships if Method.table_exists?
+      load_method_relationships if MethodPool.table_exists?
       
       # Load rights relationships
       load_rights_relationships
@@ -115,7 +115,7 @@ module Graph
       # Manifest -> Spatial (located_at) if spatial_ref is present
       if Spatial.table_exists?
         Manifest.where.not(spatial_ref: nil).find_each do |manifest|
-          if spatial = Spatial.find_by(id: manifest.spatial_ref)
+          if spatial = ::Spatial.find_by(id: manifest.spatial_ref)
             create_relationship('Manifest', manifest.id, 'Spatial', spatial.id, 'located_at')
           end
         end
@@ -181,7 +181,7 @@ module Graph
     
     def load_practical_relationships
       # Practical -> Experience (validated_by)
-      Practical.joins(:practical_experiences).find_each do |practical|
+      Practical.joins(:experience_practicals).find_each do |practical|
         practical.experiences.each do |experience|
           create_relationship('Practical', practical.id, 'Experience', experience.id, 'validated_by')
         end
@@ -261,10 +261,11 @@ module Graph
     end
     
     def load_method_relationships
-      Method.find_each do |method|
-        # Method -> Evidence (produces)
-        # Method -> Practical (standardizes)
-        # These would require join tables or metadata parsing
+      # MethodPool -> Practical (implements)
+      MethodPool.joins(:method_pool_practicals).find_each do |method|
+        method.practicals.each do |practical|
+          create_relationship('MethodPool', method.id, 'Practical', practical.id, 'implements')
+        end
       end
     end
     
@@ -279,7 +280,7 @@ module Graph
       models_with_rights << Spatial if Spatial.table_exists?
       models_with_rights << Evidence if Evidence.table_exists?
       models_with_rights << Risk if Risk.table_exists?
-      models_with_rights << Method if Method.table_exists?
+      models_with_rights << MethodPool if MethodPool.table_exists?
       
       models_with_rights.each do |model|
         model.find_each do |entity|

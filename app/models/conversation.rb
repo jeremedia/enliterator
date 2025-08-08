@@ -95,14 +95,14 @@ class Conversation < ApplicationRecord
     when :analysis, :technical
       self.temperature = 0.3
       self.top_p = 0.9
-      self.model_name = "gpt-4o"
+      self.model_name = OpenaiConfig::SettingsManager.model_for(:extraction)
     when :extraction, :structured
       self.temperature = 0.0
-      self.model_name = "gpt-4o-2024-08-06"  # Structured outputs model
+      self.model_name = OpenaiConfig::SettingsManager.model_for(:extraction)
       self.response_format = { type: "json_schema", strict: true }
     when :conversation, :chat
       self.temperature = 0.7
-      self.model_name = "gpt-4o-mini"  # Faster, cheaper for general chat
+      self.model_name = OpenaiConfig::SettingsManager.model_for(:answer)
     else
       set_default_model_config
     end
@@ -168,7 +168,7 @@ class Conversation < ApplicationRecord
   end
   
   def use_vision?
-    model_name&.include?("vision") || model_name&.include?("gpt-4o")
+    model_name&.include?("vision") || model_name&.include?("gpt-4.1")
   end
   
   private
@@ -189,7 +189,7 @@ class Conversation < ApplicationRecord
   end
   
   def default_model
-    ENV.fetch('OPENAI_DEFAULT_MODEL', 'gpt-4o-mini')
+    OpenaiConfig::SettingsManager.model_for(:answer) || ENV.fetch('OPENAI_DEFAULT_MODEL')
   end
   
   def default_temperature
@@ -202,11 +202,9 @@ class Conversation < ApplicationRecord
   
   def validate_model_name(model)
     valid_models = [
-      'gpt-4o', 
-      'gpt-4o-2024-08-06',
-      'gpt-4o-mini',
-      'gpt-4-turbo',
-      'gpt-3.5-turbo',
+      'gpt-4.1', 
+      'gpt-4.1-mini',
+      'gpt-4.1-nano',
       'o1-preview',
       'o1-mini'
     ]

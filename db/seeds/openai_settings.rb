@@ -193,7 +193,7 @@ puts "Created #{OpenaiSetting.count} settings and #{PromptTemplate.count} prompt
 if FineTuneJob.count.zero?
   FineTuneJob.create!(
     openai_job_id: 'ftjob-sample-001',
-    base_model: 'gpt-4o-mini-2024-07-18',
+    base_model: 'gpt-4.1-mini',
     status: 'failed',
     error_message: 'Sample record - no actual job',
     started_at: 1.day.ago,

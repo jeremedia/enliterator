@@ -42,11 +42,13 @@
   <div class="rounded-lg bg-white shadow">
     <div class="px-4 py-5 sm:p-6">
       <h3 class="text-base font-semibold leading-6 text-gray-900">Quick Actions</h3>
-      <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <%= link_to "Configure Models", admin_openai_settings_path,
             class: "inline-flex items-center justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500" %>
         <%= link_to "Manage Prompts", admin_prompt_templates_path,
             class: "inline-flex items-center justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500" %>
+        <%= link_to "API Call Tracking", admin_api_calls_path,
+            class: "inline-flex items-center justify-center rounded-md bg-purple-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-purple-500" %>
         <%= link_to "New Fine-Tune", new_admin_fine_tune_job_path,
             class: "inline-flex items-center justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500" %>
         <%= button_to "Reset Defaults", reset_defaults_admin_openai_settings_path,

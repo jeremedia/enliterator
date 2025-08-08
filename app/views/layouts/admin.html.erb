@@ -31,6 +31,8 @@
                       class: "#{current_page?(admin_prompt_templates_path) ? 'bg-indigo-700' : ''} text-white hover:bg-indigo-500 rounded-md px-3 py-2 text-sm font-medium" %>
                   <%= link_to "Fine-Tune Jobs", admin_fine_tune_jobs_path,
                       class: "#{controller_name == 'fine_tune_jobs' ? 'bg-indigo-700' : ''} text-white hover:bg-indigo-500 rounded-md px-3 py-2 text-sm font-medium" %>
+                  <%= link_to "Pipeline Runs", admin_pipeline_runs_path,
+                      class: "#{controller_name == 'pipeline_runs' ? 'bg-indigo-700' : ''} text-white hover:bg-indigo-500 rounded-md px-3 py-2 text-sm font-medium" %>
                 </div>
               </div>
             </div>
