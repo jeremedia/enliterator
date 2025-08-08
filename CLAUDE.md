@@ -10,9 +10,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 >
 > **Zero-history rule**: Ignore any prior prototypes or contracts. Implement only what is written here.
 
-### Current Implementation Status (2025-08-06 Late Evening Update)
+### Current Implementation Status (2025-08-08)
 
-**Pipeline: 83% Complete (7.5 of 9 stages)**
+**Technical Pipeline: 92% Complete (8.3 of 9 stages)**
+**Product Completion: ~60% (Infrastructure done, user experience incomplete)**
 
 **✅ Completed Stages 0-8 (Technical Infrastructure):**
 - Stage 0: Frame the Mission - Configuration and goal setting
@@ -47,7 +48,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `/docs/STAGE_9_IN_PROGRESS.md` - Knowledge Navigator TODO list (~30% done) 
 - `/docs/STAGE_9_KNOWLEDGE_NAVIGATOR.md` - Stage 9 detailed specification
 - `/docs/ekn-dynamic-ui-spec.md` - Dynamic UI generation from conversation
-- `/docs/PROJECT_STATUS.md` - Current project status (100% COMPLETE!)
+- `/docs/PROJECT_STATUS.md` - Current project status (Technical: 92%, Product: ~60%)
 - GitHub Issues: https://github.com/jeremedia/enliterator/issues
 
 ### Recent Implementation Highlights
@@ -78,14 +79,12 @@ rails enliterator:literacy:report[batch_id]
 - **Meta-Enliterator**: Created EKN #13 with 5 batches proving accumulation
 - **GitHub Issue #53**: Architecture implementation complete
 
-#### Stage 6: Embeddings - REFACTOR TO NEO4J GENAI IN PROGRESS
-- **ARCHITECTURAL CHANGE**: Migrating from pgvector to Neo4j GenAI plugin
-- **Neo4j GenAI Integration**: Use `genai.vector.encodeBatch` for OpenAI embeddings
-- **Unified Database**: Store embeddings as node properties in Neo4j (no separate pgvector)
-- **Hybrid Queries**: Combine semantic similarity with graph structure in one query
-- **Vector Indexes**: Native Neo4j vector indexes with cosine similarity
+#### Stage 6: Embeddings - COMPLETE (with pgvector)
+- **Implementation**: pgvector with HNSW indexing
+- **OpenAI Batch API**: 50% cost savings for bulk embedding generation
 - **Rights-aware filtering**: Only embeds training-eligible content
-- **GitHub Issue #52**: Migration in progress - proof-of-concept validated
+- **Performance**: Sub-second semantic search
+- **Note**: Neo4j GenAI migration considered but not implemented
 
 ---
 
@@ -200,124 +199,51 @@ Musts: Rails 8 conventions; Postgres (ops store), Neo4j (graph), Redis, **Solid 
 
 ## 5) OpenAI Integration — Production Implementation
 
-**STATUS**: OpenAI integration COMPLETE with database-backed settings management (Issue #47).
+**📚 REQUIRED READING**: See `/docs/OPENAI_CONFIGURATION.md` for current models and configuration rules.
 
-**⚠️ CRITICAL RULE: ABSOLUTELY NO HARDCODED OPENAI CONFIGURATIONS**
-- **NEVER** hardcode model names like "gpt-4o" or "gpt-3.5-turbo"
-- **NEVER** hardcode model versions with dates
-- **ALWAYS** use `OpenaiConfig::SettingsManager.model_for(task_type)`
-- **ALWAYS** configure via Admin UI: https://e.dev.domt.app/admin
-- Use `OpenaiConfig::SettingsManager.refresh_available_models!` to get current models
+**STATUS**: Integration complete with database-backed settings (Issue #47).
 
-**IMPORTANT - NOT IN TRAINING DATA**: The official OpenAI Ruby gem and Responses API are not in Claude's training data. When implementing:
-1. **ALWAYS** read the gem's source code first to understand the correct API
-2. **NEVER** assume method names or patterns - verify them in the gem
-3. Check `/Users/jeremy/.gem/ruby/3.4.4/gems/openai-0.16.0/lib/openai/` for the actual implementation
-4. Use `bundle open openai` to explore the gem's code structure
-5. The gem's API may differ significantly from the Python SDK or REST API
+**⚠️ ONE RULE**: Use `OpenaiConfig::SettingsManager` for ALL model selection. Never hardcode models.
 
-**Gem & client**
+**Current Models (August 2025)**: gpt-4.1, gpt-4.1-mini, gpt-4.1-nano
+**Check Configuration**: `OpenaiConfig::SettingsManager.current_configuration`
+
+**Implementation Pattern**:
 
 ```ruby
-# Gemfile
-gem "openai", "~> 0.16.0"  # MUST use official gem v0.16.0 or higher
-```
-
-```ruby
-# config/initializers/openai.rb
-OPENAI = OpenAI::Client.new(
-  api_key: ENV.fetch("OPENAI_API_KEY"),
-  timeout: 120,
-  max_retries: 2
-)
-```
-
-**Structured Outputs MUST use OpenAI::Helpers::StructuredOutput::BaseModel** — This is the CORRECT pattern:
-
-```ruby
-# Define your response models using the CORRECT base class
-class ExtractedEntity < OpenAI::Helpers::StructuredOutput::BaseModel
-  required :name, String
-  required :pool, OpenAI::EnumOf[:idea, :manifest, :experience, :relational, :evolutionary, :practical, :emanation]
-  required :confidence, Float
-  required :surface_forms, OpenAI::ArrayOf[String]
-end
-
-class EntityExtraction < OpenAI::Helpers::StructuredOutput::BaseModel
-  required :entities, OpenAI::ArrayOf[ExtractedEntity]
-  required :ambiguities, OpenAI::ArrayOf[String]
-  required :normalized_query, String
-end
-
-# Use responses.create with the model class
-response = OPENAI.responses.create(
-  model: "gpt-4o-2024-08-06",  # or gpt-4o-mini-2024-07-18
-  input: [
-    {role: :system, content: "Extract entities from the query"},
-    {role: :user, content: query_text}
-  ],
-  text: EntityExtraction
-)
-
-# Process the structured response
-result = response.output
-  .flat_map { |output| output.content }
-  .grep_v(OpenAI::Models::Responses::ResponseOutputRefusal)
-  .first
-
-if result
-  extraction = result.parsed  # This is an instance of EntityExtraction
-  # Access fields: extraction.entities, extraction.normalized_query, etc.
-end
-```
-
-**DO NOT use chat.completions.create with response_format** — The older pattern below is DEPRECATED:
-
-```ruby
-# DEPRECATED - DO NOT USE THIS PATTERN
-response = OPENAI.chat.completions.create(
-  messages: messages,
-  model: "gpt-4o-2024-08-06",
-  response_format: {
-    type: "json_schema",
-    json_schema: { ... }  # Manual JSON schema
-  },
-  temperature: 0
-)
-```
-
-**Settings Management** (implemented):
-
-```ruby
-# Models for configuration - ALREADY IMPLEMENTED
-class OpenaiSetting < ApplicationRecord
-  # Database-backed settings for models, temperature, etc.
-  def self.model_for(task)
-    setting = active.find_by(key: "model_#{task}")
-    setting&.value || default_model
-  end
-end
-
-# Base extraction service - USE THIS FOR CONSISTENCY
+# All services inherit from base class
 class YourService < OpenaiConfig::BaseExtractionService
   def call
-    messages = build_messages(input)
-    response = call_structured_api(messages, YourResponseClass)
-    
-    if response[:success]
-      process_data(response[:data])
-    else
-      handle_error(response[:error])
-    end
+    super  # Model selected automatically via SettingsManager
+  end
+  
+  protected
+  
+  def response_model_class
+    YourResponseClass
   end
 end
+```
+
+**Response Models**:
+
+```ruby
+# Response models must inherit from correct base
+class YourResponseClass < OpenAI::Helpers::StructuredOutput::BaseModel
+  required :field, String
+  required :confidence, Float
+  # Use OpenAI::ArrayOf and OpenAI::EnumOf for complex types
+end
+
+# The base service handles all OpenAI interaction
+# You just define the response model and transform logic
 ```
 
 **Key Requirements**:
-- Use the `OpenaiConfig::BaseExtractionService` base class for consistency
-- Models and temperature are configured via admin UI, not hardcoded
-- All response classes must inherit from `OpenAI::Helpers::StructuredOutput::BaseModel`
-- The BaseExtractionService handles API calls, error handling, and settings retrieval
+- Read `/docs/OPENAI_CONFIGURATION.md` before ANY OpenAI work
+- Use `OpenaiConfig::BaseExtractionService` for all extraction
+- Check current config: `OpenaiConfig::SettingsManager.current_configuration`
+- Models configured via Admin UI: https://e.dev.domt.app/admin
 
 ---
 
@@ -331,21 +257,15 @@ end
 
 ## 7) Knowledge graph (Neo4j)
 
-**CRITICAL NEO4J CONFIGURATION (MUST READ):**
-- **Neo4j is running LOCALLY via Homebrew** (NOT Docker)
-- **URL**: bolt://127.0.0.1:7687 or bolt://localhost:7687
-- **Credentials**: neo4j / cheese28
-- **Current data**: 280,739 nodes (Enliterator codebase analysis)
-- **IMPORTANT**: Nodes do NOT have batch_id properties!
-  - Always pass `nil` to Graph::QueryService, not a batch_id
-  - If you pass batch_id, queries return empty (this is NOT a bug)
-- **To verify**: Run `rails runner script/check_neo4j_health.rb`
-- **Documentation**: See `/docs/NEO4J_SETUP.md` for troubleshooting
+**📍 See `/docs/NEO4J.md` for complete Neo4j documentation (SINGLE SOURCE OF TRUTH)**
 
-- Node labels: `Idea`, `Manifest`, `Experience`, `Relational`, `Evolutionary`, `Practical`, `Emanation`, `Rights`, `Lexicon`, `Intent` (+ optional `Actor`, `Spatial`, `Evidence`, `Risk`, `Method`).
-- Relationship types: allow-list = Relation Verb Glossary.
-- Constraints: unique `id`; mandatory time field; rights pointer on every node.
-- Path textization: deterministic sentence builder using canonical Idea names + verbs.
+Quick reference:
+- **URL**: `bolt://100.104.170.10:8687` (Neo4j Desktop, auth disabled)
+- **Config**: `/config/initializers/neo4j.rb` (ONLY configuration that matters)
+- **Multi-database**: Each EKN gets `ekn-{id}` database
+- **Usage**: Always use `Graph::Connection.instance.driver`
+- **Node labels**: Ten Pool Canon (Idea, Manifest, Experience, etc.)
+- **Path textization**: Deterministic sentences using canonical names + verbs
 
 ---
 
@@ -548,3 +468,53 @@ rails test test/jobs/
 
 - **Literate technology**: software that converses in natural language, shows its reasoning paths and sources, adapts to user intent and constraints, and produces deliverables—treating data as a partner in meaning rather than a passive store.
 - **Enliteracy**: the process that makes a dataset literate by modeling it into pools of meaning and explicit flows between them—plus rights, provenance, and a canonical lexicon—so the system can answer *why*, *how*, and *what's next*, not only *what*.
+
+---
+
+## 16) System Status Checks & Server Management
+
+### CRITICAL: Server Management Rules
+- **THE ONLY WAY TO START THE SERVER**: `bin/dev`
+- **NEVER** attempt to start components individually (no `rails server`, no `bundle exec rails solid_queue:start`)
+- **NEVER** attempt to stop/kill server processes manually
+
+### Checking Rails Server Status
+```bash
+# CORRECT way to check if Rails is running
+lsof -i :3077 | grep LISTEN
+```
+
+### Checking Solid Queue Status (USE THESE EXACT QUERIES)
+```bash
+# Combined status check (PREFERRED)
+rails runner '
+  puts "=== Solid Queue Status ==="
+  puts "Queues: #{SolidQueue::Job.distinct.pluck(:queue_name).join(", ")}"
+  puts "Failed: #{SolidQueue::FailedExecution.count}"
+  puts "In Progress: #{SolidQueue::ClaimedExecution.count}"
+  puts "Finished (recent): #{SolidQueue::Job.where.not(finished_at: nil).count}"
+  puts "Ready: #{SolidQueue::ReadyExecution.count}"
+  puts "Scheduled: #{SolidQueue::ScheduledExecution.count}"
+'
+
+# Check failed jobs
+rails runner 'failed = SolidQueue::FailedExecution.order(job_id: :asc).limit(1000); puts "Failed Jobs: #{failed.count}"'
+
+# Check in-progress jobs
+rails runner 'in_progress = SolidQueue::ClaimedExecution.order(job_id: :asc).limit(1000); puts "In Progress: #{in_progress.count}"'
+
+# Check finished jobs
+rails runner 'finished = SolidQueue::Job.where.not(finished_at: nil).order(finished_at: :desc).limit(1000); puts "Recently Finished: #{finished.count}"'
+```
+
+### Pipeline Status Checks
+```bash
+# Check last pipeline run
+rails runner 'pr = EknPipelineRun.last; puts "Run ##{pr.id}: #{pr.status} - #{pr.current_stage}" if pr'
+
+# Check active pipelines
+rails runner 'EknPipelineRun.where(status: ["running", "paused"]).each { |pr| puts "Run ##{pr.id}: #{pr.status} at stage #{pr.current_stage}" }'
+```
+
+### Reference Documentation
+- `/docs/SYSTEM_STATUS_CHECKS.md` - Comprehensive status checking procedures

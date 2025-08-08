@@ -83,7 +83,7 @@ end
 class FineTune::Trainer < ApplicationService
   def initialize(training_file_path, base_model: nil)
     @training_file = training_file_path
-    @base_model = base_model || 'gpt-4o-mini-2024-07-18'
+    @base_model = base_model || 'gpt-4.1-mini'
     @client = OPENAI
   end
 
@@ -263,7 +263,7 @@ The implementation is complete when:
 - Use the VerbMapper service for all relationship creation
 - Check NegativeKnowledge for gap examples
 - Ensure all OpenAI calls use the new BaseModel pattern
-- Neo4j connection is working (bolt://127.0.0.1:7687, user: neo4j, pass: cheese28)
+- Neo4j connection is working (ARCHIVED INFO - see /docs/NEO4J.md for current config)
 - Run tests frequently to catch issues early
 
 ## Files to Reference

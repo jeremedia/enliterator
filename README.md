@@ -83,7 +83,7 @@ Transform grounded answers into:
 
 - **Rails 8** with Solid Queue, Solid Cache, Solid Cable
 - **PostgreSQL 16+** for operational data with pgvector extension
-- **Neo4j** for knowledge graph (bolt://127.0.0.1:7687)
+- **Neo4j Desktop** for knowledge graph (see `/docs/NEO4J.md` for configuration)
 - **pgvector** with neighbor gem for embeddings (HNSW index)
 - **Redis** for caching and queue management
 - **OpenAI Ruby gem v0.16.0** with Responses API and Structured Outputs
@@ -132,9 +132,8 @@ OPENAI_API_KEY=your-api-key
 # Database URLs
 DATABASE_URL=postgresql://localhost/enliterator_development
 REDIS_URL=redis://localhost:6379
-NEO4J_URL=bolt://127.0.0.1:7687
-NEO4J_USERNAME=neo4j
-NEO4J_PASSWORD=your-password
+# Neo4j configuration - see /docs/NEO4J.md for complete documentation
+NEO4J_URL=bolt://100.104.170.10:8687
 
 # Optional (defaults provided)
 STORAGE_BUCKET=enliterator-dev
@@ -233,7 +232,7 @@ dataset = builder.call
 # Train a fine-tuned model
 trainer = FineTune::Trainer.new(
   dataset_path: dataset[:path],
-  base_model: 'gpt-4o-mini-2024-07-18'
+  base_model: 'gpt-4.1-mini'
 )
 job = trainer.call
 
