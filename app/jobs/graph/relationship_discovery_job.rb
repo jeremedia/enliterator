@@ -224,25 +224,25 @@ module Graph
     end
     
     def create_graph_relationship(tx, rel)
-      # Build the Cypher query to create relationship
-      # CRITICAL: Use appropriate property for each pool type
+      # Use NodeLocator for centralized node resolution
+      locator = Graph::NodeLocator.new(ekn: @ekn)
+      
       source_pool = rel[:source][:pool_type] || rel[:source][:pool]
       target_pool = rel[:target][:pool_type] || rel[:target][:pool]
       
-      # Map pool types to their identifier properties
-      source_property = case source_pool.downcase
-                       when 'idea' then 'label'
-                       when 'practical' then 'goal'
-                       when 'experience' then 'narrative_text'
-                       else 'label'  # Default fallback
-                       end
+      # Get the appropriate property names from NodeLocator
+      source_property = locator.identifier_property_for(source_pool)
+      target_property = locator.identifier_property_for(target_pool)
       
-      target_property = case target_pool.downcase
-                       when 'idea' then 'label'
-                       when 'practical' then 'goal'
-                       when 'experience' then 'narrative_text'
-                       else 'label'  # Default fallback
-                       end
+      # Verify nodes exist before attempting creation
+      verification = locator.verify_nodes_exist(rel[:source], rel[:target])
+      unless verification[:both_exist]
+        missing = []
+        missing << "source(#{source_pool}:#{rel[:source][:label]})" unless verification[:source]
+        missing << "target(#{target_pool}:#{rel[:target][:label]})" unless verification[:target]
+        log_progress "Skipping relationship - missing nodes: #{missing.join(', ')}", level: :debug
+        return nil
+      end
       
       query = <<~CYPHER
         // Find source entity by appropriate property
@@ -253,13 +253,17 @@ module Graph
         MATCH (target:#{target_pool})
         WHERE target.#{target_property} = $target_label
         
-        // Create relationship with properties
-        CREATE (source)-[r:#{rel[:verb].upcase}]->(target)
-        SET r.confidence = $confidence,
-            r.evidence_span = $evidence,
-            r.discovery_stage = $stage,
-            r.cluster_strategy = $strategy,
-            r.discovered_at = datetime()
+        // Check if relationship already exists
+        MERGE (source)-[r:#{rel[:verb].upcase}]->(target)
+        ON CREATE SET 
+          r.confidence = $confidence,
+          r.evidence_span = $evidence,
+          r.discovery_stage = $stage,
+          r.cluster_strategy = $strategy,
+          r.discovered_at = datetime(),
+          r.status = 'candidate'
+        ON MATCH SET
+          r.updated_at = datetime()
         
         RETURN r
       CYPHER
@@ -269,11 +273,12 @@ module Graph
         target_label: rel[:target][:label],
         confidence: rel[:confidence] || 0.5,
         evidence: rel[:evidence_span],
-        stage: rel[:discovery_stage],
+        stage: rel[:discovery_stage] || 'Stage5.5',
         strategy: rel[:cluster_strategy]
       }
       
-      tx.run(query, **params)
+      result = tx.run(query, **params)
+      result.single  # Return the created/matched relationship
     end
     
     def validate_discovered_relationships
