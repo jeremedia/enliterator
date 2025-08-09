@@ -122,19 +122,20 @@ module Graph
     def paths_for_entity(node_id, max_hops: 3)
       @driver.session(database: @database) do |session|
         session.read_transaction do |tx|
-          # Build verb list from spec glossary
-          spec_verbs = EdgeLoader::VERB_GLOSSARY.keys.map(&:to_s).map(&:upcase).join('|')
+          # Build verb list from spec glossary, exclude HAS_RIGHTS
+          spec_verbs = EdgeLoader::VERB_GLOSSARY.keys.map(&:to_s).map(&:upcase)
+            .reject { |v| v == 'HAS_RIGHTS' }
           
           query = <<~CYPHER
             MATCH path = (start)-[*1..#{max_hops}]-(end)
             WHERE id(start) = $node_id
-              AND all(r IN relationships(path) WHERE type(r) IN [#{spec_verbs.split('|').map { |v| "'#{v}'" }.join(',')}])
+              AND all(r IN relationships(path) WHERE type(r) IN $verbs AND type(r) <> 'HAS_RIGHTS')
               AND id(end) <> id(start)
             RETURN path
             LIMIT 10
           CYPHER
           
-          result = tx.run(query, node_id: node_id.to_i)
+          result = tx.run(query, node_id: node_id.to_i, verbs: spec_verbs)
           
           paths = result.map do |row|
             path = row['path']
@@ -374,13 +375,14 @@ module Graph
     def find_path_between(start_id, end_id, max_hops: 3)
       @driver.session(database: @database) do |session|
         session.read_transaction do |tx|
-          spec_verbs = EdgeLoader::VERB_GLOSSARY.keys.map(&:to_s).map(&:upcase)
+          # Only use spec verbs, explicitly exclude HAS_RIGHTS
+          spec_verbs = EdgeLoader::VERB_GLOSSARY.keys.map(&:to_s).map(&:upcase).reject { |v| v == 'HAS_RIGHTS' }
           
           query = <<~CYPHER
             MATCH path = shortestPath((start)-[*1..#{max_hops}]-(end))
             WHERE id(start) = $start_id 
               AND id(end) = $end_id
-              AND all(r IN relationships(path) WHERE type(r) IN $verbs)
+              AND all(r IN relationships(path) WHERE type(r) IN $verbs AND type(r) <> 'HAS_RIGHTS')
             RETURN path
           CYPHER
           
