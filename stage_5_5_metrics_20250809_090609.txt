@@ -1,0 +1,35 @@
+============================================================
+STAGE 5.5 METRICS REPORT
+============================================================
+Timestamp: 2025-08-09 14:06:09 UTC
+EKN ID: 40
+
+GRAPH METRICS:
+  Nodes: 5169
+  Edges: 2534
+  Density: 0.0002
+  Mean Degree: 0.98
+
+COVERAGE METRICS:
+  LCC Coverage: 20.6%
+  Connected Nodes: 1064
+  Isolated Nodes: 4105
+
+DIVERSITY METRICS:
+  Total Verb Types: 7
+  Verified Verb Types: 7
+  Unique Path Patterns: 10
+
+QUALITY METRICS:
+  Avg Confidence: 0.6
+  Path Sentence Coverage: 100.0%
+  Verified Relationships: 7
+
+GATE STATUS:
+  mean_degree: 0.98 (threshold: 0.3) - ✅ PASS
+  lcc_coverage: 0.206 (threshold: 0.7) - ❌ FAIL
+  verb_diversity: 7 (threshold: 5) - ✅ PASS
+  answerability: 0.2 (threshold: 0.6) - ❌ FAIL
+
+⚠️  2/4 gates passed.
+============================================================
