@@ -1,0 +1,2 @@
+module Navigator::AskHelper
+end

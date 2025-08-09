@@ -1,0 +1,211 @@
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <h1 class="text-3xl font-bold text-gray-900 mb-6">Knowledge Navigator - Ask</h1>
+  
+  <% if @question %>
+    <!-- Single Question Answer -->
+    <div class="bg-white shadow rounded-lg p-6 mb-6">
+      <h2 class="text-lg font-semibold text-gray-900 mb-2">Question</h2>
+      <p class="text-gray-700 mb-4"><%= @question %></p>
+      
+      <% if @answer[:path_sentence] %>
+        <!-- Success: Found a path -->
+        <div class="border-l-4 border-green-400 bg-green-50 p-4 mb-4">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <h3 class="text-sm font-medium text-green-800">Path Found</h3>
+              <div class="mt-2 text-sm text-green-700">
+                <p class="font-semibold">Path Sentence:</p>
+                <p class="mt-1"><%= @answer[:path_sentence] %></p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Citations -->
+        <% if @answer[:citations].any? %>
+          <div class="bg-gray-50 rounded-lg p-4 mb-4">
+            <h3 class="text-sm font-medium text-gray-900 mb-2">Citations</h3>
+            <ul class="space-y-2">
+              <% @answer[:citations].each_with_index do |citation, i| %>
+                <li class="text-sm">
+                  <span class="font-medium">[<%= i + 1 %>]</span>
+                  Item <%= citation[:item_id] %>:
+                  <span class="italic">"<%= citation[:snippet] %>"</span>
+                </li>
+              <% end %>
+            </ul>
+          </div>
+        <% end %>
+        
+        <!-- Rights Echo -->
+        <% if @answer[:rights_echo] %>
+          <div class="bg-blue-50 rounded-lg p-4">
+            <h3 class="text-sm font-medium text-blue-900 mb-2">Rights Echo</h3>
+            <ul class="text-sm text-blue-700">
+              <li>Publishability: <%= @answer[:rights_echo][:publishability] || 'unknown' %></li>
+              <li>Training Eligible: <%= @answer[:rights_echo][:training_eligibility] || 'unknown' %></li>
+              <% if @answer[:rights_echo][:license] %>
+                <li>License: <%= @answer[:rights_echo][:license] %></li>
+              <% end %>
+              <% if @answer[:rights_echo][:attribution] %>
+                <li>Attribution: <%= @answer[:rights_echo][:attribution] %></li>
+              <% end %>
+            </ul>
+          </div>
+        <% end %>
+      <% else %>
+        <!-- Fallback: No path found -->
+        <div class="border-l-4 border-yellow-400 bg-yellow-50 p-4">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <h3 class="text-sm font-medium text-yellow-800">No Path Found</h3>
+              <div class="mt-2 text-sm text-yellow-700">
+                <p><%= @answer[:fallback] %></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+      
+      <!-- Result Mode Selector -->
+      <div class="mt-4 flex gap-2">
+        <% @answer[:mode_hints].each do |mode| %>
+          <a href="?q=<%= @question %>&mode=<%= mode %>" 
+             class="inline-flex items-center px-3 py-1 border border-gray-300 text-sm font-medium rounded-md 
+                    <%= @mode == mode.to_s ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'text-gray-700 bg-white hover:bg-gray-50' %>">
+            <%= mode.to_s.capitalize %> View
+          </a>
+        <% end %>
+      </div>
+    </div>
+    
+    <!-- Ask Another Question -->
+    <div class="bg-white shadow rounded-lg p-6">
+      <form action="/navigator/ask" method="get" class="flex gap-2">
+        <input type="text" name="q" placeholder="Ask another question..." 
+               class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+        <button type="submit" 
+                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+          Ask
+        </button>
+      </form>
+    </div>
+    
+  <% else %>
+    <!-- Answerability Report -->
+    <div class="bg-white shadow rounded-lg p-6 mb-6">
+      <h2 class="text-xl font-bold text-gray-900 mb-4">Top-50 Answerability Report</h2>
+      
+      <% if @batch_report %>
+        <!-- Summary Statistics -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div class="bg-gray-50 rounded-lg p-4">
+            <div class="text-sm font-medium text-gray-500">Answerability Rate</div>
+            <div class="mt-1 text-2xl font-semibold text-gray-900">
+              <%= @batch_report[:answerability_rate] %>%
+            </div>
+            <div class="text-sm text-gray-600">
+              <%= @batch_report[:answered] %> of <%= @batch_report[:total] %> questions
+            </div>
+          </div>
+          
+          <% if @metrics %>
+            <div class="bg-gray-50 rounded-lg p-4">
+              <div class="text-sm font-medium text-gray-500">Mean Degree</div>
+              <div class="mt-1 text-2xl font-semibold text-gray-900">
+                <%= @metrics[:mean_degree] %>
+              </div>
+              <div class="text-sm text-gray-600">
+                Target: ≥ 0.3
+              </div>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+              <div class="text-sm font-medium text-gray-500">Verb Diversity</div>
+              <div class="mt-1 text-2xl font-semibold text-gray-900">
+                <%= @metrics[:verified_verb_diversity] %>
+              </div>
+              <div class="text-sm text-gray-600">
+                Target: ≥ 5 verbs
+              </div>
+            </div>
+          <% end %>
+        </div>
+        
+        <!-- Answered Questions -->
+        <% if @batch_report[:answers].any? %>
+          <div class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-3">Successfully Answered (<%= @batch_report[:answered] %>)</h3>
+            <div class="space-y-2">
+              <% @batch_report[:answers].first(10).each do |result| %>
+                <div class="bg-green-50 rounded p-3">
+                  <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                      <p class="text-sm font-medium text-gray-900">
+                        <a href="?q=<%= CGI.escape(result[:question]) %>" class="hover:underline">
+                          <%= result[:question] %>
+                        </a>
+                      </p>
+                      <p class="text-sm text-gray-600 mt-1"><%= result[:answer] %></p>
+                    </div>
+                    <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                      <%= result[:citations] %> citations
+                    </span>
+                  </div>
+                </div>
+              <% end %>
+              <% if @batch_report[:answers].size > 10 %>
+                <p class="text-sm text-gray-500 italic">... and <%= @batch_report[:answers].size - 10 %> more</p>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+        
+        <!-- Failed Questions -->
+        <% if @batch_report[:failed].any? %>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-3">Failed to Answer (<%= @batch_report[:failed].size %>)</h3>
+            <div class="space-y-2">
+              <% @batch_report[:failed].first(10).each do |result| %>
+                <div class="bg-red-50 rounded p-3">
+                  <p class="text-sm font-medium text-gray-900">
+                    <a href="?q=<%= CGI.escape(result[:question]) %>" class="hover:underline">
+                      <%= result[:question] %>
+                    </a>
+                  </p>
+                  <p class="text-sm text-red-600 mt-1"><%= result[:reason] %></p>
+                </div>
+              <% end %>
+              <% if @batch_report[:failed].size > 10 %>
+                <p class="text-sm text-gray-500 italic">... and <%= @batch_report[:failed].size - 10 %> more</p>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+    
+    <!-- Try a Question -->
+    <div class="bg-white shadow rounded-lg p-6">
+      <h3 class="text-lg font-semibold text-gray-900 mb-3">Try a Question</h3>
+      <form action="/navigator/ask" method="get" class="flex gap-2">
+        <input type="text" name="q" placeholder="Enter your question..." 
+               class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+        <button type="submit" 
+                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+          Ask
+        </button>
+      </form>
+    </div>
+  <% end %>
+</div>

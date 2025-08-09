@@ -129,6 +129,68 @@ module Graph
       end
     end
 
+    # List edges for a specific entity, grouped by canonical verb
+    def list_by_entity_grouped(entity_id)
+      edges_by_verb = {}
+      
+      @driver.session(database: @database) do |session|
+        session.read_transaction do |tx|
+          # Get both incoming and outgoing edges
+          query = <<~CYPHER
+            MATCH (n)
+            WHERE id(n) = $entity_id
+            OPTIONAL MATCH (n)-[r_out]->(target_out)
+            WHERE type(r_out) <> 'HAS_RIGHTS'
+            OPTIONAL MATCH (source_in)-[r_in]->(n)
+            WHERE type(r_in) <> 'HAS_RIGHTS'
+            RETURN 
+              r_out, target_out, labels(target_out)[0] as target_out_pool,
+              r_in, source_in, labels(source_in)[0] as source_in_pool,
+              labels(n)[0] as node_pool, n
+          CYPHER
+          
+          result = tx.run(query, entity_id: entity_id.to_i)
+          
+          result.each do |row|
+            node = row['n']
+            node_pool = row['node_pool']
+            
+            # Process outgoing edges
+            if row['r_out']
+              rel = row['r_out']
+              verb = rel.type.downcase
+              canonical_verb = VerbPolicy.normalize(verb) || verb
+              
+              edges_by_verb[canonical_verb] ||= []
+              edges_by_verb[canonical_verb] << format_edge_data(
+                rel, 
+                node, node_pool,
+                row['target_out'], row['target_out_pool'],
+                'outgoing'
+              )
+            end
+            
+            # Process incoming edges
+            if row['r_in']
+              rel = row['r_in']
+              verb = rel.type.downcase
+              canonical_verb = VerbPolicy.normalize(verb) || verb
+              
+              edges_by_verb[canonical_verb] ||= []
+              edges_by_verb[canonical_verb] << format_edge_data(
+                rel,
+                row['source_in'], row['source_in_pool'],
+                node, node_pool,
+                'incoming'
+              )
+            end
+          end
+        end
+      end
+      
+      edges_by_verb
+    end
+
     # Get verified relationships with path sentences
     def list_verified(limit: 50)
       @driver.session(database: @database) do |session|
@@ -259,6 +321,23 @@ module Graph
       CYPHER
       
       tx.run(update_query, rel_id: relationship_id, sentence: path_sentence)
+    end
+
+    def format_edge_data(rel, source_node, source_pool, target_node, target_pool, direction)
+      {
+        id: rel.id,
+        verb: rel.type,
+        direction: direction,
+        status: rel.properties['status'] || 'legacy',
+        confidence: rel.properties['confidence'],
+        evidence_span: rel.properties['evidence_span'],
+        evidence_item_id: rel.properties['evidence_item_id'],
+        path_sentence: rel.properties['path_sentence'],
+        verified_at: rel.properties['verified_at'],
+        verified_by: rel.properties['verified_by'],
+        source: extract_node_summary(source_node, source_pool),
+        target: extract_node_summary(target_node, target_pool)
+      }
     end
 
     def extract_node_summary(node, pool_type)

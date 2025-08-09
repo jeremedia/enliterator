@@ -36,6 +36,16 @@ Rails.application.routes.draw do
     get '/onboarding', to: 'onboarding#start'
     post '/create_ekn', to: 'ekn#create'
     get '/ekn/:id/explore', to: 'ekn#explore', as: :explore_ekn
+    
+    # Entity Cards and Edge Management (Stage 9 Vertical Slice)
+    resources :entities, only: :show
+    resources :edges, only: [] do
+      member do
+        post :promote
+        post :reject
+      end
+    end
+    get "ask", to: "ask#show"
   end
   
   # Legacy welcome page (remove after transition)

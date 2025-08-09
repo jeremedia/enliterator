@@ -1,0 +1,78 @@
+# Top-50 Questions for Knowledge Navigator Answerability Testing
+# These questions test various aspects of the knowledge graph:
+# - Entity relationships
+# - Path discovery
+# - Temporal queries
+# - Spatial queries (when applicable)
+# - Cross-pool connections
+
+questions:
+  # Ideas and Principles
+  - "What ideas embody the concept of radical inclusion?"
+  - "How does the principle of gifting relate to decommodification?"
+  - "What practical methods codify the idea of immediacy?"
+  - "Which experiences validate the principle of radical self-reliance?"
+  - "What manifestations embody the idea of communal effort?"
+  
+  # Practical and Methods
+  - "What are the practical approaches to building temporary communities?"
+  - "How do volunteer coordination methods work?"
+  - "What experiences have validated leave no trace practices?"
+  - "Which methods support sustainable event planning?"
+  - "What practical solutions exist for resource sharing?"
+  
+  # Experience and Stories
+  - "What experiences demonstrate successful community building?"
+  - "How do personal stories reflect core principles?"
+  - "Which narratives highlight transformation?"
+  - "What experiences show challenges overcome?"
+  - "How do participant stories connect to ideals?"
+  
+  # Manifest and Physical
+  - "What physical structures manifest communal ideals?"
+  - "How do art installations embody principles?"
+  - "Which camps exemplify radical self-expression?"
+  - "What infrastructures support the community?"
+  - "How do theme camps manifest ideas?"
+  
+  # People and Connections
+  - "Who founded key community initiatives?"
+  - "What roles do volunteers play?"
+  - "How are leaders connected to projects?"
+  - "Who contributes to art installations?"
+  - "What are the connections between artists and themes?"
+  
+  # Troupes and Collectives
+  - "What collectives organize major events?"
+  - "How do troupes collaborate on projects?"
+  - "Which groups support infrastructure?"
+  - "What are the relationships between camps?"
+  - "How do collectives share resources?"
+  
+  # Events and Timeline
+  - "What events mark significant milestones?"
+  - "How have practices evolved over time?"
+  - "What changes occurred between years?"
+  - "Which events influenced policy changes?"
+  - "What is the timeline of major developments?"
+  
+  # Cross-Pool Queries
+  - "How do ideas manifest in physical structures?"
+  - "What experiences validate practical methods?"
+  - "Which people embody core principles?"
+  - "How do events reflect community values?"
+  - "What connections exist between art and philosophy?"
+  
+  # Complex Path Queries
+  - "What is the relationship between gifting and community building?"
+  - "How does radical self-expression influence art creation?"
+  - "What path connects volunteers to infrastructure?"
+  - "How do principles guide practical implementations?"
+  - "What links personal transformation to community practices?"
+  
+  # Meta-Queries (about the knowledge itself)
+  - "What are the most connected concepts?"
+  - "Which ideas have the most manifestations?"
+  - "What patterns emerge in community organization?"
+  - "How are different years connected?"
+  - "What are the central themes across all experiences?"

@@ -1,0 +1,2 @@
+module Navigator::EntitiesHelper
+end
