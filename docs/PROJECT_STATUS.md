@@ -4,8 +4,10 @@
 
 ## 📊 Status Summary
 
-- **Technical Pipeline**: 92% COMPLETE (8.3 of 9 stages)
-  - Stages 0-8: ✅ COMPLETE (Technical infrastructure)
+- **Technical Pipeline**: 75% COMPLETE (7.5 of 10 stages)
+  - Stages 0-5: ✅ COMPLETE
+  - Stage 5.5: ⚠️ IN PROGRESS (Relationship Discovery)
+  - Stages 6-8: ✅ COMPLETE
   - Stage 9: ⚠️ ~30% COMPLETE (Basic chat only, NOT a Knowledge Navigator)
 - **Product Completion**: ~60% (Infrastructure done, user experience incomplete)
 - **OpenAI Integration**: Phase 2 COMPLETE ✅
@@ -18,7 +20,7 @@ Enliterator is a Rails 8 application that transforms dropped data collections in
 
 **REALITY CHECK**: We have a basic chat interface that talks to a fine-tuned model. This is NOT the Knowledge Navigator vision - no dynamic visualizations, no data presentation, no actual navigation UI. Users can chat about data but cannot SEE or INTERACT with it visually.
 
-## Pipeline Implementation Progress (9 Stages Total)
+## Pipeline Implementation Progress (10 Stages Total - includes Stage 5.5)
 
 ### ✅ Completed (Stages 0-8: Technical Infrastructure)
 
@@ -40,16 +42,30 @@ Enliterator is a Rails 8 application that transforms dropped data collections in
 
 #### Stage 4: Pool Filling
 - All Ten Pool Canon models implemented
-- Pools::ExtractionJob with entity/relation extraction
-- Verb glossary enforcement
-- Path provenance tracking
+- Pools::ExtractionJob for entity extraction only
+- Entity assignment with IDs and time fields
+- Rights pointer tracking
+- NOTE: Relationships moved to Stage 5.5
 
 #### Stage 5: Graph Assembly
 - Neo4j knowledge graph construction
+- Load nodes/edges to graph
 - Schema constraints and indexes
-- Duplicate resolution and orphan removal  
-- Path textization for readable paths
-- Comprehensive integrity verification
+- Duplicate resolution and orphan removal
+- NOTE: Basic graph structure only, relationships in Stage 5.5
+
+#### Stage 5.5: Relationship Discovery ⚠️ IN PROGRESS
+- **Status**: UNDER DEVELOPMENT (2025-08-09)
+- **GitHub Issue**: #58
+- **Approach**: Construction-first multi-pass strategy
+- **Current Metrics**:
+  - Entities: 5,169 nodes
+  - Relationships: 36 edges
+  - Density: 0.007 (target: ≥0.3)
+- **Implementation**:
+  - Two-tier model: Candidate vs Verified edges
+  - Multi-pass discovery: co-occurrence, embeddings, topology, static analysis
+  - Human curation interface for verification
 
 #### Stage 6: Representations & Retrieval ✅
 - **Status**: COMPLETE with Neo4j GenAI (2025-08-06)

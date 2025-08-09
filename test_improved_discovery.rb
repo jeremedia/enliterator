@@ -20,7 +20,7 @@ puts "Cleared existing relationships"
 run = EknPipelineRun.create!(
   status: "running",
   current_stage: "relationships",
-  current_stage_number: 6,
+  current_stage_number: 5.5,
   stage_statuses: {"relationships" => "running"},
   ingest_batch: batch,
   ekn: ekn
