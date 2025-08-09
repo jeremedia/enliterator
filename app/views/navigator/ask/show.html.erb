@@ -168,44 +168,144 @@
     </div>
     
     <!-- Metrics Report -->
-    <div class="bg-white shadow rounded-lg p-6 mb-6">
-      <h2 class="text-xl font-bold text-gray-900 mb-4">Graph Metrics</h2>
-      
-      <% if @batch_report %>
-        <!-- Summary Statistics -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div class="bg-gray-50 rounded-lg p-4">
-            <div class="text-sm font-medium text-gray-500">Answerability Rate</div>
-            <div class="mt-1 text-2xl font-semibold text-gray-900">
-              <%= @batch_report[:answerability_rate] %>%
-            </div>
-            <div class="text-sm text-gray-600">
-              <%= @batch_report[:answered] %> of <%= @batch_report[:total] %> questions
-            </div>
-          </div>
-          
-          <% if @metrics %>
+    <% if @metrics %>
+      <div class="bg-white shadow rounded-lg p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Graph Metrics</h2>
+        
+        <!-- Graph Metrics Summary -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <% if @metrics[:graph_metrics] %>
             <div class="bg-gray-50 rounded-lg p-4">
-              <div class="text-sm font-medium text-gray-500">Mean Degree</div>
+              <div class="text-sm font-medium text-gray-500">Total Nodes</div>
               <div class="mt-1 text-2xl font-semibold text-gray-900">
-                <%= @metrics[:mean_degree] %>
+                <%= number_with_delimiter(@metrics[:graph_metrics][:total_nodes]) %>
               </div>
               <div class="text-sm text-gray-600">
-                Target: ≥ 0.3
+                <%= @metrics[:graph_metrics][:total_edges] %> edges
               </div>
             </div>
             
             <div class="bg-gray-50 rounded-lg p-4">
-              <div class="text-sm font-medium text-gray-500">Verb Diversity</div>
-              <div class="mt-1 text-2xl font-semibold text-gray-900">
-                <%= @metrics[:verified_verb_diversity] %>
+              <div class="text-sm font-medium text-gray-500">Mean Degree</div>
+              <div class="mt-1 text-2xl font-semibold <%= @metrics[:gate_status][:gates][:mean_degree][:passed] ? 'text-green-600' : 'text-red-600' %>">
+                <%= @metrics[:graph_metrics][:mean_degree] %>
               </div>
               <div class="text-sm text-gray-600">
-                Target: ≥ 5 verbs
+                Target: ≥ <%= @metrics[:gate_status][:gates][:mean_degree][:threshold] %>
+              </div>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+              <div class="text-sm font-medium text-gray-500">Graph Density</div>
+              <div class="mt-1 text-2xl font-semibold text-gray-900">
+                <%= (@metrics[:graph_metrics][:density] * 100).round(3) %>%
+              </div>
+              <div class="text-sm text-gray-600">
+                Edge coverage
+              </div>
+            </div>
+          <% end %>
+          
+          <% if @metrics[:coverage_metrics] %>
+            <div class="bg-gray-50 rounded-lg p-4">
+              <div class="text-sm font-medium text-gray-500">Connected Coverage</div>
+              <div class="mt-1 text-2xl font-semibold <%= @metrics[:gate_status][:gates][:lcc_coverage][:passed] ? 'text-green-600' : 'text-red-600' %>">
+                <%= (@metrics[:coverage_metrics][:lcc_coverage] * 100).round(1) %>%
+              </div>
+              <div class="text-sm text-gray-600">
+                Target: ≥ <%= (@metrics[:gate_status][:gates][:lcc_coverage][:threshold] * 100).round(0) %>%
               </div>
             </div>
           <% end %>
         </div>
+        
+        <!-- Pool Distribution -->
+        <% if @metrics[:graph_metrics] && @metrics[:graph_metrics][:pool_distribution] %>
+          <div class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-3">Pool Distribution</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <% @metrics[:graph_metrics][:pool_distribution].each do |pool, count| %>
+                <div class="bg-gray-50 rounded p-2">
+                  <div class="text-sm font-medium text-gray-600"><%= pool %></div>
+                  <div class="text-lg font-semibold text-gray-900"><%= number_with_delimiter(count) %></div>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+        
+        <!-- Gate Status -->
+        <% if @metrics[:gate_status] %>
+          <div class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-3">Stage 5.5 Gate Status</h3>
+            <div class="bg-<%= @metrics[:gate_status][:all_passed] ? 'green' : 'yellow' %>-50 rounded-lg p-4">
+              <div class="flex items-center">
+                <svg class="h-5 w-5 <%= @metrics[:gate_status][:all_passed] ? 'text-green-400' : 'text-yellow-400' %> mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <% if @metrics[:gate_status][:all_passed] %>
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                  <% else %>
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                  <% end %>
+                </svg>
+                <span class="text-sm font-medium <%= @metrics[:gate_status][:all_passed] ? 'text-green-800' : 'text-yellow-800' %>">
+                  <%= @metrics[:gate_status][:passed_count] %> of <%= @metrics[:gate_status][:total_gates] %> gates passed
+                </span>
+              </div>
+              
+              <div class="mt-3 space-y-2">
+                <% @metrics[:gate_status][:gates].each do |gate_name, gate_data| %>
+                  <div class="flex justify-between text-sm">
+                    <span class="text-gray-600"><%= gate_name.to_s.humanize %></span>
+                    <span class="font-medium <%= gate_data[:passed] ? 'text-green-600' : 'text-red-600' %>">
+                      <%= gate_data[:value] %> <%= gate_data[:passed] ? '✓' : '✗' %>
+                    </span>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+        
+        <!-- Diversity Metrics -->
+        <% if @metrics[:diversity_metrics] %>
+          <div class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-3">Relationship Diversity</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="bg-gray-50 rounded-lg p-4">
+                <div class="text-sm font-medium text-gray-500">Unique Verbs</div>
+                <div class="mt-1 text-2xl font-semibold <%= @metrics[:gate_status][:gates][:verb_diversity][:passed] ? 'text-green-600' : 'text-red-600' %>">
+                  <%= @metrics[:diversity_metrics][:unique_verbs] %>
+                </div>
+                <div class="text-sm text-gray-600">
+                  Target: ≥ <%= @metrics[:gate_status][:gates][:verb_diversity][:threshold] %>
+                </div>
+              </div>
+              
+              <div class="bg-gray-50 rounded-lg p-4">
+                <div class="text-sm font-medium text-gray-500">Verified Edges</div>
+                <div class="mt-1 text-2xl font-semibold text-gray-900">
+                  <%= @metrics[:diversity_metrics][:verified_edges] %>
+                </div>
+                <div class="text-sm text-gray-600">
+                  Total verified
+                </div>
+              </div>
+              
+              <div class="bg-gray-50 rounded-lg p-4">
+                <div class="text-sm font-medium text-gray-500">Path Patterns</div>
+                <div class="mt-1 text-2xl font-semibold text-gray-900">
+                  <%= @metrics[:diversity_metrics][:unique_path_patterns] %>
+                </div>
+                <div class="text-sm text-gray-600">
+                  Unique patterns
+                </div>
+              </div>
+            </div>
+          </div>
+        <% end %>
+        
+        <% if @batch_report %>
+        <!-- Batch Report Content -->
         
         <!-- Answered Questions -->
         <% if @batch_report[:answers].any? %>
@@ -257,8 +357,9 @@
             </div>
           </div>
         <% end %>
-      <% end %>
-    </div>
+        <% end %>
+      </div>
+    <% end %>
     
     <!-- Try a Question -->
     <div class="bg-white shadow rounded-lg p-6">
