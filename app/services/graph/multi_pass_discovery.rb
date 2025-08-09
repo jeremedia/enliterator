@@ -254,28 +254,12 @@ module Graph
     def execute_pass_d_static
       Rails.logger.info "Pass D: Static relationship discovery starting..."
       
-      # These would come from prompt packs or fine-tune datasets
-      # Using nodes we know exist from previous tests
-      static_relationships = [
-        {
-          source: { pool_type: 'Idea', label: 'Community Innovation Framework' },
-          target: { pool_type: 'Idea', label: 'Innovation Ecosystem' },
-          verb: 'enables',
-          confidence: 0.9,
-          evidence_span: "Framework enables ecosystem development",
-          discovery_stage: 'pass_d_static',
-          cluster_strategy: 'static'
-        },
-        {
-          source: { pool_type: 'Idea', label: 'Scalable Growth' },
-          target: { pool_type: 'Practical', label: 'Continuous improvement.' },
-          verb: 'requires',
-          confidence: 0.85,
-          evidence_span: "Growth requires continuous improvement",
-          discovery_stage: 'pass_d_static',
-          cluster_strategy: 'static'
-        }
-      ]
+      # TODO: In production, these would come from:
+      # 1. Prompt packs generated in Stage 8
+      # 2. Fine-tune datasets from Stage 9
+      # 3. Human-curated relationship definitions
+      # For now, returning empty as we don't have real static relationships yet
+      static_relationships = []
       
       # Verify nodes exist before adding
       valid_relationships = []

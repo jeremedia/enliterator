@@ -131,7 +131,7 @@
         </label>
         <div class="flex gap-2">
           <input type="text" name="q" id="q" 
-                 placeholder="e.g., How does the Community Innovation Framework relate to other ideas?" 
+                 placeholder="e.g., What entities are in the knowledge graph?" 
                  class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
           <button type="submit" 
                   class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
@@ -145,11 +145,11 @@
         <h3 class="text-sm font-medium text-gray-700 mb-3">Sample Questions (based on actual data):</h3>
         <div class="space-y-2">
           <% sample_questions = [
-            "What ideas does the Community Innovation Framework embody?",
-            "How does Digital Transformation relate to breakthrough innovations?",
-            "What is the relationship between Community Innovation Framework and Failure?",
-            "What concepts are connected to Agile Methodologies?",
-            "How do diverse perspectives influence innovation?"
+            "What entities exist in the knowledge graph?",
+            "How many nodes are in the graph?",
+            "What are the different pool types?",
+            "What relationships exist between entities?",
+            "Show me the graph statistics"
           ] %>
           
           <% sample_questions.each do |question| %>
