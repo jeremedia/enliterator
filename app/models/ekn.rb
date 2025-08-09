@@ -41,6 +41,7 @@ class Ekn < ApplicationRecord
   has_many :ingest_items, through: :ingest_batches
   has_many :api_calls, dependent: :nullify  # Track all API usage for this EKN
   has_many :sessions, dependent: :destroy  # All conversations with this EKN
+  has_many :stage_completions, dependent: :destroy  # Track stage completion status
   belongs_to :session, optional: true  # For pre-auth ownership
   
   # Core identity validation

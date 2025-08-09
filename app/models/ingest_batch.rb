@@ -36,6 +36,7 @@
 class IngestBatch < ApplicationRecord
   belongs_to :ekn  # CRITICAL: IngestBatch now belongs to an EKN
   has_many :ingest_items, dependent: :destroy
+  has_many :stage_completions, dependent: :destroy
   
   # Status tracking for pipeline stages
   enum :status, {
