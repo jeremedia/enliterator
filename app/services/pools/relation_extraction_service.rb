@@ -2,69 +2,85 @@
 
 module Pools
   # Model classes for structured relation extraction
-  class EntityReference < OpenAI::Helpers::StructuredOutput::BaseModel
-    required :pool_type, String, doc: "Pool type of the entity"
-    required :label, String, doc: "Label/name of the entity"
-    required :entity_index, Integer, nil?: true, doc: "Index in the entities array if referencing an extracted entity"
+  class RelationEntity < OpenAI::Helpers::StructuredOutput::BaseModel
+    required :pool_type, String, doc: "The pool type of the entity"
+    required :label, String, doc: "The label/name of the entity"
+    required :id, String, nil?: true, doc: "The entity ID if available"
   end
-
+  
   class ExtractedRelation < OpenAI::Helpers::StructuredOutput::BaseModel
-    required :verb, String, doc: "Relation verb from the glossary"
-    required :source, EntityReference, doc: "Source entity of the relation"
-    required :target, EntityReference, doc: "Target entity of the relation"
-    required :confidence, Float, doc: "Extraction confidence (0-1)"
-    required :evidence, String, doc: "Text evidence supporting this relation"
+    required :source, RelationEntity
+    required :verb, String, doc: "Relationship verb from glossary"
+    required :target, RelationEntity
+    required :evidence_span, String, nil?: true, doc: "Text evidence for relationship"
+    required :confidence, Float, doc: "Confidence score (0-1)"
   end
-
+  
   class RelationExtractionResult < OpenAI::Helpers::StructuredOutput::BaseModel
     required :relations, OpenAI::ArrayOf[ExtractedRelation], doc: "List of extracted relations"
-    required :unmapped_relations, OpenAI::ArrayOf[String], doc: "Relations found but not matching glossary"
+    required :total_entities, Integer, doc: "Total entities provided for context"
+    required :relations_found, Integer, doc: "Number of valid relations found"
   end
-
-  # Service to extract relations between entities using the Relation Verb Glossary
+  
+  # Service to extract relationships between entities using the Relation Verb Glossary
   class RelationExtractionService < OpenaiConfig::BaseExtractionService
     
     attr_reader :content, :entities, :verb_glossary
-
-    def initialize(content:, entities:, verb_glossary:)
+    
+    def initialize(content:, entities:, verb_glossary: nil)
       @content = content
-      @entities = entities
-      @verb_glossary = verb_glossary
+      @entities = Array(entities)
+      @verb_glossary = normalize_verb_glossary(verb_glossary || Graph::EdgeLoader::VERB_GLOSSARY)
     end
-
+    
     def call
+      return empty_result if content.blank? || entities.empty?
       super
     end
-
+    
     alias extract call
-
+    
     protected
-
+    
     def response_model_class
       RelationExtractionResult
     end
-
+    
     def validate_inputs!
-      raise ArgumentError, 'No entities provided' if entities.empty?
       raise ArgumentError, 'Content is required' if content.blank?
-      raise ArgumentError, 'Verb glossary is required' if verb_glossary.blank?
+      raise ArgumentError, 'Entities are required' if entities.empty?
     end
-
+    
     def content_for_extraction
       user_prompt
     end
-
+    
+    def variables_for_prompt
+      {
+        content: content,
+        entities: entities_as_json,
+        verb_glossary: verb_glossary.join(', ')
+      }
+    end
+    
     def transform_result(parsed_result)
-      relations = transform_relations(parsed_result.relations)
+      # Filter relations to only include allowed verbs
+      valid_relations = parsed_result.relations.select do |rel|
+        verb_glossary.include?(rel.verb.to_s.downcase)
+      end
       
       {
         success: true,
-        relations: relations,
-        unmapped_relations: parsed_result.unmapped_relations,
-        metadata: extraction_metadata
+        relations: transform_relations(valid_relations),
+        metadata: {
+          total_entities: entities.size,
+          relations_found: valid_relations.size,
+          filtered_count: parsed_result.relations.size - valid_relations.size,
+          extraction_time: Time.current
+        }.merge(extraction_metadata)
       }
     end
-
+    
     def build_messages
       [
         {
@@ -77,130 +93,109 @@ module Pools
         }
       ]
     end
-
+    
     private
-
+    
     def system_prompt
       <<~PROMPT
-        You are a relation extraction specialist for the Enliterator system.
-        Your task is to extract relations between entities using ONLY the approved Relation Verb Glossary.
+        You are a relationship extraction specialist for the Enliterator system.
+        Your task is to extract relationships between entities using ONLY the allowed verbs.
         
-        Approved Relations:
+        ALLOWED VERBS (use exactly as shown):
         #{format_verb_glossary}
         
         Guidelines:
-        1. Only use verbs from the approved glossary
-        2. Check that source and target pools match the verb requirements
-        3. Look for explicit or strongly implied relationships in the text
-        4. Include evidence quotes that support the relation
-        5. Set confidence based on how clearly the relation is stated
-        6. If you find relations that don't fit the glossary, list them as unmapped
-        7. Consider both forward and reverse relations where applicable
+        1. ONLY use verbs from the allowed list above
+        2. Match entities to those provided in the entity list
+        3. Include text evidence when relationship is explicit
+        4. Set confidence based on clarity of relationship
+        5. Focus on explicit relationships, not implied ones
+        6. Respect verb directionality (source -> verb -> target)
         
-        Entity Pool Types:
-        - idea: principles, theories, concepts
-        - manifest: concrete instances, artifacts, projects
-        - experience: lived outcomes, testimonials, observations
-        - relational: connections, networks, collaborations
-        - evolutionary: changes, versions, timelines
-        - practical: how-to knowledge, guides, procedures
-        - emanation: influences, adoptions, downstream effects
+        Remember: If a relationship verb is not in the allowed list, DO NOT extract it.
       PROMPT
     end
-
+    
     def user_prompt
       <<~PROMPT
-        Extract relations between the following entities based on the content.
-        Use ONLY the approved verb glossary.
+        Extract relationships from the following content using ONLY the allowed verbs.
         
-        Entities Found:
+        Available entities (use these for source/target):
         #{format_entities}
         
-        Content:
-        #{content.truncate(6000)}
+        Content to analyze:
+        #{content.truncate(8000)}
         
-        Look for relationships between these entities using the approved verbs.
-        Include text evidence for each relation.
+        Return all valid relationships found using the strict verb glossary.
       PROMPT
     end
-
+    
     def format_verb_glossary
-      verb_glossary.map do |verb, config|
-        source_desc = Array(config[:source]).join(' or ')
+      Graph::EdgeLoader::VERB_GLOSSARY.map do |verb, config|
+        source_desc = config[:source].is_a?(Array) ? config[:source].join('/') : config[:source]
         target_desc = config[:target] == '*' ? 'any' : config[:target]
-        reverse_desc = config[:reverse] ? " ↔ #{config[:reverse]}" : ''
-        symmetric_desc = config[:symmetric] ? ' (symmetric)' : ''
-        
-        "- #{verb}: #{source_desc} → #{target_desc}#{reverse_desc}#{symmetric_desc}"
+        "- #{verb}: #{source_desc} -> #{target_desc}"
       end.join("\n")
     end
-
+    
     def format_entities
-      entities.each_with_index.map do |entity, index|
-        "#{index}. [#{entity[:pool_type]}] #{entity[:attributes][:label]} - #{entity[:source_span].truncate(100)}"
+      entities.map do |entity|
+        pool = entity[:pool_type] || entity['pool_type']
+        label = entity[:label] || entity['label']
+        id = entity[:id] || entity['id']
+        "- #{pool}: #{label}#{id ? " (id: #{id})" : ''}"
       end.join("\n")
     end
-
-    def transform_relations(relations)
-      relations.filter_map do |relation|
-        # Validate verb is in glossary
-        verb_config = verb_glossary[relation.verb]
-        next unless verb_config
-
-        # Validate source and target pools match requirements
-        next unless valid_pools?(relation, verb_config)
-
+    
+    def entities_as_json
+      entities.map do |e|
         {
-          verb: relation.verb,
-          source: resolve_entity_reference(relation.source),
-          target: resolve_entity_reference(relation.target),
-          confidence: relation.confidence,
-          evidence: relation.evidence,
-          path_text: build_path_text(relation)
-        }
-      end
+          pool_type: (e[:pool_type] || e['pool_type']).to_s,
+          label: e[:label] || e['label'],
+          id: (e[:id] || e['id']).to_s
+        }.compact
+      end.to_json
     end
-
-    def valid_pools?(relation, verb_config)
-      source_pools = Array(verb_config[:source])
-      target_pools = verb_config[:target] == '*' ? nil : Array(verb_config[:target])
-
-      # Check source pool
-      source_valid = source_pools.any? { |pool| pool.downcase == relation.source.pool_type.downcase }
-      return false unless source_valid
-
-      # Check target pool if specified
-      if target_pools
-        target_valid = target_pools.any? { |pool| pool.downcase == relation.target.pool_type.downcase }
-        return false unless target_valid
-      end
-
-      true
-    end
-
-    def resolve_entity_reference(ref)
-      # If entity_index is provided, use the extracted entity
-      if ref.entity_index && entities[ref.entity_index]
-        entity = entities[ref.entity_index]
-        {
-          pool_type: entity[:pool_type],
-          label: entity[:attributes][:label],
-          extracted_entity: entity
-        }
+    
+    def normalize_verb_glossary(glossary)
+      if glossary.respond_to?(:keys)
+        glossary.keys.map(&:to_s).map(&:downcase)
       else
-        # Otherwise, use the reference as-is
+        Array(glossary).map(&:to_s).map(&:downcase)
+      end
+    end
+    
+    def transform_relations(relations)
+      relations.map do |rel|
         {
-          pool_type: ref.pool_type,
-          label: ref.label
+          source: {
+            pool_type: rel.source.pool_type,
+            label: rel.source.label,
+            id: rel.source.id
+          }.compact,
+          verb: rel.verb.downcase,
+          target: {
+            pool_type: rel.target.pool_type,
+            label: rel.target.label,
+            id: rel.target.id
+          }.compact,
+          evidence_span: rel.evidence_span,
+          confidence: rel.confidence
         }
       end
     end
-
-    def build_path_text(relation)
-      source_node = "#{relation.source.pool_type.capitalize}(#{relation.source.label})"
-      target_node = "#{relation.target.pool_type.capitalize}(#{relation.target.label})"
-      
-      "#{source_node} → #{relation.verb} → #{target_node}"
+    
+    def empty_result
+      {
+        success: true,
+        relations: [],
+        metadata: {
+          total_entities: entities.size,
+          relations_found: 0,
+          extraction_time: Time.current
+        }.merge(extraction_metadata)
+      }
     end
   end
 end
+

@@ -67,6 +67,9 @@ module Graph
           data_session.close
         end
         
+        # ACCEPTANCE GATE: Verify relationships were created (unless dataset truly has none)
+        validate_graph_relationships!
+        
         log_progress "✅ Graph assembly complete: #{@stats[:nodes_created]} nodes, #{@stats[:edges_created]} edges"
         
         # Track metrics
@@ -121,6 +124,7 @@ module Graph
       edge_loader = Graph::EdgeLoader.new(tx, @batch)
       result = edge_loader.load_all
       @stats[:edges_created] = result[:total_edges]
+      @stats[:rights_edges] = result[:rights_edges]
     end
     
     def resolve_duplicates(tx)
@@ -145,6 +149,39 @@ module Graph
     rescue => e
       # Non-fatal: log and continue; constraint creation will surface issues otherwise
       log_progress "Backfill canonical_description skipped: #{e.message}", level: :warn
+    end
+    
+    def validate_graph_relationships!
+      # Skip validation for very small datasets
+      return if @stats[:nodes_created] < 3
+      
+      # Check if we have domain relationships (not just HAS_RIGHTS)
+      domain_edges = @stats[:edges_created] - (@stats[:rights_edges] || 0)
+      
+      if domain_edges == 0 && @stats[:nodes_created] > 10
+        # Log warning but don't fail - allow manual intervention
+        log_progress "⚠️  WARNING: No domain relationships found in graph!", level: :warn
+        log_progress "   Only system relationships (HAS_RIGHTS) were created.", level: :warn
+        log_progress "   This may indicate:", level: :warn
+        log_progress "   1. Relation extraction didn't run or failed", level: :warn
+        log_progress "   2. Content doesn't contain extractable relationships", level: :warn
+        log_progress "   3. Verb glossary mismatch with content", level: :warn
+        log_progress "", level: :warn
+        log_progress "   To fix: Run `rails enliterator:graph:relations:backfill[#{@batch.id}]`", level: :warn
+        
+        # Track this as a quality issue
+        track_metric :graph_quality_warning, 'no_domain_relationships'
+        
+        # Update batch with warning
+        @batch.update!(
+          graph_metadata: (@batch.graph_metadata || {}).merge(
+            'warning' => 'no_domain_relationships',
+            'suggested_action' => "rails enliterator:graph:relations:backfill[#{@batch.id}]"
+          )
+        )
+      elsif domain_edges < @stats[:nodes_created] / 10
+        log_progress "⚠️  Low relationship density: #{domain_edges} edges for #{@stats[:nodes_created]} nodes", level: :warn
+      end
     end
     
     def collect_stage_metrics

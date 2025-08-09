@@ -33,12 +33,15 @@ module Graph
       'constrains' => { source: 'Governance', target: 'ProvenanceAndRights', reverse: 'constrained_by' },
       'produces' => { source: 'MethodPool', target: 'Evidence', reverse: 'produced_by' },
       'standardizes' => { source: 'MethodPool', target: 'Practical', reverse: 'standardized_by' },
+      'implements' => { source: 'MethodPool', target: 'Practical', reverse: nil },
       'normalizes' => { source: 'Lexicon', target: '*', reverse: 'normalized_by' },
       'disambiguates' => { source: 'Lexicon', target: '*', reverse: 'disambiguated_by' },
       'requests' => { source: 'Intent', target: 'Relational', reverse: 'requested_by' },
       'selects_template' => { source: 'Intent', target: 'Practical', reverse: 'template_for' },
       'traverses_pattern' => { source: 'Intent', target: '*', reverse: nil },
-      'targets' => { source: 'Intent', target: 'Manifest', reverse: 'targeted_by' }
+      'targets' => { source: 'Intent', target: 'Manifest', reverse: 'targeted_by' },
+      # System relationships
+      'has_rights' => { source: '*', target: 'ProvenanceAndRights', reverse: nil }
     }.freeze
     
     def initialize(transaction, batch)
@@ -75,7 +78,8 @@ module Graph
       {
         total_edges: @edge_counts.values.sum,
         by_verb: @edge_counts,
-        reverse_edges: @reverse_edge_count
+        reverse_edges: @reverse_edge_count,
+        rights_edges: @edge_counts['has_rights'] || 0
       }
     end
     

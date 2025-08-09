@@ -74,17 +74,25 @@ module Pools
       ).extract
       
       if entity_result[:success]
-        @extracted_entities.concat(entity_result[:entities] || [])
+        # Track which item these entities came from
+        entities_with_item = (entity_result[:entities] || []).map do |entity|
+          entity.merge(item_id: item.id)
+        end
+        @extracted_entities.concat(entities_with_item)
         
-        # Extract relations
+        # Extract relations using ONLY entities from this item
         relation_result = Pools::RelationExtractionService.new(
           content: item.content,
-          entities: entity_result[:entities] || [],
-          verb_glossary: Pipeline::VerbGlossary::VERBS
+          entities: entity_result[:entities] || []  # Only this item's entities!
+          # verb_glossary defaults to Graph::EdgeLoader::VERB_GLOSSARY in the service
         ).extract
         
         if relation_result[:success] && relation_result[:relations]
-          @extracted_relations.concat(relation_result[:relations])
+          # Track which item these relations came from
+          relations_with_item = relation_result[:relations].map do |rel|
+            rel.merge(item_id: item.id)
+          end
+          @extracted_relations.concat(relations_with_item)
         end
         
         item.update!(
@@ -110,38 +118,48 @@ module Pools
       
       log_progress "Saving #{@extracted_entities.size} entities to database...", level: :debug
       
-      # CRITICAL: Create ProvenanceAndRights with CORRECT attributes
-      # Find or create a default ProvenanceAndRights record for extracted entities
-      default_rights = ProvenanceAndRights.find_or_create_by!(
-        # Required fields
-        source_ids: ["pipeline_extraction_#{@batch.id}"],
-        collection_method: "openai_extraction",
-        consent_status: "implicit_consent",  # We're processing already consented data
-        license_type: "custom",  # Internal use for extracted entities
-        valid_time_start: Time.current,  # CRITICAL: Required field
-        
-        # Optional fields
-        source_owner: "Enliterator Pipeline",
-        
-        # Rights flags
-        publishability: true,
-        training_eligibility: true,
-        quarantined: false,
-        
-        # Store extraction metadata in custom_terms
-        custom_terms: {
-          'source_type' => 'extracted_entity',
-          'extraction_batch' => @batch.id,
-          'extraction_stage' => 'pool_filling',
-          'extraction_timestamp' => Time.current.iso8601
-        }
-      )
+      # Group entities by item_id to create proper ProvenanceAndRights
+      entities_by_item = @extracted_entities.group_by { |e| e[:item_id] }
       
-      @extracted_entities.each do |entity_data|
-        begin
-          save_entity(entity_data, default_rights)
-        rescue => e
-          log_progress "Failed to save entity: #{e.message}", level: :error
+      entities_by_item.each do |item_id, entities|
+        # Get the item for rights information
+        item = IngestItem.find_by(id: item_id)
+        next unless item
+        
+        # Create item-specific ProvenanceAndRights
+        item_rights = ProvenanceAndRights.find_or_create_by!(
+          # Required fields
+          source_ids: ["pipeline_extraction_#{@batch.id}_item_#{item_id}"],
+          collection_method: "openai_extraction",
+          consent_status: "implicit_consent",
+          license_type: "custom",
+          valid_time_start: Time.current,
+          
+          # Optional fields
+          source_owner: "Enliterator Pipeline",
+          
+          # Inherit rights from item
+          publishability: item.publishability || true,
+          training_eligibility: item.training_eligibility || true,
+          quarantined: false,
+          
+          # Store extraction metadata with ITEM_ID
+          custom_terms: {
+            'source_type' => 'extracted_entity',
+            'extraction_batch' => @batch.id,
+            'extraction_item' => item_id,  # CRITICAL: Track which item!
+            'extraction_stage' => 'pool_filling',
+            'extraction_timestamp' => Time.current.iso8601
+          }
+        )
+        
+        # Save entities from this item
+        entities.each do |entity_data|
+          begin
+            save_entity(entity_data, item_rights)
+          rescue => e
+            log_progress "Failed to save entity from item #{item_id}: #{e.message}", level: :error
+          end
         end
       end
     end
@@ -231,9 +249,68 @@ module Pools
     end
     
     def save_relations_to_database
-      # For now, skip relation saving as it requires entity IDs
-      # This would be implemented once entities have stable IDs
-      log_progress "Skipping relation saving (requires entity resolution)", level: :debug
+      return if @extracted_relations.blank?
+      log_progress "Saving #{@extracted_relations.size} relations to database...", level: :debug
+
+      # Group relations by item_id
+      relations_by_item = @extracted_relations.group_by { |r| r[:item_id] }
+      
+      relations_by_item.each do |item_id, relations|
+        item = IngestItem.find_by(id: item_id)
+        next unless item
+        
+        relations.each do |rel|
+        begin
+          verb = rel[:verb] || rel['verb']
+          src  = rel[:source] || rel['source'] || {}
+          tgt  = rel[:target] || rel['target'] || {}
+
+          src_pool = (src[:pool_type] || src['pool_type']).to_s.classify
+          tgt_pool = (tgt[:pool_type] || tgt['pool_type']).to_s.classify
+          src_id   = src[:id] || src['id']
+          tgt_id   = tgt[:id] || tgt['id']
+          src_lbl  = src[:label] || src['label']
+          tgt_lbl  = tgt[:label] || tgt['label']
+
+          # Resolve entities (prefer id, fallback to label)
+          src_cls = Object.const_get(src_pool) rescue nil
+          tgt_cls = Object.const_get(tgt_pool) rescue nil
+          next unless src_cls && tgt_cls
+
+          source = src_id ? src_cls.find_by(id: src_id) : src_cls.find_by(label: src_lbl)
+          target = tgt_id ? tgt_cls.find_by(id: tgt_id) : tgt_cls.find_by(label: tgt_lbl)
+          next unless source && target
+
+          # Create item-specific rights for this relation
+          rights = ProvenanceAndRights.find_or_create_by!(
+            source_ids: ["pipeline_extraction_rel_#{@batch.id}_item_#{item_id}"],
+            collection_method: "openai_relation_extraction",
+            consent_status: "implicit_consent",
+            license_type: "custom",
+            valid_time_start: Time.current,
+            publishability: item.publishability || true,
+            training_eligibility: item.training_eligibility || true,
+            quarantined: false,
+            custom_terms: { 
+              'extraction_batch' => @batch.id, 
+              'extraction_item' => item_id,  # Track item!
+              'stage' => 'pool_filling' 
+            }
+          )
+
+          Relational.find_or_create_by!(
+            relation_type: verb,
+            source: source,
+            target: target,
+            provenance_and_rights: rights,
+            valid_time_start: Time.current,
+            repr_text: "#{source.class.name}(#{source.id}) → #{verb} → #{target.class.name}(#{target.id})"
+          )
+        rescue => e
+          log_progress "Failed to save relation from item #{item_id}: #{e.message}", level: :warn
+        end
+      end  # End relations loop
+      end  # End items loop
     end
     
     def collect_stage_metrics
