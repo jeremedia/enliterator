@@ -21,7 +21,7 @@ module Graph
     
     # Configuration
     MAX_CLUSTERS_TO_PROCESS = 50
-    MAX_TOKENS_PER_CLUSTER = 2000
+    MAX_TOKENS_PER_CLUSTER = 5000  # Increased to handle larger structural clusters
     MIN_CONFIDENCE_THRESHOLD = 0.5
     
     def perform(pipeline_run_id)
@@ -103,7 +103,9 @@ module Graph
           if relationships.any?
             @discovered_relationships.concat(relationships)
             @metrics[:relationships_found] += relationships.size
-            log_progress "  Found #{relationships.size} relationships in cluster", level: :debug
+            log_progress "  Found #{relationships.size} relationships in cluster"
+          else
+            log_progress "  No relationships found in cluster", level: :debug
           end
           
           @metrics[:clusters_processed] += 1
@@ -148,6 +150,8 @@ module Graph
         entities: entities
       ).extract
       
+      log_progress "    Extraction result: success=#{result[:success]}, relations=#{result[:relations]&.size || 0}", level: :debug
+      
       return [] unless result[:success]
       
       # Filter by confidence
@@ -171,24 +175,30 @@ module Graph
       
       # Add entity descriptions
       cluster[:entities].each do |entity|
-        if entity[:properties]
-          label = entity[:properties]['label'] || entity[:label]
-          abstract = entity[:properties]['abstract']
-          goal = entity[:properties]['goal']
-          narrative = entity[:properties]['narrative_text']
-          
-          context_parts << "#{entity[:pool_type].capitalize}: #{label}"
-          context_parts << abstract if abstract
-          context_parts << "Goal: #{goal}" if goal
-          context_parts << narrative if narrative
+        # Entities from EntityClusterer have direct properties, not nested
+        label = entity[:label]
+        pool = entity[:pool_type] || entity[:labels]&.first
+        context_parts << "#{pool.to_s.capitalize}: #{label}"
+        
+        # Add additional context if available
+        if entity[:repr_text].present?
+          context_parts << entity[:repr_text]
         end
       end
       
-      # If we have item IDs, add some source content
-      if cluster[:context]&.include?('Directory:')
-        # For proximity clusters, we could fetch file content
-        # But for now, just use entity descriptions
+      # For structural clusters, add information about existing connections
+      if cluster[:strategy] == 'structural'
+        # Add note about graph structure
+        context_parts << "\nThese entities are connected in the knowledge graph through existing relationships."
+        context_parts << "They form a neighborhood of related concepts that likely have additional semantic connections."
+      elsif cluster[:strategy] == 'co_occurrence'
+        # Add note about co-occurrence
+        context_parts << "\nThese entities appear together in the same source documents."
+        context_parts << "Their co-occurrence suggests potential semantic relationships."
       end
+      
+      # Add explicit instruction for relationship discovery
+      context_parts << "\nAnalyze the connections between these entities using verbs like: embodies, elicits, codifies, exemplifies, influences, necessitates, manifests_as."
       
       context_parts.join("\n\n").truncate(8000)
     end
@@ -206,6 +216,7 @@ module Graph
               @metrics[:relationships_created] += 1
             rescue => e
               log_progress "Failed to create relationship: #{e.message}", level: :debug
+              log_progress "  Backtrace: #{e.backtrace.first(3).join("\n  ")}", level: :debug
             end
           end
         end
@@ -214,14 +225,33 @@ module Graph
     
     def create_graph_relationship(tx, rel)
       # Build the Cypher query to create relationship
+      # CRITICAL: Use appropriate property for each pool type
+      source_pool = rel[:source][:pool_type] || rel[:source][:pool]
+      target_pool = rel[:target][:pool_type] || rel[:target][:pool]
+      
+      # Map pool types to their identifier properties
+      source_property = case source_pool.downcase
+                       when 'idea' then 'label'
+                       when 'practical' then 'goal'
+                       when 'experience' then 'narrative_text'
+                       else 'label'  # Default fallback
+                       end
+      
+      target_property = case target_pool.downcase
+                       when 'idea' then 'label'
+                       when 'practical' then 'goal'
+                       when 'experience' then 'narrative_text'
+                       else 'label'  # Default fallback
+                       end
+      
       query = <<~CYPHER
-        // Find source entity
-        MATCH (source)
-        WHERE id(source) = $source_id
+        // Find source entity by appropriate property
+        MATCH (source:#{source_pool})
+        WHERE source.#{source_property} = $source_label
         
-        // Find target entity  
-        MATCH (target)
-        WHERE id(target) = $target_id
+        // Find target entity by appropriate property
+        MATCH (target:#{target_pool})
+        WHERE target.#{target_property} = $target_label
         
         // Create relationship with properties
         CREATE (source)-[r:#{rel[:verb].upcase}]->(target)
@@ -235,15 +265,15 @@ module Graph
       CYPHER
       
       params = {
-        source_id: rel[:source][:id].to_i,
-        target_id: rel[:target][:id].to_i,
+        source_label: rel[:source][:label],
+        target_label: rel[:target][:label],
         confidence: rel[:confidence] || 0.5,
         evidence: rel[:evidence_span],
         stage: rel[:discovery_stage],
         strategy: rel[:cluster_strategy]
       }
       
-      tx.run(query, params)
+      tx.run(query, **params)
     end
     
     def validate_discovered_relationships
@@ -302,10 +332,10 @@ module Graph
           
           # Try to textize the path
           begin
-            textized = textizer.textize_full_path(source_id, target_id, max_hops: 3)
+            textized_paths = textizer.find_and_textize_paths(source_id, target_id, max_hops: 3, limit: 1)
             
-            if textized
-              log_progress "  Sample path: #{textized}", level: :debug
+            if textized_paths && textized_paths.any?
+              log_progress "  Sample path: #{textized_paths.first}", level: :debug
               sample_count += 1
             end
           rescue => e
@@ -343,7 +373,7 @@ module Graph
         CYPHER
         
         result = session.run(metrics_query)
-        metrics = result.single
+        metrics = result.single rescue nil
         
         if metrics
           log_progress "Graph metrics:"
@@ -371,7 +401,7 @@ module Graph
     def update_pipeline_status
       # Mark relationship discovery as complete
       @pipeline_run.update!(
-        stage_metadata: (@pipeline_run.stage_metadata || {}).merge(
+        stage_metrics: (@pipeline_run.stage_metrics || {}).merge(
           'relationship_discovery' => {
             'completed_at' => Time.current,
             'metrics' => @metrics

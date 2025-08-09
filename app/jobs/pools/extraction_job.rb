@@ -136,9 +136,9 @@ module Pools
           # Optional fields
           source_owner: "Enliterator Pipeline",
           
-          # Inherit rights from item
-          publishability: item.publishability || true,
-          training_eligibility: item.training_eligibility || true,
+          # Default rights (items don't have these fields)
+          publishability: true,
+          training_eligibility: true,
           quarantined: false,
           
           # Store extraction metadata with ITEM_ID

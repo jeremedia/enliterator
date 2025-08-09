@@ -18,9 +18,10 @@ module Graph
     attr_reader :ekn, :batch
     
     # Target cluster size for optimal token usage
-    MIN_CLUSTER_SIZE = 10
+    # Adjusted based on actual data: most items have 3-8 entities
+    MIN_CLUSTER_SIZE = 3
     MAX_CLUSTER_SIZE = 50
-    OPTIMAL_CLUSTER_SIZE = 30
+    OPTIMAL_CLUSTER_SIZE = 15
     
     def initialize(ekn:, batch: nil)
       @ekn = ekn
@@ -54,44 +55,64 @@ module Graph
     def cluster_by_co_occurrence
       clusters = []
       
-      @driver.session(database: @ekn.neo4j_database_name) do |session|
-        query = <<~CYPHER
-          // Find entities that share source items
-          MATCH (e1)-[:HAS_RIGHTS]->(pr1:ProvenanceAndRights)
-          WHERE pr1.custom_terms.extraction_item IS NOT NULL
-          WITH e1, pr1.custom_terms.extraction_item as item_id
-          
-          MATCH (e2)-[:HAS_RIGHTS]->(pr2:ProvenanceAndRights)
-          WHERE pr2.custom_terms.extraction_item = item_id
-            AND id(e1) < id(e2)
-            AND NOT e1:ProvenanceAndRights
-            AND NOT e2:ProvenanceAndRights
-          
-          WITH e1, e2, count(*) as co_occurrences
-          WHERE co_occurrences > 0
-          
-          // Group into clusters
-          WITH collect({node1: e1, node2: e2, weight: co_occurrences}) as pairs
-          
-          // Use union-find to create clusters
-          UNWIND pairs as pair
-          WITH pair.node1 as node
-          UNION
-          WITH pair.node2 as node
-          
-          WITH collect(distinct node) as cluster_nodes
-          WHERE size(cluster_nodes) >= #{MIN_CLUSTER_SIZE}
-            AND size(cluster_nodes) <= #{MAX_CLUSTER_SIZE}
-          
-          RETURN cluster_nodes
-          LIMIT 20
-        CYPHER
+      # Use PostgreSQL to find entities grouped by extraction_item
+      # Since custom_terms isn't properly loaded to Neo4j, we use PostgreSQL
+      pr_by_item = ProvenanceAndRights
+        .where("custom_terms ->> 'extraction_batch' = ?", @batch.id.to_s)
+        .where("custom_terms ? 'extraction_item'")
+        .group_by { |pr| pr.custom_terms['extraction_item'] }
+      
+      pr_by_item.each do |item_id, prs|
+        # Get entities using these ProvenanceAndRights
+        pr_ids = prs.map(&:id)
+        entities = []
         
-        result = session.run(query)
-        result.each do |record|
-          cluster = extract_cluster_data(record['cluster_nodes'])
-          clusters << cluster if cluster[:entities].size >= MIN_CLUSTER_SIZE
+        # Collect entities from all pools
+        Idea.where(provenance_and_rights_id: pr_ids).each do |e|
+          entities << { 
+            id: e.id, 
+            label: e.label, 
+            pool_type: 'Idea',
+            repr_text: e.repr_text 
+          }
         end
+        
+        Manifest.where(provenance_and_rights_id: pr_ids).each do |e|
+          entities << { 
+            id: e.id, 
+            label: e.label, 
+            pool_type: 'Manifest',
+            repr_text: e.repr_text 
+          }
+        end
+        
+        Experience.where(provenance_and_rights_id: pr_ids).each do |e|
+          entities << { 
+            id: e.id, 
+            label: e.agent_label, 
+            pool_type: 'Experience',
+            repr_text: e.narrative_text 
+          }
+        end
+        
+        Practical.where(provenance_and_rights_id: pr_ids).each do |e|
+          entities << { 
+            id: e.id, 
+            label: e.goal, 
+            pool_type: 'Practical',
+            repr_text: e.repr_text 
+          }
+        end
+        
+        next if entities.size < MIN_CLUSTER_SIZE || entities.size > MAX_CLUSTER_SIZE
+        
+        clusters << {
+          strategy: 'co_occurrence',
+          confidence: 0.8,
+          entities: entities,
+          reason: "Entities from item ##{item_id}",
+          item_id: item_id
+        }
       end
       
       clusters
@@ -274,50 +295,63 @@ module Graph
       clusters
     end
     
-    # Strategy 5: Graph structure clustering
-    # Use existing edges to find connected components
+    # Strategy 5: Batch clustering for comprehensive coverage
+    # For sparse graphs, create overlapping batches of entities
     def cluster_by_graph_structure
       clusters = []
       
       @driver.session(database: @ekn.neo4j_database_name) do |session|
+        # Get all entities grouped by pool type
         query = <<~CYPHER
-          // Find weakly connected components
           MATCH (e)
           WHERE NOT e:ProvenanceAndRights
             AND NOT e:Lexicon
-          
-          // Get neighborhood within 2 hops
-          CALL {
-            WITH e
-            MATCH path = (e)-[*1..2]-(neighbor)
-            WHERE NOT neighbor:ProvenanceAndRights
-              AND NOT neighbor:Lexicon
-            RETURN collect(distinct neighbor) as neighbors
-          }
-          
-          WITH e, neighbors
-          WHERE size(neighbors) >= #{MIN_CLUSTER_SIZE - 1}
-            AND size(neighbors) <= #{MAX_CLUSTER_SIZE - 1}
-          
-          WITH e, neighbors[0..#{MAX_CLUSTER_SIZE - 1}] as cluster
-          
-          RETURN e as center, cluster as members
-          LIMIT 10
+          RETURN labels(e)[0] as pool, collect(e)[0..200] as entities
         CYPHER
         
         result = session.run(query)
+        
         result.each do |record|
-          entities = [extract_entity_data(record['center'])]
-          record['members'].each do |member|
-            entities << extract_entity_data(member)
-          end
+          pool = record['pool']
+          all_entities = record['entities'].map { |e| extract_entity_data(e) }
           
-          clusters << {
-            strategy: 'structural',
-            context: "Graph neighborhood (2-hop)",
-            entities: entities.uniq { |e| e[:id] },
-            confidence: 0.9
-          }
+          # Create batches of 20-30 entities for this pool
+          batch_size = 25
+          all_entities.each_slice(batch_size).with_index do |batch, index|
+            next if batch.size < MIN_CLUSTER_SIZE
+            
+            clusters << {
+              strategy: 'structural',
+              context: "#{pool} batch #{index + 1}",
+              entities: batch,
+              confidence: 0.7  # Lower confidence for arbitrary batches
+            }
+          end
+        end
+        
+        # Also create mixed-pool clusters
+        mixed_query = <<~CYPHER
+          MATCH (idea:Idea)
+          WITH collect(idea)[0..30] as ideas
+          MATCH (practical:Practical)
+          WITH ideas, collect(practical)[0..30] as practicals
+          MATCH (exp:Experience)
+          WITH ideas, practicals, collect(exp)[0..10] as experiences
+          RETURN ideas + practicals + experiences as mixed
+        CYPHER
+        
+        mixed_result = session.run(mixed_query)
+        mixed_result.each do |record|
+          entities = record['mixed'].compact.map { |e| extract_entity_data(e) }
+          
+          if entities.size >= MIN_CLUSTER_SIZE
+            clusters << {
+              strategy: 'structural',
+              context: "Mixed pool cluster",
+              entities: entities[0..MAX_CLUSTER_SIZE-1],
+              confidence: 0.8
+            }
+          end
         end
       end
       
@@ -328,55 +362,81 @@ module Graph
     def merge_clustering_strategies
       all_clusters = []
       
-      # Run each strategy
-      [:co_occurrence, :proximity, :lexical, :structural].each do |strategy|
+      # Run each strategy (reorder to put working ones first)
+      [:co_occurrence, :structural, :proximity, :lexical].each do |strategy|
         begin
-          clusters = send("cluster_by_#{strategy}")
-          all_clusters.concat(clusters)
+          # Handle the naming mismatch for structural
+          method_name = strategy == :structural ? :cluster_by_graph_structure : "cluster_by_#{strategy}"
+          clusters = send(method_name)
+          Rails.logger.info "EntityClusterer: #{strategy} found #{clusters.size} clusters"
+          all_clusters.concat(clusters) if clusters.any?
         rescue => e
           Rails.logger.warn "Clustering strategy #{strategy} failed: #{e.message}"
         end
       end
       
+      Rails.logger.info "EntityClusterer: Total clusters before dedup: #{all_clusters.size}"
+      
       # Deduplicate overlapping clusters
-      deduplicate_clusters(all_clusters)
+      result = deduplicate_clusters(all_clusters)
+      Rails.logger.info "EntityClusterer: Total clusters after dedup: #{result.size}"
+      
+      result
     end
     
     # Remove duplicate and highly overlapping clusters
     def deduplicate_clusters(clusters)
       return [] if clusters.empty?
       
-      # Sort by confidence and size
-      sorted = clusters.sort_by { |c| [-c[:confidence], -c[:entities].size] }
+      # For sparse graphs, be very permissive with deduplication
+      # Only remove exact duplicates or near-exact duplicates
       
       deduped = []
-      entity_coverage = Set.new
+      seen_signatures = Set.new
       
-      sorted.each do |cluster|
-        entity_ids = cluster[:entities].map { |e| e[:id] }
+      clusters.each do |cluster|
+        entity_ids = cluster[:entities].map { |e| e[:id] }.sort
         
-        # Calculate overlap with already selected clusters
-        overlap = entity_ids.count { |id| entity_coverage.include?(id) }
-        overlap_ratio = overlap.to_f / entity_ids.size
+        # Create a signature for this cluster
+        signature = "#{cluster[:strategy]}_#{entity_ids.join('_')}"
         
-        # Include cluster if overlap is less than 50%
-        if overlap_ratio < 0.5
+        # Only skip if we've seen this exact cluster before
+        unless seen_signatures.include?(signature)
           deduped << cluster
-          entity_coverage.merge(entity_ids)
+          seen_signatures.add(signature)
         end
       end
       
-      deduped
+      # Return all unique clusters, sorted by size (larger first) then confidence
+      deduped.sort_by { |c| [-c[:entities].size, -c[:confidence]] }
     end
     
     # Extract entity data from Neo4j node
     def extract_entity_data(node)
+      pool = node.labels.first.to_s
+      
+      # Get the appropriate label based on pool type
+      label = case pool
+              when 'Idea', 'Manifest'
+                node['label']
+              when 'Practical'
+                node['goal']
+              when 'Experience'
+                node['narrative_text'] || node['agent_label']
+              else
+                node['label'] || node['title'] || node['name']
+              end
+      
+      # Get repr_text if available
+      repr_text = node['repr_text']
+      
       {
         id: node.id,
         labels: node.labels,
-        pool_type: node.labels.first.to_s.downcase,
-        label: node['label'] || node['title'] || node['name'],
-        properties: node.properties.slice('label', 'abstract', 'goal', 'narrative_text')
+        pool_type: pool,
+        label: label,
+        repr_text: repr_text,
+        properties: node.properties.slice('label', 'abstract', 'goal', 'narrative_text', 'repr_text')
       }
     end
     

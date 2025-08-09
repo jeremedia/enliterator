@@ -157,7 +157,7 @@ module Graph
         
         query = build_constraint_query(verb, source_pools, target_pools)
         
-        result = tx.run(query)
+        result = tx.run(query, source_pools: source_pools, target_pools: target_pools)
         violations = result.single['violations']
         
         if violations > 0
