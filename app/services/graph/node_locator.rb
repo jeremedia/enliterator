@@ -34,7 +34,10 @@ module Graph
           extract_node_data(record['n'])
         end
       end
-    rescue Neo4j::Driver::Exceptions::ServiceException => e
+    rescue Neo4j::Driver::Exceptions::NoSuchRecordException => e
+      Rails.logger.debug "NodeLocator: Node not found - #{e.message}"
+      nil
+    rescue => e
       Rails.logger.error "NodeLocator: Failed to find node - #{e.message}"
       nil
     end
