@@ -37,6 +37,7 @@ module Graph
 
     # Core graph metrics - CORRECTED to compute on whole graph
     def calculate_graph_metrics
+      p "Calculating graph metrics for EKN: #{@ekn.id} in database: #{@database}"
       @driver.session(database: @database) do |session|
         session.read_transaction do |tx|
           # Count ALL nodes and edges (whole graph)
@@ -75,19 +76,13 @@ module Graph
       end
     end
 
-    # Coverage metrics including LCC
+    # Coverage metrics including LCC (OPTIMIZED)
     def calculate_coverage_metrics
+      p "Calculating coverage metrics for EKN: #{@ekn.id} in database: #{@database}"
       @driver.session(database: @database) do |session|
         session.read_transaction do |tx|
-          # Find connected components
-          components_query = <<~CYPHER
-            MATCH (n)
-            WITH n
-            MATCH path = (n)-[*]-(m)
-            WITH n, count(DISTINCT m) as component_size
-            RETURN component_size, count(n) as node_count
-            ORDER BY component_size DESC
-          CYPHER
+          # OPTIMIZED: Skip expensive connected component calculation
+          # Just get basic connectivity metrics
           
           # Simplified LCC calculation
           total_nodes = tx.run("MATCH (n) RETURN count(n) as count").single['count']
@@ -131,6 +126,7 @@ module Graph
 
     # Diversity metrics - CORRECTED to only count spec-compliant verbs
     def calculate_diversity_metrics
+      p "Calculating diversity metrics for EKN: #{@ekn.id} in database: #{@database}"
       @driver.session(database: @database) do |session|
         session.read_transaction do |tx|
           # Verb diversity - only count spec glossary verbs
@@ -181,8 +177,9 @@ module Graph
       end
     end
 
-    # Bridge metrics - track edges connecting separate components
+    # Bridge metrics - track edges connecting separate components (OPTIMIZED)
     def calculate_bridge_metrics
+      p "Calculating bridge metrics for EKN: #{@ekn.id} in database: #{@database}"
       @driver.session(database: @database) do |session|
         session.read_transaction do |tx|
           # Count edges marked as bridges
@@ -194,49 +191,47 @@ module Graph
           
           bridge_count = tx.run(bridge_query).single['bridge_count']
           
-          # Count recent edges (last discovery run)
+          # Count recent edges (most edges don't have discovered_at, so count all)
           recent_query = <<~CYPHER
             MATCH ()-[r]->()
-            WHERE r.discovered_at > datetime() - duration('P1D')
-              AND type(r) <> 'HAS_RIGHTS'
+            WHERE type(r) <> 'HAS_RIGHTS'
             RETURN count(r) as recent_count
           CYPHER
           
           recent_count = tx.run(recent_query).single['recent_count']
           
-          # Calculate edges that joined previously unconnected nodes
-          # This is expensive, so we sample
-          sample_bridge_query = <<~CYPHER
-            MATCH (n)-[r]-(m)
-            WHERE r.discovered_at > datetime() - duration('P1D')
-              AND type(r) <> 'HAS_RIGHTS'
-            WITH n, m, r
-            LIMIT 100
-            MATCH path = shortestPath((n)-[*..5]-(m))
-            WHERE NONE(rel IN relationships(path) WHERE rel = r)
-            RETURN count(DISTINCT r) as sampled_bridges
+          # SIMPLIFIED: Count cross-pool edges as proxy for bridge importance
+          # This is MUCH faster than shortest path calculations
+          cross_pool_query = <<~CYPHER
+            MATCH (n)-[r]->(m)
+            WHERE type(r) <> 'HAS_RIGHTS'
+              AND labels(n)[0] <> labels(m)[0]
+            RETURN count(r) as cross_pool_count
           CYPHER
           
-          sampled_bridges = tx.run(sample_bridge_query).single['sampled_bridges'] || 0
+          cross_pool_count = tx.run(cross_pool_query).single['cross_pool_count'] || 0
           
+          # Calculate rates
           bridge_rate = recent_count > 0 ? (bridge_count.to_f / recent_count * 100) : 0
-          estimated_bridge_rate = sampled_bridges > 0 ? (sampled_bridges / 100.0 * 100) : bridge_rate
+          cross_pool_rate = recent_count > 0 ? (cross_pool_count.to_f / recent_count * 100) : 0
           
           {
             bridge_count: bridge_count,
             recent_edges: recent_count,
             bridge_rate: bridge_rate.round(1),
-            estimated_bridge_rate: estimated_bridge_rate.round(1)
+            cross_pool_edges: cross_pool_count,
+            cross_pool_rate: cross_pool_rate.round(1)
           }
         end
       end
     rescue => e
       Rails.logger.error "Failed to calculate bridge metrics: #{e.message}"
-      { bridge_count: 0, recent_edges: 0, bridge_rate: 0, estimated_bridge_rate: 0 }
+      { bridge_count: 0, recent_edges: 0, bridge_rate: 0, cross_pool_edges: 0, cross_pool_rate: 0 }
     end
 
     # Quality metrics
     def calculate_quality_metrics
+      p "Calculating quality metrics for EKN: #{@ekn.id} in database: #{@database}"
       @driver.session(database: @database) do |session|
         session.read_transaction do |tx|
           # Confidence distribution
@@ -279,6 +274,7 @@ module Graph
 
     # Evaluate Stage 5.5 gates
     def evaluate_gates
+      p "Evaluating Stage 5.5 gates for EKN: #{@ekn.id} in database: #{@database}"
       metrics = {
         graph: calculate_graph_metrics,
         coverage: calculate_coverage_metrics,
