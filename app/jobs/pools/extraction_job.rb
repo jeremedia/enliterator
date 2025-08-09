@@ -1,12 +1,26 @@
 # frozen_string_literal: true
 
-# PURPOSE: Stage 4 of the 9-stage pipeline - Pool Filling
-# Extracts entities for the Ten Pool Canon and builds relationships
-# using the Relation Verb Glossary.
+# PURPOSE: Stage 4 of the 9-stage pipeline - Pool Filling (Entity Extraction Only)
+#
+# CRITICAL DESIGN DECISION:
+# Relationships are NOT extracted at this stage. Here's why:
+#
+# 1. Limited Context: At item level, we only see ~7 entities from a single file.
+#    Real relationships exist ACROSS items (e.g., ControllerClass uses ModelClass).
+#
+# 2. Wrong Timing: We need all entities in the graph first to discover meaningful
+#    cross-cutting relationships. Extracting within items creates disconnected islands.
+#
+# 3. Token Waste: Sending unrelated entities wastes tokens and finds nothing useful.
+#
+# Relationships are discovered in Stage 5.5 (Graph::RelationshipDiscoveryJob) after
+# all entities are loaded, using clustering to find related entity groups.
+#
+# See docs/ISSUE_RELATIONSHIP_EXTRACTION_REDESIGN.md for full analysis.
 #
 # Inputs: IngestItems with completed lexicon extraction
-# Outputs: Pool entities with relationships
-
+# Outputs: Pool entities (no relationships)
+#
 module Pools
   class ExtractionJob < Pipeline::BaseJob
     queue_as :pipeline
@@ -16,17 +30,16 @@ module Pools
       # Do NOT call super - BaseJob uses around_perform to wrap this method
       
       @extracted_entities = []
-      @extracted_relations = []
       items = items_to_process
       
-      log_progress "Starting pool extraction for #{items.count} items"
+      log_progress "Starting entity extraction for #{items.count} items"
       
       processed = 0
       failed = 0
       
       items.find_each do |item|
         begin
-          extract_from_item(item)
+          extract_entities_from_item(item)
           processed += 1
           
           if processed % 10 == 0
@@ -41,15 +54,15 @@ module Pools
       
       # Save extracted entities to database
       save_entities_to_database
-      save_relations_to_database
       
-      log_progress "✅ Pool extraction complete: #{processed} processed, #{failed} failed"
+      log_progress "✅ Entity extraction complete: #{processed} processed, #{failed} failed"
+      log_progress "   Extracted #{@extracted_entities.size} entities"
+      log_progress "   Note: Relationships will be discovered in Stage 5.5 after graph assembly"
       
       # Track metrics
       track_metric :items_processed, processed
       track_metric :items_failed, failed
       track_metric :entities_extracted, @extracted_entities.size
-      track_metric :relations_extracted, @extracted_relations.size
       
       # Update batch status
       @batch.update!(status: 'pool_filling_completed')
@@ -63,10 +76,10 @@ module Pools
       @batch.ingest_items.where(pool_status: 'pending').where(quarantined: [false, nil])
     end
     
-    def extract_from_item(item)
+    def extract_entities_from_item(item)
       return if item.content.blank?
       
-      # Extract entities
+      # Extract entities ONLY (no relationships at this stage)
       entity_result = Pools::EntityExtractionService.new(
         content: item.content,
         lexicon_context: get_lexicon_context,
@@ -74,32 +87,17 @@ module Pools
       ).extract
       
       if entity_result[:success]
-        # Track which item these entities came from
+        # Track which item these entities came from for proper ProvenanceAndRights
         entities_with_item = (entity_result[:entities] || []).map do |entity|
           entity.merge(item_id: item.id)
         end
         @extracted_entities.concat(entities_with_item)
         
-        # Extract relations using ONLY entities from this item
-        relation_result = Pools::RelationExtractionService.new(
-          content: item.content,
-          entities: entity_result[:entities] || []  # Only this item's entities!
-          # verb_glossary defaults to Graph::EdgeLoader::VERB_GLOSSARY in the service
-        ).extract
-        
-        if relation_result[:success] && relation_result[:relations]
-          # Track which item these relations came from
-          relations_with_item = relation_result[:relations].map do |rel|
-            rel.merge(item_id: item.id)
-          end
-          @extracted_relations.concat(relations_with_item)
-        end
-        
         item.update!(
           pool_status: 'extracted',
           pool_metadata: {
             entities_count: entity_result[:entities]&.size || 0,
-            relations_count: relation_result[:relations]&.size || 0,
+            # Note: relations_count removed - relationships discovered later
             extracted_at: Time.current
           },
           graph_status: 'pending'  # CRITICAL: Mark as ready for graph assembly
@@ -215,8 +213,10 @@ module Pools
           provenance_and_rights: rights
         )
       when 'relational'
+        # Note: Relational entities here are entity placeholders, not actual relationships
+        # Real relationships are discovered in Stage 5.5
         Relational.create!(
-          relation_type: attrs[:relation_type] || 'connects_to',
+          relation_type: attrs[:relation_type] || 'placeholder',
           source_id: attrs[:source_id],
           source_type: attrs[:source_type] || 'Unknown',
           target_id: attrs[:target_id],
@@ -248,77 +248,12 @@ module Pools
       end
     end
     
-    def save_relations_to_database
-      return if @extracted_relations.blank?
-      log_progress "Saving #{@extracted_relations.size} relations to database...", level: :debug
-
-      # Group relations by item_id
-      relations_by_item = @extracted_relations.group_by { |r| r[:item_id] }
-      
-      relations_by_item.each do |item_id, relations|
-        item = IngestItem.find_by(id: item_id)
-        next unless item
-        
-        relations.each do |rel|
-        begin
-          verb = rel[:verb] || rel['verb']
-          src  = rel[:source] || rel['source'] || {}
-          tgt  = rel[:target] || rel['target'] || {}
-
-          src_pool = (src[:pool_type] || src['pool_type']).to_s.classify
-          tgt_pool = (tgt[:pool_type] || tgt['pool_type']).to_s.classify
-          src_id   = src[:id] || src['id']
-          tgt_id   = tgt[:id] || tgt['id']
-          src_lbl  = src[:label] || src['label']
-          tgt_lbl  = tgt[:label] || tgt['label']
-
-          # Resolve entities (prefer id, fallback to label)
-          src_cls = Object.const_get(src_pool) rescue nil
-          tgt_cls = Object.const_get(tgt_pool) rescue nil
-          next unless src_cls && tgt_cls
-
-          source = src_id ? src_cls.find_by(id: src_id) : src_cls.find_by(label: src_lbl)
-          target = tgt_id ? tgt_cls.find_by(id: tgt_id) : tgt_cls.find_by(label: tgt_lbl)
-          next unless source && target
-
-          # Create item-specific rights for this relation
-          rights = ProvenanceAndRights.find_or_create_by!(
-            source_ids: ["pipeline_extraction_rel_#{@batch.id}_item_#{item_id}"],
-            collection_method: "openai_relation_extraction",
-            consent_status: "implicit_consent",
-            license_type: "custom",
-            valid_time_start: Time.current,
-            publishability: item.publishability || true,
-            training_eligibility: item.training_eligibility || true,
-            quarantined: false,
-            custom_terms: { 
-              'extraction_batch' => @batch.id, 
-              'extraction_item' => item_id,  # Track item!
-              'stage' => 'pool_filling' 
-            }
-          )
-
-          Relational.find_or_create_by!(
-            relation_type: verb,
-            source: source,
-            target: target,
-            provenance_and_rights: rights,
-            valid_time_start: Time.current,
-            repr_text: "#{source.class.name}(#{source.id}) → #{verb} → #{target.class.name}(#{target.id})"
-          )
-        rescue => e
-          log_progress "Failed to save relation from item #{item_id}: #{e.message}", level: :warn
-        end
-      end  # End relations loop
-      end  # End items loop
-    end
-    
     def collect_stage_metrics
       {
         items_processed: @metrics[:items_processed] || 0,
         items_failed: @metrics[:items_failed] || 0,
-        entities_extracted: @metrics[:entities_extracted] || 0,
-        relations_extracted: @metrics[:relations_extracted] || 0
+        entities_extracted: @metrics[:entities_extracted] || 0
+        # Note: relations_extracted removed - relationships discovered in Stage 5.5
       }
     end
   end

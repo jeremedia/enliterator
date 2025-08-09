@@ -47,7 +47,8 @@ class EknPipelineRun < ApplicationRecord
   belongs_to :ekn
   belongs_to :ingest_batch
   
-  # Pipeline stages in order (0-9)
+  # Pipeline stages in order (0-10)
+  # Note: Stage numbering adjusted to include 5.5 as stage 6
   PIPELINE_STAGES = {
     0 => { name: 'initialized', job: nil, description: 'Frame the mission - Configuration and goal setting' },
     1 => { name: 'intake', job: 'Pipeline::IntakeJob', description: 'Bundle discovery and file processing' },
@@ -55,10 +56,11 @@ class EknPipelineRun < ApplicationRecord
     3 => { name: 'lexicon', job: 'Lexicon::BootstrapJob', description: 'Term extraction and canonical forms' },
     4 => { name: 'pools', job: 'Pools::ExtractionJob', description: 'Ten Pool Canon entity extraction' },
     5 => { name: 'graph', job: 'Graph::AssemblyJob', description: 'Neo4j knowledge graph construction' },
-    6 => { name: 'embeddings', job: 'Embedding::RepresentationJob', description: 'Generate vector embeddings' },
-    7 => { name: 'literacy', job: 'Literacy::ScoringJob', description: 'Calculate enliteracy score' },
-    8 => { name: 'deliverables', job: 'Deliverables::GenerationJob', description: 'Generate export artifacts' },
-    9 => { name: 'fine_tuning', job: 'FineTune::DatasetBuilderJob', description: 'Build fine-tuning dataset' }
+    6 => { name: 'relationships', job: 'Graph::RelationshipDiscoveryJob', description: 'Discover cross-boundary relationships' },
+    7 => { name: 'embeddings', job: 'Embedding::RepresentationJob', description: 'Generate vector embeddings' },
+    8 => { name: 'literacy', job: 'Literacy::ScoringJob', description: 'Calculate enliteracy score' },
+    9 => { name: 'deliverables', job: 'Deliverables::GenerationJob', description: 'Generate export artifacts' },
+    10 => { name: 'fine_tuning', job: 'FineTune::DatasetBuilderJob', description: 'Build fine-tuning dataset' }
   }.freeze
   
   # State machine for overall pipeline
@@ -147,7 +149,7 @@ class EknPipelineRun < ApplicationRecord
   def advance_to_next_stage!
     next_stage_num = current_stage_number + 1
     
-    if next_stage_num > 9
+    if next_stage_num > 10
       log_info("✅ All stages complete, finishing pipeline", label: "pipeline")
       complete!
       return
@@ -284,8 +286,8 @@ class EknPipelineRun < ApplicationRecord
       batch_id: ingest_batch_id,
       status: status,
       current_stage: current_stage,
-      stage_number: "#{current_stage_number}/9",
-      progress_percentage: (current_stage_number / 9.0 * 100).round,
+      stage_number: "#{current_stage_number}/10",
+      progress_percentage: (current_stage_number / 10.0 * 100).round,
       stages_completed: stage_statuses.select { |_, v| v == 'completed' }.keys,
       stages_failed: stage_statuses.select { |_, v| v == 'failed' }.keys,
       duration_seconds: duration_so_far,
@@ -324,8 +326,8 @@ class EknPipelineRun < ApplicationRecord
     {
       run_id: id,
       status: status,
-      current_stage: "#{current_stage_number}/9 - #{current_stage}",
-      progress: "#{(current_stage_number / 9.0 * 100).round}%",
+      current_stage: "#{current_stage_number}/10 - #{current_stage}",
+      progress: "#{(current_stage_number / 10.0 * 100).round}%",
       duration: duration_so_far,
       latest_logs: latest_activity,
       has_errors: has_errors?,
