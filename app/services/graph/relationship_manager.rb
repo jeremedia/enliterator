@@ -16,20 +16,47 @@ module Graph
     def promote_to_verified(relationship_id, promoted_by: 'system', reason: nil)
       @driver.session(database: @database) do |session|
         session.write_transaction do |tx|
-          query = <<~CYPHER
+          # First check rights on the evidence item
+          rights_check_query = <<~CYPHER
+            MATCH ()-[r]->()
+            WHERE id(r) = $rel_id AND r.status = 'candidate'
+            OPTIONAL MATCH (item:ProvenanceAndRights)
+            WHERE item.id = r.evidence_item_id
+            RETURN r, item.publishability as publishable, item.training_eligibility as trainable
+          CYPHER
+          
+          check_result = tx.run(rights_check_query, rel_id: relationship_id).single
+          
+          unless check_result
+            Rails.logger.warn "Relationship #{relationship_id} not found or not candidate"
+            return false
+          end
+          
+          # Check rights - must be publishable for intended use
+          publishable = check_result['publishable']
+          if publishable == false
+            Rails.logger.warn "Cannot promote relationship #{relationship_id}: evidence not publishable"
+            return false
+          end
+          
+          # Promote to verified
+          promote_query = <<~CYPHER
             MATCH ()-[r]->()
             WHERE id(r) = $rel_id AND r.status = 'candidate'
             SET r.status = 'verified',
                 r.verified_at = datetime(),
                 r.verified_by = $promoted_by,
-                r.verification_reason = $reason
+                r.verification_reason = $reason,
+                r.rights_checked = true,
+                r.publishable = $publishable
             RETURN r
           CYPHER
           
-          result = tx.run(query, 
+          result = tx.run(promote_query, 
             rel_id: relationship_id,
             promoted_by: promoted_by,
-            reason: reason
+            reason: reason,
+            publishable: publishable != false
           )
           
           rel = result.single

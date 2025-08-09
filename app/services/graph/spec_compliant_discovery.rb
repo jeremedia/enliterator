@@ -216,25 +216,9 @@ module Graph
       neighbors
     end
 
-    # Get allowed verbs from the spec glossary
+    # Get allowed verbs from the spec glossary using VerbPolicy
     def get_allowed_verbs(source_pool, target_pool)
-      verbs = []
-      
-      EdgeLoader::VERB_GLOSSARY.each do |verb, config|
-        # Check if this verb allows the source->target pool combination
-        source_match = config[:source] == '*' || 
-                      config[:source] == source_pool ||
-                      (config[:source].is_a?(Array) && config[:source].include?(source_pool))
-        
-        target_match = config[:target] == '*' || 
-                      config[:target] == target_pool ||
-                      (config[:target].is_a?(Array) && config[:target].include?(target_pool))
-        
-        verbs << verb if source_match && target_match
-      end
-      
-      # Filter out system verbs
-      verbs.reject { |v| v == 'has_rights' }
+      VerbPolicy.allowed_verbs(source_pool, target_pool).map(&:to_s)
     end
 
     # Check if relationship already exists
@@ -279,6 +263,17 @@ module Graph
       target_id = verification[:target][:id]
       verb = relationship[:verb].upcase
 
+      # Check if this is a bridge edge (connects previously unconnected components)
+      bridge_check_query = <<~CYPHER
+        MATCH (source), (target)
+        WHERE id(source) = $source_id AND id(target) = $target_id
+        OPTIONAL MATCH path = shortestPath((source)-[*..10]-(target))
+        RETURN path IS NULL as is_bridge
+      CYPHER
+      
+      bridge_result = tx.run(bridge_check_query, source_id: source_id, target_id: target_id).single
+      is_bridge = bridge_result && bridge_result['is_bridge']
+
       query = <<~CYPHER
         MATCH (source), (target)
         WHERE id(source) = $source_id AND id(target) = $target_id
@@ -290,7 +285,8 @@ module Graph
             r.discovery_stage = $discovery_stage,
             r.cluster_strategy = $cluster_strategy,
             r.discovered_at = datetime(),
-            r.discovered_by = 'spec_compliant_discovery'
+            r.discovered_by = 'spec_compliant_discovery',
+            r.bridge = $is_bridge
         RETURN r
       CYPHER
 
@@ -301,7 +297,8 @@ module Graph
         evidence_span: relationship[:evidence_span],
         evidence_item_id: relationship[:evidence_item_id],
         discovery_stage: relationship[:discovery_stage],
-        cluster_strategy: relationship[:cluster_strategy]
+        cluster_strategy: relationship[:cluster_strategy],
+        is_bridge: is_bridge || false
       )
 
       result.single.present?
@@ -310,15 +307,16 @@ module Graph
       false
     end
 
-    # Validate verb is in spec glossary
+    # Validate verb is in spec glossary using VerbPolicy
     def validate_verb(verb)
       return false unless verb
       
-      valid = EdgeLoader::VERB_GLOSSARY.key?(verb.downcase)
-      unless valid
+      normalized = VerbPolicy.normalize(verb)
+      unless normalized
         Rails.logger.warn "Rejected non-spec verb: #{verb}"
+        return false
       end
-      valid
+      true
     end
 
     # Validate evidence requirements

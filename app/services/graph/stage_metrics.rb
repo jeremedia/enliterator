@@ -30,6 +30,7 @@ module Graph
         coverage_metrics: calculate_coverage_metrics,
         diversity_metrics: calculate_diversity_metrics,
         quality_metrics: calculate_quality_metrics,
+        bridge_metrics: calculate_bridge_metrics,
         gate_status: evaluate_gates
       }
     end
@@ -178,6 +179,60 @@ module Graph
           }
         end
       end
+    end
+
+    # Bridge metrics - track edges connecting separate components
+    def calculate_bridge_metrics
+      @driver.session(database: @database) do |session|
+        session.read_transaction do |tx|
+          # Count edges marked as bridges
+          bridge_query = <<~CYPHER
+            MATCH ()-[r]->()
+            WHERE r.bridge = true
+            RETURN count(r) as bridge_count
+          CYPHER
+          
+          bridge_count = tx.run(bridge_query).single['bridge_count']
+          
+          # Count recent edges (last discovery run)
+          recent_query = <<~CYPHER
+            MATCH ()-[r]->()
+            WHERE r.discovered_at > datetime() - duration('P1D')
+              AND type(r) <> 'HAS_RIGHTS'
+            RETURN count(r) as recent_count
+          CYPHER
+          
+          recent_count = tx.run(recent_query).single['recent_count']
+          
+          # Calculate edges that joined previously unconnected nodes
+          # This is expensive, so we sample
+          sample_bridge_query = <<~CYPHER
+            MATCH (n)-[r]-(m)
+            WHERE r.discovered_at > datetime() - duration('P1D')
+              AND type(r) <> 'HAS_RIGHTS'
+            WITH n, m, r
+            LIMIT 100
+            MATCH path = shortestPath((n)-[*..5]-(m))
+            WHERE NONE(rel IN relationships(path) WHERE rel = r)
+            RETURN count(DISTINCT r) as sampled_bridges
+          CYPHER
+          
+          sampled_bridges = tx.run(sample_bridge_query).single['sampled_bridges'] || 0
+          
+          bridge_rate = recent_count > 0 ? (bridge_count.to_f / recent_count * 100) : 0
+          estimated_bridge_rate = sampled_bridges > 0 ? (sampled_bridges / 100.0 * 100) : bridge_rate
+          
+          {
+            bridge_count: bridge_count,
+            recent_edges: recent_count,
+            bridge_rate: bridge_rate.round(1),
+            estimated_bridge_rate: estimated_bridge_rate.round(1)
+          }
+        end
+      end
+    rescue => e
+      Rails.logger.error "Failed to calculate bridge metrics: #{e.message}"
+      { bridge_count: 0, recent_edges: 0, bridge_rate: 0, estimated_bridge_rate: 0 }
     end
 
     # Quality metrics
