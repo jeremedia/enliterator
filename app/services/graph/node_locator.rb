@@ -73,25 +73,46 @@ module Graph
     end
 
     # Get the canonical label for a node
-    def canonical_label_for(node)
-      return nil unless node
+    def canonical_label_for(node_or_properties)
+      return nil unless node_or_properties
       
-      pool_type = node[:pool_type] || node['pool_type'] || node[:labels]&.first
-      pool_type = normalize_pool_type(pool_type)
+      # Handle both node objects and property hashes
+      properties = if node_or_properties.respond_to?(:properties)
+                    node_or_properties.properties
+                  else
+                    node_or_properties
+                  end
       
+      # Determine pool type from labels or properties
+      pool_type = properties[:pool_type] || properties['pool_type']
+      
+      # If no explicit pool_type, try to infer from labels
+      if pool_type.nil? && properties[:labels]
+        pool_type = properties[:labels].first
+      elsif pool_type.nil? && properties['labels']
+        pool_type = properties['labels'].first
+      end
+      
+      pool_type = normalize_pool_type(pool_type) if pool_type
+      
+      # Get the appropriate field based on pool type
       case pool_type
       when 'Idea', 'Manifest', 'Person', 'Troupe', 'Genre', 'Emanation'
-        node['label'] || node[:label]
+        properties['label'] || properties[:label]
       when 'Practical', 'Method'
-        node['goal'] || node[:goal] || node['label'] || node[:label]
+        properties['goal'] || properties[:goal] || properties['label'] || properties[:label]
       when 'Experience', 'Event'
-        node['narrative_text'] || node[:narrative_text] || 
-        node['agent_label'] || node[:agent_label] ||
-        node['label'] || node[:label]
+        properties['narrative_text'] || properties[:narrative_text] || 
+        properties['agent_label'] || properties[:agent_label] ||
+        properties['label'] || properties[:label]
       when 'Lexicon'
-        node['term'] || node[:term] || node['label'] || node[:label]
+        properties['term'] || properties[:term] || properties['label'] || properties[:label]
       else
-        node['label'] || node[:label] || node['name'] || node[:name]
+        # Fallback: try common fields
+        properties['label'] || properties[:label] || 
+        properties['goal'] || properties[:goal] ||
+        properties['narrative_text'] || properties[:narrative_text] ||
+        properties['name'] || properties[:name]
       end
     end
 
