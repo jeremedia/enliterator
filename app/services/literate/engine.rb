@@ -74,23 +74,33 @@ module Literate
       # Build the user message for response generation
       user_message = build_response_request(intent, results, context)
       
-      # Call OpenAI with conversation's model config
+      # Call OpenAI with conversation's model config using Responses API
       begin
-        response = OPENAI.chat.completions.create(
-          **@conversation.model_configuration,
-          messages: [
-            { role: "system", content: system_message },
-            { role: "user", content: user_message }
-          ]
+        # Define response structure for conversation
+        response_class = Class.new(OpenAI::Helpers::StructuredOutput::BaseModel) do
+          required :answer, String, doc: "The response to the user's query"
+          required :confidence, Float, doc: "Confidence score 0-1"
+          optional :reasoning, String, doc: "Internal reasoning for the response"
+        end
+        
+        # Combine messages into a single input
+        input_messages = [
+          { role: "system", content: system_message },
+          { role: "user", content: user_message }
+        ]
+        
+        response = OPENAI.responses.create(
+          model: @conversation.model_name || OpenaiConfig::SettingsManager.model_for(:answer),
+          input: input_messages,
+          text: response_class
         )
         
-        content = response.dig("choices", 0, "message", "content")
-        confidence = calculate_confidence(response)
+        parsed = response.parsed
         
         {
-          content: content,
-          confidence: confidence,
-          reasoning: extract_reasoning(response),
+          content: parsed.answer,
+          confidence: parsed.confidence,
+          reasoning: parsed.reasoning,
           model_response: response
         }
         

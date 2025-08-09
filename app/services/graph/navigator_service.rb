@@ -41,7 +41,7 @@ module Graph
     end
 
     # Get all edges for an entity, grouped by canonical verb
-    def edges_by_verb_for_entity(node_id)
+    def edges_by_verb_for_entity(node_id, limit_per_direction: 50)
       @driver.session(database: @database) do |session|
         session.read_transaction do |tx|
           # Get outgoing edges (removed batch_id filter to work with any data)
@@ -57,6 +57,7 @@ module Graph
               source as source_node,
               labels(target)[0] as target_pool,
               target as target_node
+            LIMIT $limit
           CYPHER
           
           # Get incoming edges
@@ -72,10 +73,11 @@ module Graph
               source as source_node,
               labels(target)[0] as target_pool,
               target as target_node
+            LIMIT $limit
           CYPHER
           
-          outgoing = tx.run(outgoing_query, node_id: node_id.to_i).to_a
-          incoming = tx.run(incoming_query, node_id: node_id.to_i).to_a
+          outgoing = tx.run(outgoing_query, node_id: node_id.to_i, limit: limit_per_direction).to_a
+          incoming = tx.run(incoming_query, node_id: node_id.to_i, limit: limit_per_direction).to_a
           
           all_edges = outgoing + incoming
           
@@ -338,14 +340,14 @@ module Graph
       
       @driver.session(database: @database) do |session|
         session.read_transaction do |tx|
-          # Extract the most important keywords (limit to 2 to avoid too many queries)
+          # Extract the most important keywords (limit to 3 to avoid too many queries)
           keywords = question.downcase.split(/\s+/)
-            .select { |w| w.length > 4 && !%w[what which where when that this these those].include?(w) }
-            .first(2)
+            .select { |w| w.length > 4 && !%w[what which where when that this these those does embody relate].include?(w) }
+            .first(3)
           
           return [] if keywords.empty?
           
-          # Do a single efficient query for the most important keyword
+          # Query for all keywords and combine results
           query = <<~CYPHER
             MATCH (n)
             WHERE n.label IS NOT NULL 
@@ -355,16 +357,23 @@ module Graph
           CYPHER
           
           entities = []
-          # Just search for the first keyword to avoid hanging
-          if keywords.first
-            result = tx.run(query, keyword: keywords.first)
+          seen_ids = Set.new
+          
+          # Search for each keyword and collect unique entities
+          keywords.each do |keyword|
+            result = tx.run(query, keyword: keyword)
             result.each do |row|
-              entities << {
-                id: row['n'].id,
-                pool: row['pool'],
-                label: @node_locator.canonical_label_for(row['n'].properties.merge(pool_type: row['pool']))
-              }
+              entity_id = row['n'].id
+              unless seen_ids.include?(entity_id)
+                seen_ids << entity_id
+                entities << {
+                  id: entity_id,
+                  pool: row['pool'],
+                  label: @node_locator.canonical_label_for(row['n'].properties.merge(pool_type: row['pool']))
+                }
+              end
             end
+            break if entities.length >= 3 # Limit total entities
           end
           
           entities

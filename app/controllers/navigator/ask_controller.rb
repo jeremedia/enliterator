@@ -8,13 +8,14 @@ class Navigator::AskController < ApplicationController
     end
     
     svc = Graph::NavigatorService.new(ekn: ekn)
-    q = params[:q].presence
+    q = params[:question].presence || params[:q].presence
     
     if q
-      # Answer a specific question
-      @answer = svc.answer(q)
+      # Answer a specific question using OpenAI
+      ask_service = Navigator::AskService.new(ekn: ekn, question: q)
+      @answer = ask_service.call
       @question = q
-      @mode = params[:mode] || 'table'
+      @mode = params[:mode] || 'conversation'
     else
       # Don't auto-run the full test - it's too slow
       # Instead show a form to test individual questions

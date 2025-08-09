@@ -22,8 +22,14 @@ class Navigator::EntitiesController < ApplicationController
       return
     end
     
-    # Get edges grouped by canonical verb
-    @edges_by_verb = navigator.edges_by_verb_for_entity(@id.to_i)
+    # Get edges grouped by canonical verb (limit 20 per direction, then 10 per verb)
+    edges = navigator.edges_by_verb_for_entity(@id.to_i, limit_per_direction: 20)
+    
+    # Further limit to 10 edges per verb group for display
+    @edges_by_verb = {}
+    edges.each do |verb, verb_edges|
+      @edges_by_verb[verb] = verb_edges.first(10)
+    end
     
     # Sort verbs by spec order
     verb_order = %w[embodies codifies influences supports validated_by elicits manifests_in 
