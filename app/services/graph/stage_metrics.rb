@@ -34,19 +34,24 @@ module Graph
       }
     end
 
-    # Core graph metrics
+    # Core graph metrics - CORRECTED to compute on whole graph
     def calculate_graph_metrics
       @driver.session(database: @database) do |session|
         session.read_transaction do |tx|
-          # Count nodes and edges
+          # Count ALL nodes and edges (whole graph)
           node_count = tx.run("MATCH (n) RETURN count(n) as count").single['count']
-          edge_count = tx.run("MATCH ()-[r]->() WHERE type(r) <> 'HAS_RIGHTS' RETURN count(r) as count").single['count']
+          edge_query = <<~CYPHER
+            MATCH ()-[r]->() 
+            WHERE type(r) <> 'HAS_RIGHTS' 
+            RETURN count(r) as count
+          CYPHER
+          edge_count = tx.run(edge_query).single['count']
           
-          # Calculate density
+          # Calculate density on WHOLE GRAPH
           max_edges = (node_count * (node_count - 1)) / 2.0
           density = node_count > 1 ? (edge_count.to_f / max_edges) : 0
           
-          # Mean degree
+          # Mean degree on WHOLE GRAPH  
           mean_degree = node_count > 0 ? (2.0 * edge_count) / node_count : 0
           
           # Node distribution by pool
@@ -123,14 +128,15 @@ module Graph
       end
     end
 
-    # Diversity metrics
+    # Diversity metrics - CORRECTED to only count spec-compliant verbs
     def calculate_diversity_metrics
       @driver.session(database: @database) do |session|
         session.read_transaction do |tx|
-          # Verb diversity
+          # Verb diversity - only count spec glossary verbs
           verb_query = <<~CYPHER
             MATCH ()-[r]->()
             WHERE type(r) <> 'HAS_RIGHTS'
+              AND type(r) <> 'CO_OCCURS_WITH'
             RETURN type(r) as verb, 
                    count(r) as count,
                    r.status as status
@@ -145,9 +151,12 @@ module Graph
             count = row['count']
             status = row['status']
             
-            all_verbs[verb] = (all_verbs[verb] || 0) + count
-            if status == 'verified'
-              verified_verbs[verb] = (verified_verbs[verb] || 0) + count
+            # Only count verbs that are in the spec glossary
+            if EdgeLoader::VERB_GLOSSARY.key?(verb.downcase)
+              all_verbs[verb] = (all_verbs[verb] || 0) + count
+              if status == 'verified'
+                verified_verbs[verb] = (verified_verbs[verb] || 0) + count
+              end
             end
           end
           
