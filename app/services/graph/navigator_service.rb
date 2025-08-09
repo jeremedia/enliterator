@@ -44,7 +44,7 @@ module Graph
     def edges_by_verb_for_entity(node_id)
       @driver.session(database: @database) do |session|
         session.read_transaction do |tx|
-          # Get outgoing edges
+          # Get outgoing edges (removed batch_id filter to work with any data)
           outgoing_query = <<~CYPHER
             MATCH (source)-[r]->(target)
             WHERE id(source) = $node_id AND type(r) <> 'HAS_RIGHTS'
@@ -332,26 +332,31 @@ module Graph
     end
 
     def find_entities_in_question(question)
-      # Simplified entity extraction
+      # Simplified entity extraction - OPTIMIZED to avoid hanging
       # In production, would use fine-tuned model or NER
       
       @driver.session(database: @database) do |session|
         session.read_transaction do |tx|
-          # Search for entities by text similarity (simplified)
+          # Extract the most important keywords (limit to 2 to avoid too many queries)
+          keywords = question.downcase.split(/\s+/)
+            .select { |w| w.length > 4 && !%w[what which where when that this these those].include?(w) }
+            .first(2)
+          
+          return [] if keywords.empty?
+          
+          # Do a single efficient query for the most important keyword
           query = <<~CYPHER
             MATCH (n)
-            WHERE n.repr_text IS NOT NULL 
-              AND toLower(n.repr_text) CONTAINS toLower($keyword)
+            WHERE n.label IS NOT NULL 
+              AND toLower(n.label) CONTAINS toLower($keyword)
             RETURN n, labels(n)[0] as pool
-            LIMIT 5
+            LIMIT 3
           CYPHER
           
-          # Extract keywords (very simplified)
-          keywords = question.downcase.split(/\s+/).select { |w| w.length > 3 }
-          
           entities = []
-          keywords.each do |keyword|
-            result = tx.run(query, keyword: keyword)
+          # Just search for the first keyword to avoid hanging
+          if keywords.first
+            result = tx.run(query, keyword: keywords.first)
             result.each do |row|
               entities << {
                 id: row['n'].id,
@@ -361,7 +366,7 @@ module Graph
             end
           end
           
-          entities.uniq { |e| e[:id] }
+          entities
         end
       end
     end
@@ -379,8 +384,9 @@ module Graph
             RETURN path
           CYPHER
           
-          result = tx.run(query, start_id: start_id, end_id: end_id, verbs: spec_verbs).single
-          result ? result['path'] : nil
+          result = tx.run(query, start_id: start_id, end_id: end_id, verbs: spec_verbs)
+          first_result = result.first
+          first_result ? first_result['path'] : nil
         end
       end
     end

@@ -3,7 +3,7 @@ class Navigator::EntitiesController < ApplicationController
     @id = params[:id]
     
     # Find the current EKN (use first one with data for now)
-    ekn = Ekn.joins(:ingest_batches).where(ingest_batches: { status: 'complete' }).first
+    ekn = Ekn.joins(:ingest_batches).where(ingest_batches: { status: 'completed' }).first
     
     unless ekn
       render plain: "No EKN with complete data found", status: :not_found

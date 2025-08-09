@@ -2,7 +2,7 @@ class Navigator::EdgesController < ApplicationController
   skip_before_action :verify_authenticity_token # For AJAX calls
   
   def promote
-    ekn = Ekn.joins(:ingest_batches).where(ingest_batches: { status: 'complete' }).first
+    ekn = Ekn.joins(:ingest_batches).where(ingest_batches: { status: 'completed' }).first
     
     unless ekn
       render json: { error: "No EKN found" }, status: :not_found
@@ -27,7 +27,7 @@ class Navigator::EdgesController < ApplicationController
   end
 
   def reject
-    ekn = Ekn.joins(:ingest_batches).where(ingest_batches: { status: 'complete' }).first
+    ekn = Ekn.joins(:ingest_batches).where(ingest_batches: { status: 'completed' }).first
     
     unless ekn
       render json: { error: "No EKN found" }, status: :not_found
