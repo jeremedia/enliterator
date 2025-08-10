@@ -253,7 +253,7 @@ module ApiTracking
           api_call.save!
           
           # Wrap the stream to track usage as it's consumed
-          StreamWrapper.new(response, api_call, @provider_adapter)
+          ApiTracking::StreamWrapper.new(response, api_call, @provider_adapter)
           
         rescue => e
           api_call.status = "failed"
