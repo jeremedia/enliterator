@@ -24,6 +24,7 @@ class Conversation < ApplicationRecord
   has_many :messages, dependent: :destroy
   # User association removed - can be added later when user management is implemented
   belongs_to :ingest_batch, optional: true
+  belongs_to :ekn, optional: true
   
   # Store conversation context and state
   store_accessor :context, :current_dataset, :current_stage, :user_expertise_level, 
@@ -41,23 +42,23 @@ class Conversation < ApplicationRecord
   before_create :set_initial_status
   
   # Conversation statuses
-  enum :status, {
-    active: 0,
-    paused: 1,
-    completed: 2,
-    abandoned: 3
-  }
+  enum :status, { 
+    active: 'active', 
+    paused: 'paused', 
+    completed: 'completed', 
+    abandoned: 'abandoned' 
+  }, prefix: :status
   
-  # User expertise levels
-  enum :expertise_level, {
-    beginner: 0,
-    intermediate: 1,
-    advanced: 2,
-    expert: 3
-  }
+  # User expertise levels  
+  enum :expertise_level, { 
+    beginner: 'beginner', 
+    intermediate: 'intermediate', 
+    advanced: 'advanced', 
+    expert: 'expert' 
+  }, prefix: :level
   
   scope :recent, -> { order(last_activity_at: :desc) }
-  scope :active, -> { where(status: :active) }
+  scope :active, -> { where(status: 'active') }
   # for_user scope removed - can be added later when user management is implemented
   
   # Get or set the OpenAI model for this conversation
@@ -206,12 +207,13 @@ class Conversation < ApplicationRecord
   end
   
   def set_initial_status
-    self.status ||= :active
+    self.status ||= 'active'
     self.last_activity_at ||= Time.current
   end
   
   def default_model
-    OpenaiConfig::SettingsManager.model_for(:answer) || ENV.fetch('OPENAI_DEFAULT_MODEL')
+    # Use the configured model for answering questions (should be gpt-5.1 or similar)
+    OpenaiConfig::SettingsManager.model_for(:answer) || 'gpt-5.1'
   end
   
   def default_temperature

@@ -1,0 +1,52 @@
+<div class="flex <%= message.role == 'user' ? 'justify-end' : 'justify-start' %> message-wrapper" id="message-<%= message.id %>">
+  <div class="flex <%= message.role == 'user' ? 'flex-row-reverse' : 'flex-row' %> max-w-3xl space-x-3">
+    <!-- Avatar -->
+    <div class="flex-shrink-0">
+      <% if message.role == 'user' %>
+        <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center">
+          <span class="text-white text-sm font-medium">U</span>
+        </div>
+      <% else %>
+        <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
+          <span class="text-white text-sm font-medium">AI</span>
+        </div>
+      <% end %>
+    </div>
+    
+    <!-- Message content -->
+    <div class="flex-1">
+      <div class="<%= message.role == 'user' ? 'bg-indigo-100' : 'bg-white' %> rounded-lg px-4 py-3 shadow-sm">
+        <div id="message-<%= message.id %>-content" 
+             class="prose prose-sm max-w-none"
+             data-controller="markdown"
+             data-markdown-content-value="<%= message.content %>"
+             data-markdown-streaming-value="<%= message.streaming? %>">
+          <% if message.streaming? %>
+            <div class="text-gray-500 italic">Generating response...</div>
+          <% else %>
+            <%= render_markdown(message.content) %>
+          <% end %>
+        </div>
+      </div>
+      
+      <!-- Message actions -->
+      <div class="flex items-center space-x-2 mt-1 opacity-0 hover:opacity-100 transition-opacity">
+        <% if message.role == 'assistant' %>
+          <!-- Copy button -->
+          <button data-action="click->chat#copyMessage" 
+                  data-message-id="<%= message.id %>"
+                  class="text-gray-400 hover:text-gray-600 p-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+            </svg>
+          </button>
+        <% end %>
+        
+        <!-- Timestamp -->
+        <span class="text-xs text-gray-400">
+          <%= message.created_at.strftime("%I:%M %p") %>
+        </span>
+      </div>
+    </div>
+  </div>
+</div>

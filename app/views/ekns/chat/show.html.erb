@@ -1,0 +1,97 @@
+<%= turbo_stream_from "conversation_#{@conversation.id}" %>
+
+<div class="flex flex-col h-screen bg-gray-50" data-controller="chat" data-chat-conversation-id-value="<%= @conversation.id %>">
+  
+  <!-- Header -->
+  <div class="bg-white border-b border-gray-200 px-6 py-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center space-x-4">
+        <a href="/ekn/<%= @ekn.slug %>/chat" class="text-gray-600 hover:text-gray-900">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+          </svg>
+        </a>
+        <div>
+          <h1 class="text-xl font-semibold text-gray-900"><%= @ekn.name %></h1>
+          <p class="text-sm text-gray-500">Conversation #<%= @conversation.id %></p>
+        </div>
+      </div>
+      
+      <!-- Settings and Actions -->
+      <div class="flex items-center space-x-2">
+        <!-- Model selector -->
+        <div class="relative" data-controller="dropdown">
+          <button data-action="click->dropdown#toggle" class="flex items-center space-x-1 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
+            <span id="current-model"><%= @conversation.ai_model %></span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
+          <div data-dropdown-target="menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+            <% ['gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano'].each do |model| %>
+              <%= button_to model, 
+                update_settings_chat_index_path(ekn_slug: @ekn.slug),
+                params: { conversation_id: @conversation.id, conversation: { model_config: { model_name: model } } },
+                method: :patch,
+                remote: true,
+                class: "block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" %>
+            <% end %>
+          </div>
+        </div>
+        
+        <!-- Export button -->
+        <button data-action="click->chat#showExportMenu" class="p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Messages Area -->
+  <div class="flex-1 overflow-y-auto" data-chat-target="messagesContainer">
+    <div class="max-w-4xl mx-auto px-4 py-8">
+      <!-- Messages will be rendered here -->
+      <div id="messages" class="space-y-6">
+        <% @messages.each do |message| %>
+          <%= render 'message', message: message %>
+        <% end %>
+      </div>
+      
+      <!-- Typing indicator -->
+      <div id="typing-indicator">
+        <%= render 'typing_indicator', show: false %>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Input Area -->
+  <div class="bg-white border-t border-gray-200">
+    <div class="max-w-4xl mx-auto px-4 py-4">
+      <div id="message-form">
+        <%= render 'message_form', conversation: @conversation %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Custom scrollbar for messages */
+  [data-chat-target="messagesContainer"]::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  [data-chat-target="messagesContainer"]::-webkit-scrollbar-track {
+    background: #f3f4f6;
+  }
+  
+  [data-chat-target="messagesContainer"]::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 4px;
+  }
+  
+  [data-chat-target="messagesContainer"]::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+  }
+</style>

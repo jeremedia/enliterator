@@ -474,6 +474,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_08_205235) do
     t.jsonb "deliverables"
     t.string "fine_tune_dataset_path"
     t.string "fine_tune_job_id"
+    t.jsonb "graph_metadata", default: {}
     t.index ["created_at"], name: "index_ingest_batches_on_created_at"
     t.index ["ekn_id"], name: "index_ingest_batches_on_ekn_id"
     t.index ["source_type"], name: "index_ingest_batches_on_source_type"
@@ -967,6 +968,29 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_08_205235) do
     t.index ["year"], name: "index_spatials_on_year"
   end
 
+  create_table "stage_completions", force: :cascade do |t|
+    t.bigint "ingest_batch_id", null: false
+    t.bigint "ekn_id", null: false
+    t.integer "stage_number", null: false
+    t.string "stage_name", null: false
+    t.string "status", default: "pending", null: false
+    t.jsonb "completion_metrics", default: {}
+    t.string "output_fingerprint"
+    t.text "skip_reason"
+    t.datetime "started_at"
+    t.datetime "completed_at"
+    t.datetime "checked_at"
+    t.decimal "api_cost_usd", precision: 10, scale: 4
+    t.integer "api_calls_made"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ekn_id", "stage_number"], name: "index_stage_completions_on_ekn_id_and_stage_number"
+    t.index ["ekn_id"], name: "index_stage_completions_on_ekn_id"
+    t.index ["ingest_batch_id", "stage_number"], name: "index_stage_completions_on_ingest_batch_id_and_stage_number", unique: true
+    t.index ["ingest_batch_id"], name: "index_stage_completions_on_ingest_batch_id"
+    t.index ["status"], name: "index_stage_completions_on_status"
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "email", default: "", null: false
     t.string "encrypted_password", default: "", null: false
@@ -1066,4 +1090,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_08_205235) do
   add_foreign_key "risk_practicals", "risks"
   add_foreign_key "risks", "provenance_and_rights", column: "provenance_and_rights_id"
   add_foreign_key "spatials", "provenance_and_rights", column: "provenance_and_rights_id"
+  add_foreign_key "stage_completions", "ekns"
+  add_foreign_key "stage_completions", "ingest_batches"
 end

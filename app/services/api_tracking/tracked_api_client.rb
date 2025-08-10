@@ -125,8 +125,8 @@ module ApiTracking
         # Generate cache key from request
         cache_key = generate_cache_key(endpoint, @final_args, @final_kwargs)
 
-        # Check cache first if enabled
-        if @cache_enabled
+        # Check cache first if enabled (but not for streaming endpoints)
+        if @cache_enabled && !is_streaming_endpoint?(endpoint)
           cached_response = check_cache(@provider, cache_key)
           if cached_response
             Rails.logger.info "[TrackedApiClient] Cache hit for #{@provider}:#{endpoint}"
@@ -137,15 +137,31 @@ module ApiTracking
         # Create tracking record
         api_call = create_api_call(@provider, endpoint, @provider_adapter)
 
+        # Check if this is likely a streaming endpoint
+        is_streaming = is_streaming_endpoint?(endpoint)
+        
         # Execute the actual API call
-        result = api_call.track_execution do |call|
-          begin
+        result = if is_streaming
+          # For streaming, use custom tracking that doesn't extract data
+          track_streaming_execution(api_call)
+        else
+          api_call.track_execution do |call|
+            begin
             # Navigate through the method chain
             target = @client
             @method_chain[0...-1].each do |method|
               target = target.send(method)
             end
 
+            # Debug logging for streaming methods
+            if @method_chain.join('.').include?('stream')
+              puts "[TrackedApiClient] Calling #{@method_chain.join('.')}"
+              puts "[TrackedApiClient] Args: #{@final_args.inspect}"
+              puts "[TrackedApiClient] Kwargs: #{@final_kwargs.inspect}"
+              puts "[TrackedApiClient] Block given: #{@block.present?}"
+              puts "[TrackedApiClient] Target class: #{target.class}"
+            end
+            
             # Make the final call
             response = if @block
               target.send(@method_chain.last, *@final_args, **@final_kwargs, &@block)
@@ -154,15 +170,39 @@ module ApiTracking
             else
               target.send(@method_chain.last, *@final_args)
             end
+            
+            # Debug what we got back
+            if @method_chain.join('.').include?('stream')
+              puts "[TrackedApiClient] Response class: #{response.class}"
+              puts "[TrackedApiClient] Response methods include .each? #{response.respond_to?(:each)}"
+            end
 
-            # Store complete response
-            call.response_data = serialize_response(response)
-            call.response_cache_key = cache_key
+            # Check if this is a streaming response
+            if is_streaming_response?(response)
+              Rails.logger.info "[TrackedApiClient] Detected streaming response for #{endpoint}"
+              Rails.logger.info "[TrackedApiClient] Response class: #{response.class.name}"
+              
+              # Mark as streaming but don't serialize yet
+              call.response_data = { streaming: true, stream_class: response.class.name }
+              call.response_cache_key = nil # Can't cache streams
+              call.metadata ||= {}
+              call.metadata['streaming'] = true
+              
+              # Wrap the stream to track usage as it's consumed
+              wrapped_stream = StreamWrapper.new(response, call, @provider_adapter)
+              Rails.logger.info "[TrackedApiClient] Created StreamWrapper"
+              wrapped_stream
+            else
+              # Normal non-streaming response
+              # Store complete response
+              call.response_data = serialize_response(response)
+              call.response_cache_key = cache_key
 
-            # Extract usage data through adapter
-            @provider_adapter.extract_usage_data(call, response)
+              # Extract usage data through adapter
+              @provider_adapter.extract_usage_data(call, response)
 
-            response
+              response
+            end
           rescue => e
             call.error_code = e.class.name
             call.error_message = e.message
@@ -174,11 +214,63 @@ module ApiTracking
             raise
           end
         end
+        end  # End of if is_streaming
 
         result
       end
 
       private
+      
+      def track_streaming_execution(api_call)
+        start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC, :millisecond)
+        
+        begin
+          # Navigate through the method chain
+          target = @client
+          @method_chain[0...-1].each do |method|
+            target = target.send(method)
+          end
+          
+          # Make the actual streaming call
+          response = if @block
+            target.send(@method_chain.last, *@final_args, **@final_kwargs, &@block)
+          elsif @final_kwargs.any?
+            target.send(@method_chain.last, *@final_args, **@final_kwargs)
+          else
+            target.send(@method_chain.last, *@final_args)
+          end
+          
+          # For streaming, we don't extract data immediately
+          api_call.status = "pending"  # Still pending until stream completes
+          api_call.response_type = response.class.name
+          api_call.response_data = { streaming: true, stream_class: response.class.name }
+          api_call.metadata ||= {}
+          api_call.metadata['streaming'] = true
+          
+          # Save the initial record
+          end_time = Process.clock_gettime(Process::CLOCK_MONOTONIC, :millisecond)
+          api_call.response_time_ms = end_time - start_time
+          api_call.save!
+          
+          # Wrap the stream to track usage as it's consumed
+          StreamWrapper.new(response, api_call, @provider_adapter)
+          
+        rescue => e
+          api_call.status = "failed"
+          api_call.error_code = e.class.name
+          api_call.error_message = e.message
+          api_call.error_details = {
+            backtrace: e.backtrace&.first(10),
+            args: @final_args,
+            kwargs: @final_kwargs
+          }
+          
+          end_time = Process.clock_gettime(Process::CLOCK_MONOTONIC, :millisecond)
+          api_call.response_time_ms = end_time - start_time
+          api_call.save!
+          raise
+        end
+      end
 
       def generate_cache_key(endpoint, args, kwargs)
         # Create a deterministic cache key
@@ -286,6 +378,33 @@ module ApiTracking
         }
       end
 
+      def is_streaming_endpoint?(endpoint)
+        # Check if this endpoint typically returns streaming responses
+        endpoint.include?('.stream') || 
+        endpoint.include?('stream_raw') ||
+        (@final_kwargs[:stream] == true) ||
+        (@final_kwargs['stream'] == true)
+      end
+      
+      def is_streaming_response?(response)
+        # Check if this is a streaming response object
+        return false unless response
+        
+        class_name = response.class.name
+        
+        # OpenAI streaming classes
+        return true if class_name.include?('Stream')
+        return true if class_name.include?('Streaming')
+        
+        # Check if it's an Enumerator (common for streams)
+        return true if response.is_a?(Enumerator)
+        
+        # Check if it responds to streaming methods
+        return true if response.respond_to?(:stream) && !response.respond_to?(:usage)
+        
+        false
+      end
+      
       def deserialize_response(data, provider_type)
         # Convert stored data back to appropriate response object
         case provider_type

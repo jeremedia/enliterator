@@ -77,6 +77,10 @@ gem "pg_search"
 # File processing
 gem "rubyzip"
 gem "marcel" # MIME type detection
+
+# Markdown rendering with syntax highlighting
+gem "redcarpet", "~> 3.6"
+gem "rouge", "~> 4.2"
 gem "pdf-reader"
 gem "mini_magick" # For image processing
 gem "ruby-vips" # For efficient image processing

@@ -1,0 +1,41 @@
+<%= form_with url: send_message_chat_path(ekn_slug: @ekn.slug, id: conversation), 
+              method: :post,
+              data: { 
+                controller: "chat-form",
+                action: "turbo:submit-end->chat-form#reset"
+              } do |f| %>
+  <div class="relative">
+    <div class="flex items-end space-x-2">
+      <div class="flex-1 relative">
+        <%= text_area_tag :message, nil,
+            placeholder: "Message #{@ekn.name}...",
+            rows: 1,
+            data: {
+              "chat-form-target": "input",
+              action: "keydown->chat-form#handleKeydown input->chat-form#updateCharCount"
+            },
+            class: "w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none",
+            style: "min-height: 52px; max-height: 200px;" %>
+        
+        <!-- Character count -->
+        <div class="absolute bottom-2 right-2 text-xs text-gray-400">
+          <span data-chat-form-target="charCount">0</span> / 4000
+        </div>
+      </div>
+      
+      <!-- Send button -->
+      <%= button_tag type: :submit,
+          data: { "chat-form-target": "sendButton" },
+          class: "px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" do %>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+        </svg>
+      <% end %>
+    </div>
+    
+    <!-- Shortcuts hint -->
+    <div class="mt-2 text-xs text-gray-500">
+      Press <kbd class="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs">⌘</kbd> + <kbd class="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs">Enter</kbd> to send
+    </div>
+  </div>
+<% end %>

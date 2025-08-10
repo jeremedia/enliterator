@@ -1,5 +1,58 @@
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-  <h1 class="text-3xl font-bold text-gray-900 mb-6">Knowledge Navigator - Ask</h1>
+  <!-- Header with EKN Information -->
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-2">Knowledge Navigator - Ask</h1>
+    
+    <% if @ekn %>
+      <div class="bg-gray-50 rounded-lg p-4">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-900">
+              <%= @ekn.name || "EKN ##{@ekn.id}" %>
+            </h2>
+            <p class="text-sm text-gray-600 mt-1">
+              <%= @ekn.description || "Knowledge Navigator for #{@ekn.slug}" %>
+            </p>
+          </div>
+          
+          <div class="flex gap-6 text-sm">
+            <% if @ekn_stats.any? %>
+              <div>
+                <span class="text-gray-500">Files:</span>
+                <span class="font-medium text-gray-900">
+                  <%= number_with_delimiter(@ekn_stats[:processed_files]) %> / <%= number_with_delimiter(@ekn_stats[:total_files]) %>
+                </span>
+              </div>
+              <div>
+                <span class="text-gray-500">Nodes:</span>
+                <span class="font-medium text-gray-900">
+                  <%= number_with_delimiter(@ekn_stats[:graph_nodes]) %>
+                </span>
+              </div>
+              <div>
+                <span class="text-gray-500">Terms:</span>
+                <span class="font-medium text-gray-900">
+                  <%= number_with_delimiter(@ekn_stats[:lexicon_terms]) %>
+                </span>
+              </div>
+              <div>
+                <span class="text-gray-500">Status:</span>
+                <span class="font-medium <%= @ekn_stats[:pipeline_status] == 'completed' ? 'text-green-600' : 'text-yellow-600' %>">
+                  <%= @ekn_stats[:pipeline_status]&.capitalize %>
+                </span>
+              </div>
+            <% end %>
+          </div>
+        </div>
+        
+        <% if @ekn_stats[:last_updated] %>
+          <div class="mt-2 text-xs text-gray-500">
+            Last updated: <%= @ekn_stats[:last_updated].strftime("%B %d, %Y at %I:%M %p") %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
   
   <% if @question %>
     <!-- Single Question Answer -->
@@ -7,110 +60,126 @@
       <h2 class="text-lg font-semibold text-gray-900 mb-2">Question</h2>
       <p class="text-gray-700 mb-4"><%= @question %></p>
       
-      <% if @answer[:answer].present? %>
-        <!-- AI Generated Answer -->
-        <div class="border-l-4 border-blue-400 bg-blue-50 p-4 mb-4">
-          <div class="flex">
-            <div class="flex-shrink-0">
-              <svg class="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-              </svg>
-            </div>
-            <div class="ml-3">
-              <h3 class="text-sm font-medium text-blue-800">AI Answer</h3>
-              <div class="mt-2 text-sm text-blue-700 whitespace-pre-wrap">
-                <%= @answer[:answer] %>
-              </div>
-            </div>
-          </div>
+      <% if @answer[:processing] %>
+        <!-- Processing state - use Stimulus controller for polling -->
+        <div data-controller="async-question"
+             data-async-question-job-id-value="<%= @job_id %>"
+             data-async-question-ekn-slug-value="<%= @ekn.slug %>"
+             data-async-question-cache-key-value="ask_answer:<%= @ekn.slug %>:<%= Digest::MD5.hexdigest(@question) %>:<%= @mode %>"
+             data-async-question-poll-interval-value="1000">
+          
+          <div data-async-question-target="loadingSpinner"></div>
+          <div data-async-question-target="answerContainer"></div>
         </div>
-      <% end %>
-      
-      <% if @answer[:path_sentence] %>
-        <!-- Success: Found a path -->
-        <div class="border-l-4 border-green-400 bg-green-50 p-4 mb-4">
-          <div class="flex">
-            <div class="flex-shrink-0">
-              <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-              </svg>
-            </div>
-            <div class="ml-3">
-              <h3 class="text-sm font-medium text-green-800">Path Found</h3>
-              <div class="mt-2 text-sm text-green-700">
-                <p class="font-semibold">Path Sentence:</p>
-                <p class="mt-1"><%= @answer[:path_sentence] %></p>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Citations -->
-        <% if @answer[:citations].any? %>
-          <div class="bg-gray-50 rounded-lg p-4 mb-4">
-            <h3 class="text-sm font-medium text-gray-900 mb-2">Citations</h3>
-            <ul class="space-y-2">
-              <% @answer[:citations].each_with_index do |citation, i| %>
-                <li class="text-sm">
-                  <span class="font-medium">[<%= i + 1 %>]</span>
-                  Item <%= citation[:item_id] %>:
-                  <span class="italic">"<%= citation[:snippet] %>"</span>
-                </li>
-              <% end %>
-            </ul>
-          </div>
-        <% end %>
-        
-        <!-- Rights Echo -->
-        <% if @answer[:rights_echo] %>
-          <div class="bg-blue-50 rounded-lg p-4">
-            <h3 class="text-sm font-medium text-blue-900 mb-2">Rights Echo</h3>
-            <ul class="text-sm text-blue-700">
-              <li>Publishability: <%= @answer[:rights_echo][:publishability] || 'unknown' %></li>
-              <li>Training Eligible: <%= @answer[:rights_echo][:training_eligibility] || 'unknown' %></li>
-              <% if @answer[:rights_echo][:license] %>
-                <li>License: <%= @answer[:rights_echo][:license] %></li>
-              <% end %>
-              <% if @answer[:rights_echo][:attribution] %>
-                <li>Attribution: <%= @answer[:rights_echo][:attribution] %></li>
-              <% end %>
-            </ul>
-          </div>
-        <% end %>
       <% else %>
-        <!-- Fallback: No path found -->
-        <div class="border-l-4 border-yellow-400 bg-yellow-50 p-4">
-          <div class="flex">
-            <div class="flex-shrink-0">
-              <svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-              </svg>
-            </div>
-            <div class="ml-3">
-              <h3 class="text-sm font-medium text-yellow-800">No Path Found</h3>
-              <div class="mt-2 text-sm text-yellow-700">
-                <p><%= @answer[:fallback] %></p>
+        <!-- Answer is ready -->
+        <% if @answer[:answer].present? %>
+          <!-- AI Generated Answer -->
+          <div class="border-l-4 border-blue-400 bg-blue-50 p-4 mb-4">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-800">AI Answer</h3>
+                <div class="mt-2 text-sm text-blue-700 whitespace-pre-wrap">
+                  <%= @answer[:answer] %>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        <% end %>
+        
+        <% if @answer[:path_sentence] %>
+          <!-- Success: Found a path -->
+          <div class="border-l-4 border-green-400 bg-green-50 p-4 mb-4">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div class="ml-3">
+                <h3 class="text-sm font-medium text-green-800">Path Found</h3>
+                <div class="mt-2 text-sm text-green-700">
+                  <p class="font-semibold">Path Sentence:</p>
+                  <p class="mt-1"><%= @answer[:path_sentence] %></p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Citations -->
+          <% if @answer[:citations]&.any? %>
+            <div class="bg-gray-50 rounded-lg p-4 mb-4">
+              <h3 class="text-sm font-medium text-gray-900 mb-2">Citations</h3>
+              <ul class="space-y-2">
+                <% @answer[:citations].each_with_index do |citation, i| %>
+                  <li class="text-sm">
+                    <span class="font-medium">[<%= i + 1 %>]</span>
+                    Item <%= citation[:item_id] %>:
+                    <span class="italic">"<%= citation[:snippet] %>"</span>
+                  </li>
+                <% end %>
+              </ul>
+            </div>
+          <% end %>
+          
+          <!-- Rights Echo -->
+          <% if @answer[:rights_echo] %>
+            <div class="bg-blue-50 rounded-lg p-4">
+              <h3 class="text-sm font-medium text-blue-900 mb-2">Rights Echo</h3>
+              <ul class="text-sm text-blue-700">
+                <li>Publishability: <%= @answer[:rights_echo][:publishability] || 'unknown' %></li>
+                <li>Training Eligible: <%= @answer[:rights_echo][:training_eligibility] || 'unknown' %></li>
+                <% if @answer[:rights_echo][:license] %>
+                  <li>License: <%= @answer[:rights_echo][:license] %></li>
+                <% end %>
+                <% if @answer[:rights_echo][:attribution] %>
+                  <li>Attribution: <%= @answer[:rights_echo][:attribution] %></li>
+                <% end %>
+              </ul>
+            </div>
+          <% end %>
+        <% elsif !@answer[:processing] %>
+          <!-- Fallback: No path found -->
+          <div class="border-l-4 border-yellow-400 bg-yellow-50 p-4">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div class="ml-3">
+                <h3 class="text-sm font-medium text-yellow-800">No Path Found</h3>
+                <div class="mt-2 text-sm text-yellow-700">
+                  <p><%= @answer[:fallback] %></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% end %>
       <% end %>
       
       <!-- Result Mode Selector -->
-      <div class="mt-4 flex gap-2">
-        <% @answer[:mode_hints].each do |mode| %>
-          <a href="?q=<%= @question %>&mode=<%= mode %>" 
-             class="inline-flex items-center px-3 py-1 border border-gray-300 text-sm font-medium rounded-md 
-                    <%= @mode == mode.to_s ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'text-gray-700 bg-white hover:bg-gray-50' %>">
-            <%= mode.to_s.capitalize %> View
-          </a>
-        <% end %>
-      </div>
+      <% if @answer[:mode_hints] %>
+        <div class="mt-4 flex gap-2">
+          <% @answer[:mode_hints].each do |mode| %>
+            <a href="/ekn/<%= @ekn.slug %>/ask?q=<%= @question %>&mode=<%= mode %>" 
+               class="inline-flex items-center px-3 py-1 border border-gray-300 text-sm font-medium rounded-md 
+                      <%= @mode == mode.to_s ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'text-gray-700 bg-white hover:bg-gray-50' %>">
+              <%= mode.to_s.capitalize %> View
+            </a>
+          <% end %>
+        </div>
+      <% end %>
     </div>
     
     <!-- Ask Another Question -->
     <div class="bg-white shadow rounded-lg p-6">
-      <form action="/navigator/ask" method="get" class="flex gap-2">
+      <form action="/ekn/<%= @ekn.slug %>/ask" method="get" class="flex gap-2">
         <input type="text" name="q" placeholder="Ask another question..." 
                class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
         <button type="submit" 
@@ -125,7 +194,7 @@
     <div class="bg-white shadow rounded-lg p-6 mb-6">
       <h2 class="text-xl font-bold text-gray-900 mb-4">Ask the Knowledge Navigator</h2>
       
-      <form action="/navigator/ask" method="get" class="mb-6">
+      <form action="/ekn/<%= @ekn.slug %>/ask" method="get" class="mb-6">
         <label for="q" class="block text-sm font-medium text-gray-700 mb-2">
           Enter your question about the Enliterator codebase:
         </label>
@@ -153,7 +222,7 @@
           ] %>
           
           <% sample_questions.each do |question| %>
-            <a href="?q=<%= CGI.escape(question) %>" 
+            <a href="/ekn/<%= @ekn.slug %>/ask?q=<%= CGI.escape(question) %>" 
                class="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
               <div class="flex items-center">
                 <svg class="h-4 w-4 text-gray-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -167,204 +236,37 @@
       </div>
     </div>
     
-    <!-- Metrics Report -->
-    <% if @metrics %>
-      <div class="bg-white shadow rounded-lg p-6 mb-6">
+    <!-- Metrics Container with Async Loading -->
+    <% if @ekn && @batch %>
+      <div class="bg-white shadow rounded-lg p-6 mb-6"
+           data-controller="async-metrics"
+           data-async-metrics-ekn-slug-value="<%= @ekn.slug %>"
+           data-async-metrics-batch-id-value="<%= @batch.id %>">
+        
         <h2 class="text-xl font-bold text-gray-900 mb-4">Graph Metrics</h2>
         
-        <!-- Graph Metrics Summary -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <% if @metrics[:graph_metrics] %>
-            <div class="bg-gray-50 rounded-lg p-4">
-              <div class="text-sm font-medium text-gray-500">Total Nodes</div>
-              <div class="mt-1 text-2xl font-semibold text-gray-900">
-                <%= number_with_delimiter(@metrics[:graph_metrics][:total_nodes]) %>
-              </div>
-              <div class="text-sm text-gray-600">
-                <%= @metrics[:graph_metrics][:total_edges] %> edges
-              </div>
-            </div>
-            
-            <div class="bg-gray-50 rounded-lg p-4">
-              <div class="text-sm font-medium text-gray-500">Mean Degree</div>
-              <div class="mt-1 text-2xl font-semibold <%= @metrics[:gate_status][:gates][:mean_degree][:passed] ? 'text-green-600' : 'text-red-600' %>">
-                <%= @metrics[:graph_metrics][:mean_degree] %>
-              </div>
-              <div class="text-sm text-gray-600">
-                Target: ≥ <%= @metrics[:gate_status][:gates][:mean_degree][:threshold] %>
-              </div>
-            </div>
-            
-            <div class="bg-gray-50 rounded-lg p-4">
-              <div class="text-sm font-medium text-gray-500">Graph Density</div>
-              <div class="mt-1 text-2xl font-semibold text-gray-900">
-                <%= (@metrics[:graph_metrics][:density] * 100).round(3) %>%
-              </div>
-              <div class="text-sm text-gray-600">
-                Edge coverage
-              </div>
-            </div>
-          <% end %>
-          
-          <% if @metrics[:coverage_metrics] %>
-            <div class="bg-gray-50 rounded-lg p-4">
-              <div class="text-sm font-medium text-gray-500">Connected Coverage</div>
-              <div class="mt-1 text-2xl font-semibold <%= @metrics[:gate_status][:gates][:lcc_coverage][:passed] ? 'text-green-600' : 'text-red-600' %>">
-                <%= (@metrics[:coverage_metrics][:lcc_coverage] * 100).round(1) %>%
-              </div>
-              <div class="text-sm text-gray-600">
-                Target: ≥ <%= (@metrics[:gate_status][:gates][:lcc_coverage][:threshold] * 100).round(0) %>%
-              </div>
-            </div>
-          <% end %>
+        <!-- Loading spinner (hidden after metrics load) -->
+        <div data-async-metrics-target="loadingSpinner" class="hidden">
+          <div class="flex items-center justify-center py-8">
+            <svg class="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </div>
         </div>
         
-        <!-- Pool Distribution -->
-        <% if @metrics[:graph_metrics] && @metrics[:graph_metrics][:pool_distribution] %>
-          <div class="mb-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-3">Pool Distribution</h3>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-              <% @metrics[:graph_metrics][:pool_distribution].each do |pool, count| %>
-                <div class="bg-gray-50 rounded p-2">
-                  <div class="text-sm font-medium text-gray-600"><%= pool %></div>
-                  <div class="text-lg font-semibold text-gray-900"><%= number_with_delimiter(count) %></div>
-                </div>
-              <% end %>
-            </div>
-          </div>
-        <% end %>
+        <!-- Metrics will be loaded here -->
+        <div data-async-metrics-target="metricsContainer"></div>
         
-        <!-- Gate Status -->
-        <% if @metrics[:gate_status] %>
-          <div class="mb-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-3">Stage 5.5 Gate Status</h3>
-            <div class="bg-<%= @metrics[:gate_status][:all_passed] ? 'green' : 'yellow' %>-50 rounded-lg p-4">
-              <div class="flex items-center">
-                <svg class="h-5 w-5 <%= @metrics[:gate_status][:all_passed] ? 'text-green-400' : 'text-yellow-400' %> mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <% if @metrics[:gate_status][:all_passed] %>
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                  <% else %>
-                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                  <% end %>
-                </svg>
-                <span class="text-sm font-medium <%= @metrics[:gate_status][:all_passed] ? 'text-green-800' : 'text-yellow-800' %>">
-                  <%= @metrics[:gate_status][:passed_count] %> of <%= @metrics[:gate_status][:total_gates] %> gates passed
-                </span>
-              </div>
-              
-              <div class="mt-3 space-y-2">
-                <% @metrics[:gate_status][:gates].each do |gate_name, gate_data| %>
-                  <div class="flex justify-between text-sm">
-                    <span class="text-gray-600"><%= gate_name.to_s.humanize %></span>
-                    <span class="font-medium <%= gate_data[:passed] ? 'text-green-600' : 'text-red-600' %>">
-                      <%= gate_data[:value] %> <%= gate_data[:passed] ? '✓' : '✗' %>
-                    </span>
-                  </div>
-                <% end %>
-              </div>
-            </div>
-          </div>
-        <% end %>
-        
-        <!-- Diversity Metrics -->
-        <% if @metrics[:diversity_metrics] %>
-          <div class="mb-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-3">Relationship Diversity</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div class="bg-gray-50 rounded-lg p-4">
-                <div class="text-sm font-medium text-gray-500">Unique Verbs</div>
-                <div class="mt-1 text-2xl font-semibold <%= @metrics[:gate_status][:gates][:verb_diversity][:passed] ? 'text-green-600' : 'text-red-600' %>">
-                  <%= @metrics[:diversity_metrics][:unique_verbs] %>
-                </div>
-                <div class="text-sm text-gray-600">
-                  Target: ≥ <%= @metrics[:gate_status][:gates][:verb_diversity][:threshold] %>
-                </div>
-              </div>
-              
-              <div class="bg-gray-50 rounded-lg p-4">
-                <div class="text-sm font-medium text-gray-500">Verified Edges</div>
-                <div class="mt-1 text-2xl font-semibold text-gray-900">
-                  <%= @metrics[:diversity_metrics][:verified_edges] %>
-                </div>
-                <div class="text-sm text-gray-600">
-                  Total verified
-                </div>
-              </div>
-              
-              <div class="bg-gray-50 rounded-lg p-4">
-                <div class="text-sm font-medium text-gray-500">Path Patterns</div>
-                <div class="mt-1 text-2xl font-semibold text-gray-900">
-                  <%= @metrics[:diversity_metrics][:unique_path_patterns] %>
-                </div>
-                <div class="text-sm text-gray-600">
-                  Unique patterns
-                </div>
-              </div>
-            </div>
-          </div>
-        <% end %>
-        
-        <% if @batch_report %>
-        <!-- Batch Report Content -->
-        
-        <!-- Answered Questions -->
-        <% if @batch_report[:answers].any? %>
-          <div class="mb-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-3">Successfully Answered (<%= @batch_report[:answered] %>)</h3>
-            <div class="space-y-2">
-              <% @batch_report[:answers].first(10).each do |result| %>
-                <div class="bg-green-50 rounded p-3">
-                  <div class="flex justify-between items-start">
-                    <div class="flex-1">
-                      <p class="text-sm font-medium text-gray-900">
-                        <a href="?q=<%= CGI.escape(result[:question]) %>" class="hover:underline">
-                          <%= result[:question] %>
-                        </a>
-                      </p>
-                      <p class="text-sm text-gray-600 mt-1"><%= result[:answer] %></p>
-                    </div>
-                    <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                      <%= result[:citations] %> citations
-                    </span>
-                  </div>
-                </div>
-              <% end %>
-              <% if @batch_report[:answers].size > 10 %>
-                <p class="text-sm text-gray-500 italic">... and <%= @batch_report[:answers].size - 10 %> more</p>
-              <% end %>
-            </div>
-          </div>
-        <% end %>
-        
-        <!-- Failed Questions -->
-        <% if @batch_report[:failed].any? %>
-          <div>
-            <h3 class="text-lg font-semibold text-gray-900 mb-3">Failed to Answer (<%= @batch_report[:failed].size %>)</h3>
-            <div class="space-y-2">
-              <% @batch_report[:failed].first(10).each do |result| %>
-                <div class="bg-red-50 rounded p-3">
-                  <p class="text-sm font-medium text-gray-900">
-                    <a href="?q=<%= CGI.escape(result[:question]) %>" class="hover:underline">
-                      <%= result[:question] %>
-                    </a>
-                  </p>
-                  <p class="text-sm text-red-600 mt-1"><%= result[:reason] %></p>
-                </div>
-              <% end %>
-              <% if @batch_report[:failed].size > 10 %>
-                <p class="text-sm text-gray-500 italic">... and <%= @batch_report[:failed].size - 10 %> more</p>
-              <% end %>
-            </div>
-          </div>
-        <% end %>
-        <% end %>
+        <!-- Error message container -->
+        <div data-async-metrics-target="errorMessage"></div>
       </div>
     <% end %>
     
     <!-- Try a Question -->
     <div class="bg-white shadow rounded-lg p-6">
       <h3 class="text-lg font-semibold text-gray-900 mb-3">Try a Question</h3>
-      <form action="/navigator/ask" method="get" class="flex gap-2">
+      <form action="/ekn/<%= @ekn.slug %>/ask" method="get" class="flex gap-2">
         <input type="text" name="q" placeholder="Enter your question..." 
                class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
         <button type="submit" 

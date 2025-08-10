@@ -25,6 +25,28 @@ Rails.application.routes.draw do
   get "/public", to: "public#index"
   get "/public/more", to: "public#more", as: :public_more
   
+  # EKN-scoped routes (top-level)
+  scope "/ekn/:ekn_slug" do
+    # Legacy ask interface
+    get "ask", to: "navigator/ask#show", as: :ekn_ask
+    get "ask/metrics", to: "navigator/ask#metrics", as: :ekn_ask_metrics
+    get "ask/answer_status", to: "navigator/ask#answer_status", as: :ekn_ask_answer_status
+    
+    # Modern chat interface
+    resources :chat, controller: 'ekns/chat', only: [:index, :show, :new] do
+      member do
+        get :messages
+        post :send_message
+      end
+      collection do
+        get :search
+        post :export
+        post :retry
+        patch :update_settings
+      end
+    end
+  end
+  
   # Knowledge Navigator - The main user interface
   namespace :navigator do
     get '/', to: 'conversation#index'
@@ -45,7 +67,12 @@ Rails.application.routes.draw do
         post :reject
       end
     end
-    get "ask", to: "ask#show"
+    
+    # Legacy route redirect (within navigator namespace)
+    get "ask", to: redirect { |params, request|
+      ekn = Ekn.joins(:ingest_batches).where(ingest_batches: { status: "completed" }).first
+      "/ekn/#{ekn&.slug || 'default'}/ask"
+    }
   end
   
   # Legacy welcome page (remove after transition)

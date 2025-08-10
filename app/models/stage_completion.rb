@@ -62,43 +62,30 @@ class StageCompletion < ApplicationRecord
   private
   
   def check_pool_filling_completion
-    # Check if entities already extracted for this batch
+    # Check if entities already extracted for this batch in Neo4j
     total_items = ingest_batch.ingest_items.count
     return false if total_items == 0
     
-    # Check each pool for extracted entities
-    extracted_counts = {
-      ideas: ingest_batch.ideas.count,
-      practicals: ingest_batch.practicals.count,
-      experiences: ingest_batch.experiences.count,
-      manifests: ingest_batch.manifests.count,
-      characters: ingest_batch.characters.count,
-      times: ingest_batch.times.count,
-      spaces: ingest_batch.spaces.count,
-      lifecycles: ingest_batch.lifecycles.count,
-      symbolics: ingest_batch.symbolics.count,
-      relators: ingest_batch.relators.count
-    }
+    # For now, check if nodes exist in Neo4j for this batch
+    # In reality, entities are stored in Neo4j, not separate tables
+    node_count = count_neo4j_nodes
     
-    # Must have entities in at least 3 pools
-    pools_with_entities = extracted_counts.values.count { |c| c > 0 }
-    return false if pools_with_entities < 3
+    # If no nodes exist, pool filling hasn't been done
+    return false if node_count == 0
     
-    # Check coverage rate (entities per item)
-    total_entities = extracted_counts.values.sum
-    coverage_rate = total_entities.to_f / total_items
+    # Check coverage rate (nodes per item)
+    coverage_rate = node_count.to_f / total_items
     
     # Log metrics
     self.completion_metrics = {
-      extracted_counts: extracted_counts,
-      pools_with_entities: pools_with_entities,
+      node_count: node_count,
       coverage_rate: coverage_rate,
-      total_entities: total_entities,
       total_items: total_items
     }
     
     # Skip if coverage is good enough (multiple entities per item expected)
-    coverage_rate >= 2.0 # Average 2+ entities per item
+    # Lower threshold since we're counting all nodes, not just entities
+    coverage_rate >= 1.0 # Average 1+ nodes per item
   end
   
   def check_embeddings_completion
@@ -116,13 +103,12 @@ class StageCompletion < ApplicationRecord
     driver = Graph::Connection.instance.driver
     driver.session(database: ekn.neo4j_database_name) do |session|
       session.read_transaction do |tx|
-        result = tx.run(<<~CYPHER
+        result = tx.run(<<~CYPHER, batch_id: ingest_batch.id)
           MATCH (n)
           WHERE n.batch_id = $batch_id
             AND n.embedding IS NOT NULL
           RETURN count(n) as count
         CYPHER
-        , batch_id: ingest_batch.id)
         
         embedding_count = result.single['count']
       end
@@ -141,22 +127,18 @@ class StageCompletion < ApplicationRecord
   end
   
   def check_lexicon_completion
-    # Check if lexicon entries exist
-    lexicon_count = ingest_batch.lexicon_entries.count
+    # For now, just check if there are items
+    # Lexicon extraction would normally be checked here
     item_count = ingest_batch.ingest_items.count
     
     return false if item_count == 0
     
-    # Should have multiple lexicon entries per item
-    coverage = lexicon_count.to_f / item_count
-    
     self.completion_metrics = {
-      lexicon_count: lexicon_count,
       item_count: item_count,
-      coverage: coverage
+      status: 'not_implemented'
     }
     
-    coverage >= 1.0 # At least 1 lexicon entry per item
+    false # Don't skip lexicon for now
   end
   
   def check_relationship_completion
@@ -169,21 +151,19 @@ class StageCompletion < ApplicationRecord
     driver.session(database: ekn.neo4j_database_name) do |session|
       session.read_transaction do |tx|
         # Count nodes
-        node_count = tx.run(<<~CYPHER
+        node_count = tx.run(<<~CYPHER, batch_id: ingest_batch.id).single['count']
           MATCH (n) WHERE n.batch_id = $batch_id
           RETURN count(n) as count
         CYPHER
-        , batch_id: ingest_batch.id).single['count']
         
         # Count edges
-        edge_count = tx.run(<<~CYPHER
+        edge_count = tx.run(<<~CYPHER, batch_id: ingest_batch.id).single['count']
           MATCH (n)-[r]-(m)
           WHERE n.batch_id = $batch_id
             AND m.batch_id = $batch_id
             AND type(r) <> 'HAS_RIGHTS'
           RETURN count(DISTINCT r) as count
         CYPHER
-        , batch_id: ingest_batch.id).single['count']
         
         return false if node_count < 2
         
@@ -210,13 +190,13 @@ class StageCompletion < ApplicationRecord
     when 1 # Intake
       ingest_batch.ingest_items.count > 0
     when 2 # Rights
-      ingest_batch.ingest_items.where(rights_id: nil).count == 0
+      ingest_batch.ingest_items.where(provenance_and_rights_id: nil).count == 0
     when 5 # Graph Assembly
       count_neo4j_nodes > 0
     when 7 # Literacy Scoring
-      ingest_batch.literacy_scores.exists?
+      false # Will check when we have literacy scoring
     when 8 # Deliverables
-      ingest_batch.prompt_packs.exists?
+      false # Will check when we have deliverables
     else
       false # Don't skip by default
     end
@@ -230,11 +210,10 @@ class StageCompletion < ApplicationRecord
     
     driver.session(database: ekn.neo4j_database_name) do |session|
       session.read_transaction do |tx|
-        result = tx.run(<<~CYPHER
+        result = tx.run(<<~CYPHER, batch_id: ingest_batch.id)
           MATCH (n) WHERE n.batch_id = $batch_id
           RETURN count(n) as count
         CYPHER
-        , batch_id: ingest_batch.id)
         
         count = result.single['count']
       end

@@ -80,18 +80,27 @@ end
 
 ## Current Models (August 2025)
 
+### 🔒 PRODUCTION DEFAULTS - DO NOT CHANGE
+
+These are the **ONLY** models that should be configured in production:
+
 | Task | Model | Purpose |
 |------|-------|---------|
-| **Extraction** | `gpt-4.1` | Entity and term extraction with Structured Outputs |
-| **Answer** | `gpt-4.1` | High-quality conversational responses |
-| **Routing** | `gpt-4.1-nano` | Ultra-fast query routing and intent classification |
+| **Extraction** | `gpt-5-mini` | Entity and term extraction with Structured Outputs |
+| **Answer** | `gpt-5` | High-quality conversational responses |
+| **Routing** | `gpt-5-nano` | Ultra-fast query routing and intent classification |
 | **Fine-tuning** | `gpt-4.1-mini` | Base model for fine-tuning |
 
-### ⚠️ OUTDATED MODELS - DO NOT USE
+**⚠️ CRITICAL**: These models are carefully selected for optimal performance and cost. DO NOT change them without explicit approval. They are configured through the Admin UI and should remain constant.
+
+### ⚠️ OUTDATED MODELS - NEVER USE
 - ❌ `gpt-4o-2024-08-06` - Over a year old, expensive
-- ❌ `gpt-4o-mini` - Outdated, replaced by gpt-4.1-mini
+- ❌ `gpt-4o-mini` - Outdated, never use even in examples
 - ❌ `gpt-3.5-turbo` - Legacy model
+- ❌ `gpt-4.1` - Replaced by gpt-5 for answers
+- ❌ `gpt-4.1-nano` - Replaced by gpt-5-nano for routing
 - ❌ Any model with "2024" in the name
+- ❌ Any model with "4o" in the name
 
 ## Check Current Configuration
 
@@ -103,16 +112,16 @@ config = OpenaiConfig::SettingsManager.current_configuration
 
 # Returns a hash like this (actual output from production):
 {
-  "timestamp": "2025-08-07T12:19:51Z",
+  "timestamp": "2025-08-10T00:10:50Z",
   "models": {
-    "extraction": "gpt-4.1",
-    "answer": "gpt-4.1",
-    "routing": "gpt-4.1-nano",
+    "extraction": "gpt-5-mini",
+    "answer": "gpt-5",
+    "routing": "gpt-5-nano",
     "fine_tune": "gpt-4.1-mini"
   },
   "temperatures": {
     "extraction": 0.0,
-    "answer": 0.7,
+    "answer": 0.4,
     "routing": 0.0
   },
   "settings_source": {
@@ -122,9 +131,9 @@ config = OpenaiConfig::SettingsManager.current_configuration
     "fine_tune": "database"      # Using database config
   },
   "environment_variables": {
-    "OPENAI_MODEL": "gpt-4.1-2025-04-14",         # Set as fallback
-    "OPENAI_MODEL_ANSWER": "gpt-4.1-2025-04-14",  # Set as fallback
-    "OPENAI_FT_BASE": "gpt-4.1-mini-2025-04-14",  # Set as fallback
+    "OPENAI_MODEL": "gpt-5-mini",                 # Set as fallback
+    "OPENAI_MODEL_ANSWER": "gpt-5",               # Set as fallback
+    "OPENAI_FT_BASE": "gpt-4.1-mini",             # Set as fallback
     "OPENAI_API_KEY": "SET (hidden)"              # API key is configured
   },
   "batch_api": {
@@ -209,8 +218,8 @@ OpenaiConfig::SettingsManager.current_configuration
 # Set models in database (preferred over ENV)
 rails runner script/configure_openai_models.rb
 
-# Or manually set individual settings:
-OpenaiSetting.set('model_extraction', 'gpt-4.1', 
+# Or manually set individual settings (ONLY use production defaults):
+OpenaiSetting.set('model_extraction', 'gpt-5-mini', 
   category: 'model', 
   model_type: 'extraction',
   description: 'Model for entity extraction'
@@ -218,7 +227,7 @@ OpenaiSetting.set('model_extraction', 'gpt-4.1',
 
 # Verify the change took effect
 OpenaiConfig::SettingsManager.model_for(:extraction)
-# => "gpt-4.1"
+# => "gpt-5-mini"
 ```
 
 ### Environment Variables (.env)
@@ -229,11 +238,13 @@ These are FALLBACKS only - database settings take precedence:
 # Required
 OPENAI_API_KEY=sk-...your-key...
 
-# Model fallbacks (use specific dated versions)
-OPENAI_MODEL=gpt-4.1-2025-04-14
-OPENAI_MODEL_ANSWER=gpt-4.1-2025-04-14
-OPENAI_FT_BASE=gpt-4.1-mini-2025-04-14
+# Model fallbacks (these should match the production defaults)
+OPENAI_MODEL=gpt-5-mini
+OPENAI_MODEL_ANSWER=gpt-5
+OPENAI_FT_BASE=gpt-4.1-mini
 ```
+
+**Note**: Even these environment variables should use the production defaults. The database settings configured through the Admin UI will override these.
 
 ## Complete Service Implementation Example
 
@@ -366,6 +377,90 @@ puts result[:metadata]  # Should show model used
 4. **No Surprises**: Explicit failure better than silent fallback to wrong model
 5. **Audit Trail**: Database settings show who changed what and when
 
+## Streaming Support
+
+### Current Status: ✅ WORKING with API Tracking
+
+**Fixed**: The `ApiTracking::TrackedApiClient` wrapper now properly supports streaming responses while still tracking API usage for cost analysis.
+
+### How Streaming Works
+
+The OpenAI gem supports streaming with structured outputs, and the API tracking wrapper now handles it correctly:
+
+```ruby
+# ✅ WORKS - Streaming with tracking
+stream = OPENAI.responses.stream(
+  model: model,
+  input: messages,
+  text: ResponseClass  # Structured output class
+)
+
+# The stream is automatically wrapped in StreamWrapper for tracking
+stream.each do |event|
+  case event
+  when OpenAI::Streaming::ResponseTextDeltaEvent
+    # Incremental JSON chunks
+    json_chunk = event.delta
+  when OpenAI::Streaming::ResponseTextDoneEvent
+    # Final parsed object
+    parsed_object = event.parsed
+  end
+end
+```
+
+### How It Was Fixed
+
+The `ApiTracking::TrackedApiClient` wrapper now:
+
+1. **Detects streaming endpoints** by checking for `.stream` methods or `stream: true` parameter
+2. **Uses custom tracking** for streams that doesn't try to serialize the response
+3. **Wraps streams in StreamWrapper** which tracks usage as the stream is consumed
+4. **Updates API call records** with token counts and costs after streaming completes
+
+### Implementation Details
+
+```ruby
+# The wrapper detects streaming and handles it specially
+class TrackedApiClient::ChainBuilder
+  def execute_with_tracking
+    if is_streaming_endpoint?(endpoint)
+      # Use special tracking that doesn't serialize
+      track_streaming_execution(api_call)
+    else
+      # Normal tracking with serialization
+      api_call.track_execution { ... }
+    end
+  end
+  
+  def track_streaming_execution(api_call)
+    # Creates the stream without serializing
+    response = # ... make streaming call ...
+    
+    # Wrap in StreamWrapper for usage tracking
+    StreamWrapper.new(response, api_call, @provider_adapter)
+  end
+end
+
+# StreamWrapper passes through events while tracking
+class StreamWrapper
+  def each
+    @original_stream.each do |event|
+      track_event(event)  # Track usage
+      yield event         # Pass through untouched
+    end
+    finalize_tracking     # Update costs when done
+  end
+end
+```
+
+### Streaming Methods to Support
+
+- `OPENAI.responses.stream()` - Stream with structured outputs
+- `OPENAI.responses.stream_raw()` - Stream raw events
+- `OPENAI.chat.completions.create(stream: true)` - Legacy streaming
+
+All return iterator objects that MUST NOT be consumed during tracking.
+
 ## Need Help?
 
 - Implementation: `app/services/openai_config/settings_manager.rb`
@@ -373,6 +468,7 @@ puts result[:metadata]  # Should show model used
 - Examples: `app/services/pools/entity_extraction_service.rb`
 - Tests: `rails test test/services/openai_config/`
 - Admin UI: https://e.dev.domt.app/admin
+- **Streaming**: `app/services/api_tracking/stream_wrapper.rb` - Handles streaming with tracking
 
 ---
 

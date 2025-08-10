@@ -20,7 +20,7 @@ class Message < ApplicationRecord
   belongs_to :prompt_version, optional: true
   
   validates :role, presence: true
-  validates :content, presence: true
+  validates :content, presence: true, unless: :streaming?
   
   # Message roles
   enum :role, { 
@@ -34,7 +34,8 @@ class Message < ApplicationRecord
   # Store rich metadata about the message
   store_accessor :metadata, :intent, :actions_taken, :entities_mentioned,
                  :model_used, :temperature_used, :prompt_key, :confidence_score,
-                 :reasoning_trace, :tools_called, :execution_time
+                 :reasoning_trace, :tools_called, :execution_time, :streaming,
+                 :error, :error_message, :error_class, :error_backtrace
   
   scope :recent, ->(limit = 10) { order(created_at: :desc).limit(limit) }
   scope :by_role, ->(role) { where(role: role) }
@@ -89,7 +90,18 @@ class Message < ApplicationRecord
   # Estimate tokens (rough approximation)
   def estimate_tokens
     # Rough estimate: 1 token ≈ 4 characters
+    return 0 if content.nil?
     (content.length / 4.0).ceil
+  end
+  
+  # Check if message is currently streaming
+  def streaming?
+    streaming == true || streaming == 'true'
+  end
+  
+  # Check if message had an error
+  def error?
+    error == true || error == 'true'
   end
   
   private
