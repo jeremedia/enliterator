@@ -289,13 +289,30 @@ module Api
           api_key = request.headers["X-API-Key"]
           expected_key = ENV["MCP_API_KEY"] || "test-key-123"
           
+          # Log what we're receiving for debugging
+          if params.dig("params", "clientInfo", "name") == "openai-mcp"
+            Rails.logger.info "OpenAI MCP client detected"
+            Rails.logger.info "Authorization header: #{auth_header.present? ? 'Present' : 'Missing'}"
+          end
+          
+          # Check Bearer token (what OpenAI sends when you configure Access token)
           if auth_header&.start_with?("Bearer ")
             token = auth_header.split(" ").last
             return token == expected_key
-          elsif api_key.present?
+          end
+          
+          # Check X-API-Key header (alternative method)
+          if api_key.present?
             return api_key == expected_key
           end
           
+          # For development/testing without auth
+          if expected_key == "test-key-123"
+            Rails.logger.warn "Using default test key - configure MCP_API_KEY for production"
+            return true
+          end
+          
+          Rails.logger.warn "MCP auth failed - no valid authentication provided"
           false
         end
         
