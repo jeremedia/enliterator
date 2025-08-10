@@ -70,6 +70,48 @@ class ChatResponseJob < ApplicationJob
       }
     end
     
+    # Get the last user message
+    last_user_message = conversation.messages.where(role: 'user').last
+    
+    # Use QueryOrchestrator to get relevant context if we have a user query
+    knowledge_context = nil
+    if last_user_message && conversation.ekn
+      begin
+        Rails.logger.info "Using QueryOrchestrator for: #{last_user_message.content}"
+        orchestrator = QueryOrchestrator.new(ekn: conversation.ekn, conversation: conversation)
+        orchestration_result = orchestrator.process(last_user_message.content)
+        
+        if orchestration_result && !orchestration_result[:error]
+          knowledge_context = orchestration_result[:context_for_llm]
+          Rails.logger.info "Orchestrator provided #{knowledge_context&.length || 0} chars of context"
+          
+          # Store metadata about what was found
+          if assistant_message = conversation.messages.where(role: 'assistant').last
+            assistant_message.metadata.merge!(
+              orchestration: {
+                tool_used: orchestration_result[:tool_used],
+                confidence: orchestration_result[:confidence],
+                results_count: orchestration_result[:results][:items]&.size || 0,
+                canonical_entities: orchestration_result[:canonical_entities],
+                detected_pools: orchestration_result[:detected_pools]
+              }
+            )
+          end
+        end
+      rescue => e
+        Rails.logger.error "QueryOrchestrator failed: #{e.message}"
+        # Continue without orchestration context
+      end
+    end
+    
+    # Add knowledge context if available
+    if knowledge_context
+      messages << {
+        role: 'system',
+        content: "Knowledge Graph Context:\n#{knowledge_context}"
+      }
+    end
+    
     # Add conversation history (last 20 messages)
     conversation.messages.recent(20).reverse.each do |msg|
       next if msg.role == 'system' # Skip system messages in history
@@ -104,11 +146,24 @@ class ChatResponseJob < ApplicationJob
       4. Be helpful, clear, and conversational
       
       When answering:
-      - Use the knowledge graph to find connections
-      - Provide specific entity names and relationships
-      - Cite your sources when possible
-      - Explain your reasoning
+      - Use the knowledge graph context provided in the next system message
+      - Reference specific entities by name and type (e.g., "Idea(Radical Inclusion)")
+      - Explain connections and relationships between entities
+      - If no relevant context is provided, explain what you would need to answer
       - Be conversational but accurate
+      - When you cite entities, use the format: EntityType(EntityName)
+      
+      The Ten Pool Canon entities you'll encounter:
+      - Idea: Concepts, principles, philosophies
+      - Practical: Methods, processes, techniques
+      - Experience: Stories, testimonials, personal accounts
+      - Manifest: Physical/digital artifacts, documents
+      - Character: People, agents, roles
+      - Time: Temporal entities, events, periods
+      - Space: Locations, places, geographic entities
+      - Lifecycle: States, transitions, progressions
+      - Symbolic: Symbols, meanings, representations
+      - Relator: Relationships, connections
     PROMPT
   end
   

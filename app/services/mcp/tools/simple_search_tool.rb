@@ -18,6 +18,23 @@ module Mcp
         # For now, do keyword search in Neo4j
         results = keyword_search(query, pools, top_k * 2)
         
+        # If no results with full phrase, try individual words
+        if results.empty? && query.include?(' ')
+          Rails.logger.info "No results for full phrase, trying individual words"
+          words = query.split(/\s+/)
+          all_results = []
+          
+          words.each do |word|
+            word_results = keyword_search(word, pools, top_k)
+            all_results.concat(word_results)
+          end
+          
+          # Deduplicate and sort by relevance
+          results = all_results.uniq { |r| r[:entity_id] }
+                              .sort_by { |r| -r[:similarity] }
+                              .first(top_k * 2)
+        end
+        
         # Enhance with graph context
         enhanced = enhance_results(results)
         
@@ -54,8 +71,8 @@ module Mcp
         # Search for nodes containing the query text
         cypher = <<~CYPHER
           MATCH (n)
-          WHERE (n.label IS NOT NULL AND toLower(n.label) CONTAINS toLower($query))
-             OR (n.repr_text IS NOT NULL AND toLower(n.repr_text) CONTAINS toLower($query))
+          WHERE ((n.label IS NOT NULL AND toLower(n.label) CONTAINS toLower($query))
+             OR (n.repr_text IS NOT NULL AND toLower(n.repr_text) CONTAINS toLower($query)))
              #{pool_filter}
           RETURN 
             id(n) as entity_id,
@@ -69,6 +86,9 @@ module Mcp
           ORDER BY relevance DESC
           LIMIT #{limit}
         CYPHER
+        
+        Rails.logger.info "SimpleSearchTool Cypher query: #{cypher}"
+        Rails.logger.info "Query param: #{query}, Pools: #{pools.inspect}"
         
         result = session.run(cypher, query: query)
         

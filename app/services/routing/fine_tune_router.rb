@@ -136,6 +136,19 @@ module Routing
       # Convert ToolParams object to hash
       params = parsed_result.tool_params.to_h.compact
       
+      # Replace template variables with actual values
+      params.each do |key, value|
+        if value.is_a?(String) && value.include?('{{')
+          params[key] = value.gsub('{{query}}', @query)
+                            .gsub('{{text}}', @query)
+        end
+      end
+      
+      # Capitalize pool names to match Neo4j labels
+      if params[:pools].is_a?(Array)
+        params[:pools] = params[:pools].map(&:capitalize)
+      end
+      
       # Add defaults based on tool
       case parsed_result.primary_tool
       when 'search'
@@ -152,11 +165,14 @@ module Routing
         params[:text] ||= @query
       end
       
+      # Capitalize detected pools to match Neo4j labels
+      detected_pools = parsed_result.detected_pools.to_a.map(&:capitalize)
+      
       {
         query: @query,
         normalized_query: parsed_result.normalized_query,
         canonical_entities: parsed_result.canonical_entities.to_a,
-        detected_pools: parsed_result.detected_pools.to_a,
+        detected_pools: detected_pools,
         primary_tool: parsed_result.primary_tool,
         tool_params: params,
         confidence: parsed_result.confidence,
