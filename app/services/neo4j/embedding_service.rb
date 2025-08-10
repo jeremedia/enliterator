@@ -11,22 +11,35 @@ module Neo4j
       @driver = Graph::Connection.instance.driver
     end
     
-    # Semantic search using Neo4j vector indexes
+    # Semantic search using Neo4j vector indexes or fallback to manual similarity
     def semantic_search(query, limit: 10, pools: nil)
       query_embedding = generate_embedding(query)
       return [] unless query_embedding
       
       session = @driver.session(database: @database_name)
       
-      # Build WHERE clause for pool filtering
-      pool_clause = if pools && pools.any?
-        labels = pools.map { |p| ":#{p}" }.join(" OR n")
-        "AND (n#{labels})"
-      else
-        ""
+      # First try with vector index if available
+      begin
+        results = search_with_index(session, query_embedding, limit, pools)
+        return results if results.any?
+      rescue => e
+        Rails.logger.info "Vector index search failed, using fallback: #{e.message}"
       end
       
-      # Search using db.index.vector.queryNodes
+      # Fallback: manual cosine similarity calculation
+      results = search_without_index(session, query_embedding, limit, pools)
+      
+      session.close
+      results
+    rescue => e
+      Rails.logger.error "Semantic search failed: #{e.message}"
+      session&.close
+      []
+    end
+    
+    def search_with_index(session, query_embedding, limit, pools)
+      pool_clause = build_pool_clause(pools)
+      
       cypher = <<~CYPHER
         CALL db.index.vector.queryNodes(
           'universal_embeddings',
@@ -35,17 +48,51 @@ module Neo4j
         ) YIELD node, score
         WHERE true #{pool_clause}
         RETURN 
-          node.id as entity_id,
+          id(node) as entity_id,
           labels(node)[0] as entity_type,
-          node.name as entity_name,
+          node.label as entity_name,
           node.repr_text as content,
           score as similarity
         ORDER BY score DESC
       CYPHER
       
       result = session.run(cypher, query_embedding: query_embedding)
+      format_search_results(result)
+    end
+    
+    def search_without_index(session, query_embedding, limit, pools)
+      pool_clause = build_pool_clause(pools)
       
-      results = result.map do |record|
+      # Manual cosine similarity using gds.similarity.cosine
+      cypher = <<~CYPHER
+        MATCH (n)
+        WHERE n.embedding IS NOT NULL #{pool_clause}
+        WITH n, gds.similarity.cosine(n.embedding, $query_embedding) AS similarity
+        ORDER BY similarity DESC
+        LIMIT #{limit}
+        RETURN 
+          id(n) as entity_id,
+          labels(n)[0] as entity_type,
+          n.label as entity_name,
+          n.repr_text as content,
+          similarity
+      CYPHER
+      
+      result = session.run(cypher, query_embedding: query_embedding)
+      format_search_results(result)
+    end
+    
+    def build_pool_clause(pools)
+      if pools && pools.any?
+        labels = pools.map { |p| ":#{p}" }.join(" OR n")
+        "AND (n#{labels})"
+      else
+        ""
+      end
+    end
+    
+    def format_search_results(result)
+      result.map do |record|
         {
           'entity_id' => record[:entity_id],
           'entity_type' => record[:entity_type],
@@ -54,13 +101,6 @@ module Neo4j
           'similarity' => record[:similarity]
         }
       end
-      
-      session.close
-      results
-    rescue => e
-      Rails.logger.error "Semantic search failed: #{e.message}"
-      session&.close
-      []
     end
     
     # Generate embeddings for entities
