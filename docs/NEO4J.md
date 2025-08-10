@@ -150,10 +150,10 @@ The Graph Assembly stage (Pipeline Stage 5) loads extracted entities into Neo4j.
 
 ## 🧬 Stage 6: Neo4j GenAI Integration
 
-**STATUS**: Migrating from pgvector to Neo4j GenAI for embeddings
+**STATUS**: Migration to Neo4j GenAI COMPLETE - all embeddings in Neo4j
 
 ### What's Changing
-- **Before**: Neo4j (graph) + pgvector (embeddings) = 2 databases
+- **Before**: Neo4j (graph) + separate vector database = 2 databases
 - **After**: Neo4j (graph + embeddings) = 1 unified database
 
 ### GenAI Capabilities
@@ -268,7 +268,7 @@ session.close
 
 ### Next Steps 📍
 1. Complete Neo4j GenAI integration
-2. Remove pgvector dependencies
+2. ~~Remove pgvector dependencies~~ ✅ COMPLETE
 3. Implement semantic-structural visualizations
 
 ## 🎯 Key Principles

@@ -250,8 +250,7 @@ See [CLAUDE.md](CLAUDE.md) for detailed implementation guidance.
 - `Lexicon/` - Canonical terms and normalization
 - `Pools/` - Ten Pool Canon models
 - `Graph/` - Neo4j operations and path textization
-- `Embedding/` - pgvector index management
- - `Embedding/` - Neo4j GenAI vector management
+- `Embedding/` - Neo4j GenAI vector management
 - `Runtime/` - Q&A orchestration and gap tracking
 - `MCP/` - Tool server implementation
 - `Models/` - Fine-tune dataset generation

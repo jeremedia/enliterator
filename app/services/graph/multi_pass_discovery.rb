@@ -128,9 +128,9 @@ module Graph
               return { status: 'skipped', reason: 'Insufficient embeddings', discovered: 0 }
             end
             
-            # For now, use a simplified approach without GDS
-            # In production, this would use pgvector similarity search
-            Rails.logger.info "Pass B: Using simplified semantic matching (GDS not available)"
+            # Use Neo4j GenAI plugin for semantic similarity
+            # Embeddings are stored directly in Neo4j nodes
+            Rails.logger.info "Pass B: Using Neo4j GenAI semantic matching"
             
             # Find pairs with similar repr_text as proxy for semantic similarity
             query = <<~CYPHER

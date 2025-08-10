@@ -2,7 +2,7 @@
 
 module Neo4j
   # Unified embedding service using Neo4j GenAI plugin
-  # Replaces pgvector-based Embedding services
+  # All embeddings stored directly in Neo4j nodes and relationships
   class EmbeddingService
     def initialize(batch_id = nil)
       @batch_id = batch_id

@@ -6,7 +6,7 @@ This document is a self‑contained bootstrap prompt and execution plan to start
 - You are assisting on the Enliterator repo to complete the Meta‑Enliterator pipeline (Stages 0–8) and make it reproducible, observable, and recoverable. Do not assume prior memory; use only in‑repo context.
 - Read order on start: `README.md` → `CLAUDE.md` → `.claude/ON_START.md` → `AGENTS.md` → `docs/NEO4J.md` → `docs/PROJECT_STATUS.md` → `lib/tasks/enliterator.rake`.
 - Non‑negotiables:
-  - Use Neo4j GenAI for embeddings (no pgvector). Per‑EKN Neo4j DB (`ekn-{id}`); always use `Graph::Connection`.
+  - Neo4j GenAI handles all embeddings. Per‑EKN Neo4j DB (`ekn-{id}`); always use `Graph::Connection`.
   - GPT‑5: do NOT send `temperature` unless supported. Use `OpenaiConfig::SettingsManager` for models and zero‑temp extraction.
   - Rights/provenance‑first. Quarantine ambiguous items; never invent facts; always cite/ground.
   - Start app via `bin/dev`. Prefer rake tasks over ad‑hoc scripts.

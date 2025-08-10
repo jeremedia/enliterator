@@ -230,4 +230,4 @@ puts "4. Hybrid queries combining structure + semantics are possible"
 
 puts "\n💡 CONCLUSION:"
 puts "Neo4j GenAI provides everything needed for semantic-structural exploration."
-puts "No need for separate pgvector database!"
+puts "All embeddings stored directly in Neo4j - single unified database!"

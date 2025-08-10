@@ -132,7 +132,7 @@ class MetaEnliterationPipeline
       { canonical_form: 'Lexicon Bootstrap', surface_forms: ['lexicon', 'canonical terms', 'surface forms'], category: 'stage' },
       { canonical_form: 'Pool Filling', surface_forms: ['pool filling', 'entity extraction', 'pool extraction'], category: 'stage' },
       { canonical_form: 'Graph Assembly', surface_forms: ['graph', 'neo4j', 'knowledge graph'], category: 'stage' },
-      { canonical_form: 'Embeddings', surface_forms: ['embeddings', 'pgvector', 'vector representations'], category: 'stage' },
+      { canonical_form: 'Embeddings', surface_forms: ['embeddings', 'neo4j genai', 'vector representations'], category: 'stage' },
       { canonical_form: 'Literacy Scoring', surface_forms: ['literacy score', 'enliteracy score', 'maturity'], category: 'stage' },
       { canonical_form: 'Deliverables', surface_forms: ['deliverables', 'prompt packs', 'evaluation bundles'], category: 'stage' },
       

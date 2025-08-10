@@ -282,6 +282,6 @@ puts "• Perfect alignment with database-per-EKN isolation"
 puts "• Native support for semantic-structural exploration"
 
 puts "\n🚀 RECOMMENDATION:"
-puts "PROCEED with Neo4j GenAI migration. This is architecturally superior"
-puts "to maintaining separate Neo4j + pgvector databases."
+puts "Neo4j GenAI migration COMPLETE. Architecturally superior approach"
+puts "with all embeddings stored directly in the knowledge graph."
 puts "\n"

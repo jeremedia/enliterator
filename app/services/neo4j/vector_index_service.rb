@@ -2,7 +2,7 @@
 
 module Neo4j
   # Service for managing vector embeddings directly in Neo4j using GenAI plugin
-  # Eliminates need for separate pgvector database
+  # All vector operations handled natively within Neo4j
   class VectorIndexService
     def initialize(database_name = nil)
       @database_name = database_name || 'neo4j'

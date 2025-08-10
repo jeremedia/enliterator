@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Embedding
-  # Neo4j-based embedding builder job (replaces pgvector version)
+  # Neo4j-based embedding builder job using GenAI plugin
   class Neo4jBuilderJob < ApplicationJob
     queue_as :embeddings
     

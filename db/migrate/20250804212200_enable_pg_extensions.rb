@@ -3,6 +3,6 @@ class EnablePgExtensions < ActiveRecord::Migration[8.0]
     enable_extension 'pg_trgm'    # For trigram text search
     enable_extension 'pgcrypto'   # For UUID generation
     enable_extension 'btree_gin'  # For better GIN index performance
-    enable_extension 'vector'     # For pgvector embeddings
+    # Neo4j GenAI plugin handles embeddings - no pgvector needed
   end
 end

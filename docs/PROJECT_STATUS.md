@@ -76,7 +76,7 @@ Enliterator is a Rails 8 application that transforms dropped data collections in
   - ✅ Rights-aware filtering for training eligibility
   - ✅ Full test coverage
 - **Notes**:
-  - Migration from pgvector to Neo4j GenAI completed (see git log)
+  - Neo4j GenAI handles all embeddings - single unified database
   - Index creation and embedding generation handled in Stage 6 job
 
 #### Stage 7: Literacy Scoring & Gaps ✅
