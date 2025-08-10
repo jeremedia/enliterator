@@ -131,11 +131,18 @@ Rails.application.routes.draw do
     get '/', to: 'dashboard#index', as: :dashboard
   end
   
-  # Future API endpoints for MCP server
+  # API endpoints
   namespace :api do
     namespace :v1 do
-      # MCP tools will go here
-      # resources :mcp, only: [:create]
+      # MCP (Model Context Protocol) Server endpoints
+      namespace :mcp do
+        # Main SSE endpoint for MCP communication (ChatGPT requires /sse/ ending)
+        match 'sse', to: 'mcp#sse', via: [:get, :post]
+        match 'sse/', to: 'mcp#sse', via: [:get, :post]  # With trailing slash
+        
+        # Optional REST endpoint for testing
+        post 'tools', to: 'mcp#tools'
+      end
     end
   end
 end

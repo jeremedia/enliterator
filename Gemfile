@@ -52,6 +52,9 @@ gem "thruster", require: false
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 # gem "image_processing", "~> 1.2"
 
+# CORS support for MCP Server (SSE endpoints)
+gem "rack-cors"
+
 # OpenAI integration - official OpenAI Ruby gem
 # OpenAI Ruby SDK (Responses API, streaming)
 gem "openai", "~> 0.16.0"
