@@ -94,10 +94,13 @@ module Ingest
       routing_info = markitdown_result[:routing_info]
       metadata = markitdown_result[:metadata]
       
+      # CRITICAL: Sanitize content for PostgreSQL - remove null bytes
+      content = markitdown_result[:content]&.gsub("\0", '') || ''
+      
       update_data = {
         extraction_method: 'markitdown',
-        content: markitdown_result[:content], 
-        content_sample: markitdown_result[:content][0..4999], # First 5000 chars for rights inference
+        content: content, 
+        content_sample: content[0..4999], # First 5000 chars for rights inference
         content_length_chars: metadata[:content_length_chars],
         estimated_tokens: metadata[:estimated_tokens],
         extraction_model_used: routing_info[:model],

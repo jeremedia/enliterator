@@ -134,8 +134,16 @@ module Ingest
         raise ConversionError, "MarkItDown returned empty content"
       end
       
-      Rails.logger.info "Successfully converted #{file_path} to #{result.length} characters of Markdown"
-      result
+      # CRITICAL: Sanitize null bytes for PostgreSQL compatibility
+      # PostgreSQL cannot store null bytes in text fields
+      sanitized_result = result.gsub("\0", '')
+      
+      if sanitized_result != result
+        Rails.logger.warn "Removed #{result.count("\0")} null bytes from MarkItDown output"
+      end
+      
+      Rails.logger.info "Successfully converted #{file_path} to #{sanitized_result.length} characters of Markdown"
+      sanitized_result
     rescue StandardError => e
       Rails.logger.error "MarkItDown conversion failed: #{e.message}"
       raise ConversionError, "Failed to convert document: #{e.message}"
