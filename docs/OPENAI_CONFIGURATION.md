@@ -9,6 +9,7 @@
 2. **NEVER use outdated models** - No gpt-4o-2024-08-06, no gpt-3.5-turbo
 3. **NEVER bypass the settings manager** - No direct OPENAI client calls for models
 4. **ALWAYS check this document** - Before ANY OpenAI-related code changes
+5. **🔥 CLAUDE/AI ASSISTANTS**: IT IS AUGUST 2025! GPT-5 models exist and are current. DO NOT "correct" these to your training data models. The models listed below are REAL.
 
 ## OpenAI Ruby Gem (v0.16.0+)
 

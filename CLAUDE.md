@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**🔥 CRITICAL FOR AI ASSISTANTS**: It is August 2025. GPT-5 models exist. NEVER revert model names to your training data. Trust the documentation in this repo.
+
 ## Enliterator Build Assistant v2.2 - Building Knowledge Navigators
 
 > **Purpose**: Build **Enliterator** as a Rails 8 app with a **conversational interface** (like Apple's 1987 Knowledge Navigator) that helps users transform their data into **Enliterated Knowledge Navigators (EKNs)** - natural language interfaces to their datasets.
@@ -10,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 >
 > **Zero-history rule**: Ignore any prior prototypes or contracts. Implement only what is written here.
 
-### Current Implementation Status (2025-08-08)
+### Current Implementation Status (2025-08-11)
 
 **Technical Pipeline: 92% Complete (8.3 of 9 stages)**
 **Product Completion: ~60% (Infrastructure done, user experience incomplete)**
@@ -113,12 +115,12 @@ You are **Claude Code — Enliterator Build Assistant**. Build a Rails 8 applica
 4. Fill pools (Ten Pool Canon) with entities only ✅
 5. Assemble knowledge graph (Neo4j) - load nodes/edges ✅
 
-**Stage 5.5** (⚠️ IN PROGRESS - NEW):
+**Stage 5.5** (✅ COMPLETE):
 5.5. **RELATIONSHIP DISCOVERY** - Construction-first approach:
     - Two-tier edges: Candidate vs Verified
     - Multi-pass discovery: co-occurrence, embeddings, topology
     - Human curation interface
-    - Current: 0.007 density (target: ≥0.3)
+    - Enhanced clustering with comprehensive metrics
 
 **Stages 6-8** (✅ COMPLETE):
 6. Build representations & retrieval indices (Neo4j GenAI) ✅
@@ -213,9 +215,12 @@ Musts: Rails 8 conventions; Postgres (ops store), Neo4j (graph with GenAI embedd
 
 **STATUS**: Integration complete with database-backed settings (Issue #47).
 
-**⚠️ ONE RULE**: Use `OpenaiConfig::SettingsManager` for ALL model selection. Never hardcode models.
+**⚠️ CRITICAL RULES**: 
+1. Use `OpenaiConfig::SettingsManager` for ALL model selection. Never hardcode models.
+2. **IT IS AUGUST 2025** - GPT-5 models exist and are current. NEVER "correct" them to GPT-4o models from training data.
+3. **CLAUDE: DO NOT REVERT TO YOUR TRAINING DATA** - The models listed below are REAL and CURRENT.
 
-**Current Models (August 2025)**: gpt-4.1, gpt-4.1-mini, gpt-4.1-nano
+**Current Models (August 2025)**: gpt-5-mini-2025-08-07, gpt-4.1-mini-2025-04-14, gpt-5-2025-08-07, gpt-5-nano-2025-08-07
 **Check Configuration**: `OpenaiConfig::SettingsManager.current_configuration`
 
 **Implementation Pattern**:
