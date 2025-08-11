@@ -803,6 +803,168 @@ namespace :enliterator do
       end
     end
   end
+
+  namespace :seed do
+    desc "Process Arctic EKN through full pipeline (complementary to db:seed)"
+    task process_arctic: :environment do
+      puts "🚀 PROCESSING ARCTIC EKN THROUGH FULL PIPELINE"
+      puts "=" * 60
+      
+      arctic_ekn = Ekn.find_by!(slug: "arctic-research")
+      batch = arctic_ekn.ingest_batches.find_by!(name: "Arctic Research Documents Collection")
+      
+      puts "EKN: #{arctic_ekn.name} (ID: #{arctic_ekn.id})"
+      puts "Batch: #{batch.name} (#{batch.ingest_items.count} items)"
+      
+      # Create pipeline run and execute
+      pipeline_run = EknPipelineRun.create!(
+        ekn: arctic_ekn,
+        ingest_batch: batch,
+        auto_advance: true,
+        skip_failed_items: false,
+        options: {
+          inline_mode: true,
+          demo_run: false
+        }
+      )
+      
+      puts "Created Pipeline Run: #{pipeline_run.id}"
+      puts "Starting 9-stage pipeline processing..."
+      
+      start_time = Time.current
+      ENV["PIPELINE_INLINE"] = "true"
+      
+      pipeline_run.start!
+      
+      end_time = Time.current
+      total_duration = (end_time - start_time).round(2)
+      
+      pipeline_run.reload
+      puts "\n" + "=" * 60
+      puts "🎯 ARCTIC PIPELINE PROCESSING COMPLETE"
+      puts "=" * 60
+      puts "Status: #{pipeline_run.status}"
+      puts "Final Stage: #{pipeline_run.current_stage} (#{pipeline_run.current_stage_number}/10)"
+      puts "Duration: #{total_duration} seconds"
+      puts "Literacy Score: #{pipeline_run.literacy_score || 'Not calculated'}"
+      
+      if pipeline_run.completed?
+        puts "\n✅ SUCCESS! Arctic Research Navigator fully operational"
+        puts "🌐 Access: https://e.dev.domt.app/#{arctic_ekn.slug}/chat"
+      else
+        puts "\n⚠️ Pipeline incomplete or failed"
+        puts "Error: #{pipeline_run.error_message}" if pipeline_run.error_message
+      end
+    end
+    
+    desc "Complete reset and rebuild of Arctic EKN (DESTRUCTIVE - asks for confirmation)"
+    task reset_arctic: :environment do
+      puts "🔄 RESETTING ARCTIC EKN (DESTROY AND RECREATE)"
+      puts "=" * 60
+      
+      # CRITICAL: Cost protection check
+      arctic_ekn = Ekn.find_by(slug: "arctic-research")
+      if arctic_ekn
+        completed_runs = arctic_ekn.ekn_pipeline_runs.where(status: 'completed').count
+        if completed_runs > 0
+          estimated_cost = completed_runs * 50
+          puts "💰 COST WARNING: This will destroy #{completed_runs} completed pipeline run(s)"
+          puts "   Estimated recreation cost: $#{estimated_cost}+ in OpenAI API calls"
+          puts "   Last processing: #{arctic_ekn.updated_at}"
+          puts ""
+          puts "Are you SURE you want to delete this expensive data?"
+          puts "Type 'YES DELETE EXPENSIVE DATA' to confirm:"
+          
+          confirmation = STDIN.gets.chomp
+          unless confirmation == "YES DELETE EXPENSIVE DATA"
+            puts "❌ Reset aborted - expensive data protected"
+            puts "💡 Use 'rails db:seed' to add data without destroying existing"
+            exit 0
+          end
+        end
+        
+        puts "Destroying existing Arctic EKN..."
+        arctic_ekn.destroy!
+        puts "✅ Destroyed"
+      else
+        puts "No existing Arctic EKN found"
+      end
+      
+      # Run seeds to recreate
+      puts "\nRunning db:seed..."
+      Rake::Task["db:seed"].invoke
+      
+      # Process pipeline
+      puts "\nProcessing Arctic pipeline..."
+      Rake::Task["enliterator:seed:process_arctic"].invoke
+      
+      puts "\n🎉 Arctic EKN completely rebuilt and operational!"
+    end
+    
+    desc "Check Arctic EKN and essential data status"
+    task status: :environment do
+      puts "📊 ARCTIC EKN STATUS CHECK"
+      puts "=" * 60
+      
+      # Check admin user
+      admin_user = User.find_by(email: "j@zinod.com")
+      puts "Admin User (j@zinod.com): #{admin_user ? '✅ Present' : '❌ Missing'}"
+      
+      # Check Arctic EKN
+      arctic_ekn = Ekn.find_by(slug: "arctic-research")
+      if arctic_ekn
+        puts "Arctic EKN: ✅ Present (ID: #{arctic_ekn.id})"
+        puts "  Status: #{arctic_ekn.status || 'Unknown'}"
+        puts "  Neo4j DB: #{arctic_ekn.neo4j_database_name}"
+        puts "  Knowledge Graph: #{arctic_ekn.total_nodes || 0} nodes, #{arctic_ekn.total_relationships || 0} relationships"
+        
+        # Check batch
+        batch = arctic_ekn.ingest_batches.find_by(name: "Arctic Research Documents Collection")
+        if batch
+          puts "  Research Batch: ✅ Present (#{batch.ingest_items.count} items)"
+          puts "    Status: #{batch.status}"
+          processed = batch.ingest_items.where.not(triage_status: ['pending', 'failed']).count
+          puts "    Processed: #{processed}/#{batch.ingest_items.count}"
+        else
+          puts "  Research Batch: ❌ Missing"
+        end
+        
+        # Check personality
+        personality = arctic_ekn.ekn_personality_profile
+        puts "  Personality Profile: #{personality ? '✅ Present' : '❌ Missing'}"
+        
+        # Check last pipeline run
+        pipeline_run = arctic_ekn.ekn_pipeline_runs.last
+        if pipeline_run
+          puts "  Last Pipeline Run: ✅ #{pipeline_run.status} (Stage #{pipeline_run.current_stage})"
+          puts "    Literacy Score: #{pipeline_run.literacy_score || 'Not calculated'}"
+        else
+          puts "  Pipeline Runs: ❌ None found"
+        end
+        
+      else
+        puts "Arctic EKN: ❌ Missing"
+      end
+      
+      puts "\n🎯 RECOVERY COMMANDS:"
+      puts "• Full rebuild: rails enliterator:seed:reset_arctic"
+      puts "• Seed only: rails db:seed"
+      puts "• Pipeline only: rails enliterator:seed:process_arctic"
+    end
+
+    desc "Add training questions to Arctic EKN"
+    task add_training_questions: :environment do
+      puts "🎯 ADDING ARCTIC TRAINING QUESTIONS"
+      puts "=" * 60
+      
+      arctic_ekn = Ekn.find_by!(slug: "arctic-research")
+      
+      # Load training questions from the temp script
+      load Rails.root.join("tmp", "create_arctic_training_questions.rb")
+      
+      puts "✅ Arctic training questions added successfully"
+    end
+  end
   
   desc "Show pipeline status"
   task status: :environment do

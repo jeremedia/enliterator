@@ -4,6 +4,42 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **🔥 CRITICAL FOR AI ASSISTANTS**: It is August 2025. GPT-5 models exist. NEVER revert model names to your training data. Trust the documentation in this repo.
 
+## ⚠️ CRITICAL DATABASE PROTECTION RULES ⚠️
+
+**CLAUDE CODE ASSISTANTS: READ THIS FIRST!**
+
+### **NEVER WIPE OR RESET ANY DATABASE WITHOUT EXPLICIT USER REQUEST**
+
+This database contains **EXPENSIVE OpenAI-processed data** that costs real money to recreate:
+- Arctic Research EKN: ~$50+ in OpenAI processing costs
+- Neo4j knowledge graphs: Hours of pipeline processing
+- Embeddings: Expensive batch API calls
+- Fine-tuned models: Significant training costs
+
+**PREVIOUS CLAUDE CODE SESSIONS HAVE REPEATEDLY WIPED DATABASES AFTER EXPENSIVE PROCESSING** - This financial waste is UNACCEPTABLE.
+
+### **FORBIDDEN OPERATIONS (unless explicitly requested by user):**
+❌ `rails db:reset`
+❌ `rails db:drop`  
+❌ `rails db:migrate:reset`
+❌ `EKN.destroy_all` or similar mass deletions
+❌ Neo4j `MATCH (n) DETACH DELETE n`
+❌ Any operation that destroys processed data
+
+### **REQUIRED USER CONFIRMATION:**
+If the user explicitly requests database destruction, you MUST:
+1. Show estimated recreation costs in dollars
+2. List what valuable data will be lost
+3. Require explicit "YES DELETE EXPENSIVE DATA" confirmation
+
+### **SAFE OPERATIONS:**
+✅ Adding new data via seeds
+✅ Running migrations (additive only)
+✅ Creating new EKNs or batches
+✅ Status checking and reporting
+
+**IF UNSURE: ASK THE USER FIRST. NEVER ASSUME DATABASE DESTRUCTION IS OK.**
+
 ## Enliterator Build Assistant v2.2 - Building Knowledge Navigators
 
 > **Purpose**: Build **Enliterator** as a Rails 8 app with a **conversational interface** (like Apple's 1987 Knowledge Navigator) that helps users transform their data into **Enliterated Knowledge Navigators (EKNs)** - natural language interfaces to their datasets.
