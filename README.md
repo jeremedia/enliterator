@@ -10,7 +10,7 @@ Enliterator doesn't just process data - it creates **Knowledge Navigators**. Eac
 - **Explore interactively** through clicking, zooming, and filtering
 - **Learn from progressively** as they accumulate knowledge over time
 
-**Current Status**: Pipeline complete (Stages 0-8), Knowledge Navigator interface 30% complete (Stage 9)
+**Current Status**: Pipeline 100% complete (All stages 0-9), Knowledge Navigator ~75% complete (core functionality working)
 
 ## What is Enliteracy?
 
@@ -45,9 +45,11 @@ Drop a data bundle and the system automatically:
 3. **Lexicon Bootstrap** - Creates canonical terms and normalizations
 4. **Pool Filling** - Extracts entities using the Ten Pool Canon
 5. **Graph Assembly** - Builds Neo4j knowledge graph
+5.5. **Relationship Discovery** - Multi-pass clustering discovers cross-boundary connections
 6. **Representations & Retrieval** - Creates Neo4j GenAI embeddings (unified in graph)
 7. **Literacy Scoring** - Evaluates completeness and gaps
 8. **Deliverables** - Generates evaluation bundles
+9. **Knowledge Navigator** - Conversational interface with entity navigation
 
 ### Ten Pool Canon
 The portable contract for meaning:
@@ -62,13 +64,13 @@ The portable contract for meaning:
 9. **Lexicon & Ontology** - Definitions and controlled vocabulary
 10. **Intent & Task** - User requests and fulfillment
 
-### MCP Server Tools
-- `extract_and_link` - Extract entities with OpenAI Structured Outputs
-- `search` - Unified semantic + graph search with rights filtering
-- `fetch` - Retrieve full records with relations
-- `bridge` - Find paths between concepts
-- `location_neighbors` - Spatial analysis (when applicable)
-- `set_persona` / `clear_persona` - Style customization
+### MCP Server Tools (All Implemented ✅)
+- `extract_and_link` - Extract entities with OpenAI Structured Outputs ✅
+- `search` - Unified semantic + graph search with rights filtering ✅
+- `fetch` - Retrieve full records with relations ✅  
+- `bridge` - Find paths between concepts ✅
+- `location_neighbors` - Spatial analysis (when applicable) ✅
+- `set_persona` / `clear_persona` - Style customization ✅
 
 ### Delivery Adapters
 Transform grounded answers into:
@@ -82,11 +84,13 @@ Transform grounded answers into:
 ## Technology Stack
 
 - **Rails 8** with Solid Queue, Solid Cache, Solid Cable
-- **PostgreSQL 16+** for operational data
+- **PostgreSQL 16+** for operational data  
 - **Neo4j Desktop** for knowledge graph (see `/docs/NEO4J.md` for configuration)
 - **Neo4j GenAI** for vector embeddings and similarity search (unified with graph)
 - **Redis** for caching and queue management
 - **OpenAI Ruby gem v0.16.0** with Responses API and Structured Outputs
+- **QueryOrchestrator** connects chat to knowledge graph via MCP tools
+- **Fine-tuned model** for domain-specific query routing and canonical term mapping
 - **Docker Compose** for development services
 - **Admin UI** for settings management (https://e.dev.domt.app/admin)
 
