@@ -182,7 +182,16 @@ else
   puts "✅ Arctic personality profile already exists"
 end
 
-# SECTION 6: Output Status Summary
+# SECTION 6: OpenAI Settings and Prompt Templates (CRITICAL CONFIGURATION)
+puts "\n⚙️ CREATING OPENAI SETTINGS & PROMPT TEMPLATES"
+puts "Loading critical OpenAI configuration that was lost in database wipe..."
+
+# Load the OpenAI settings seed file
+load Rails.root.join('db', 'seeds', 'openai_settings.rb')
+
+puts "✅ OpenAI settings and prompt templates restored"
+
+# SECTION 7: Output Status Summary
 puts "\n" + "=" * 60
 puts "🎯 ENLITERATOR SEEDS COMPLETED"
 puts "=" * 60
@@ -193,6 +202,8 @@ puts "  Arctic EKN: #{arctic_ekn.persisted? ? '✅ Ready' : '❌ Failed'}"
 puts "  Research Batch: #{batch.persisted? ? '✅ Ready' : '❌ Failed'}"
 puts "  PDF Documents: #{batch.ingest_items.count} items"
 puts "  Personality Profile: #{arctic_ekn.ekn_personality_profile ? '✅ Ready' : '❌ Failed'}"
+puts "  OpenAI Settings: #{OpenaiSetting.count} settings"
+puts "  Prompt Templates: #{PromptTemplate.count} templates"
 puts "  Neo4j Database: #{arctic_ekn.neo4j_database_name}"
 
 puts "\n🚀 NEXT STEPS:"
