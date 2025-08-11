@@ -1,0 +1,129 @@
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="sm:flex sm:items-center">
+    <div class="sm:flex-auto">
+      <h1 class="text-2xl font-semibold text-gray-900">MCP Tool Calls</h1>
+      <p class="mt-2 text-sm text-gray-700">
+        Track all Model Context Protocol tool executions
+      </p>
+    </div>
+  </div>
+
+  <div class="mt-8 flow-root">
+    <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+      <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
+        <table class="min-w-full divide-y divide-gray-300">
+          <thead>
+            <tr>
+              <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">ID</th>
+              <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Tool</th>
+              <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
+              <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Message/Conv</th>
+              <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Duration</th>
+              <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Created</th>
+              <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+            <% McpToolCall.recent.limit(100).each do |call| %>
+              <tr>
+                <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                  <%= call.id %>
+                </td>
+                <td class="whitespace-nowrap px-3 py-4 text-sm">
+                  <div class="font-medium text-gray-900"><%= call.tool_name %></div>
+                  <div class="text-gray-500 text-xs truncate max-w-xs" title="<%= call.tool_id %>">
+                    <%= call.tool_id&.slice(0, 20) %>...
+                  </div>
+                </td>
+                <td class="whitespace-nowrap px-3 py-4 text-sm">
+                  <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
+                    <%= case call.status
+                       when 'completed' then 'bg-green-100 text-green-700'
+                       when 'executing' then 'bg-blue-100 text-blue-700'
+                       when 'failed' then 'bg-red-100 text-red-700'
+                       else 'bg-gray-100 text-gray-700'
+                       end %>">
+                    <%= call.status %>
+                  </span>
+                </td>
+                <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                  <% if call.message %>
+                    Msg #<%= call.message_id %>
+                  <% end %>
+                  <% if call.conversation %>
+                    / Conv #<%= call.conversation_id %>
+                  <% end %>
+                </td>
+                <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                  <% if call.duration_ms %>
+                    <%= call.duration_ms %> ms
+                  <% else %>
+                    -
+                  <% end %>
+                </td>
+                <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                  <%= call.created_at.strftime("%m/%d %I:%M %p") %>
+                </td>
+                <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                  <button onclick="toggleDetails('call-<%= call.id %>')" class="text-indigo-600 hover:text-indigo-900">
+                    Details
+                  </button>
+                </td>
+              </tr>
+              <tr id="call-<%= call.id %>" class="hidden">
+                <td colspan="7" class="px-3 py-4 bg-gray-50">
+                  <div class="space-y-2">
+                    <div>
+                      <strong>Arguments:</strong>
+                      <pre class="mt-1 text-xs bg-white p-2 rounded border"><%= JSON.pretty_generate(call.arguments || {}) %></pre>
+                    </div>
+                    <% if call.response_data %>
+                      <div>
+                        <strong>Response:</strong>
+                        <pre class="mt-1 text-xs bg-white p-2 rounded border max-h-40 overflow-auto"><%= JSON.pretty_generate(call.response_data).slice(0, 1000) %>...</pre>
+                      </div>
+                    <% end %>
+                    <% if call.error_message %>
+                      <div>
+                        <strong>Error:</strong>
+                        <div class="mt-1 text-sm text-red-600"><%= call.error_message %></div>
+                      </div>
+                    <% end %>
+                    <% if call.logs.any? %>
+                      <div>
+                        <strong>Logs:</strong>
+                        <div class="mt-1 space-y-1">
+                          <% call.logs.each do |log| %>
+                            <% log.log_items.recent.limit(5).each do |item| %>
+                              <div class="text-xs">
+                                <span class="text-gray-500"><%= item.created_at.strftime("%I:%M:%S") %></span>
+                                <span class="<%= item.status == 'error' ? 'text-red-600' : 'text-gray-700' %>">
+                                  <%= item.text %>
+                                </span>
+                              </div>
+                            <% end %>
+                          <% end %>
+                        </div>
+                      </div>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleDetails(id) {
+  const row = document.getElementById(id);
+  if (row.classList.contains('hidden')) {
+    row.classList.remove('hidden');
+  } else {
+    row.classList.add('hidden');
+  }
+}
+</script>

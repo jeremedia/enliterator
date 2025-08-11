@@ -19,7 +19,12 @@
       "Bash(curl:*)",
       "Bash(bundle exec rake:*)",
       "Bash(rm:*)",
-      "Bash(hash -r)"
+      "Bash(hash -r)",
+      "Bash(codex:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(npm i:*)",
+      "Bash(pip show:*)",
+      "Bash(pip install:*)"
     ],
     "deny": []
   }

@@ -44,6 +44,7 @@
     <orderEntry type="library" scope="PROVIDED" name="activesupport (v8.0.2, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="addressable (v2.8.7, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="afm (v0.2.2, chruby: ruby-3.4.4) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="annotate (v3.2.0@0e78f7, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="ast (v2.4.3, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="async (v2.12.1, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="async-io (v1.43.2, chruby: ruby-3.4.4) [gem]" level="application" />
@@ -113,6 +114,7 @@
     <orderEntry type="library" scope="PROVIDED" name="hashdiff (v1.2.0, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="hashery (v2.1.2, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="hotwire-spark (v0.1.13, chruby: ruby-3.4.4) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="httparty (v0.23.1, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="i18n (v1.14.7, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="ice_nine (v0.11.2, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="importmap-rails (v2.2.2, chruby: ruby-3.4.4) [gem]" level="application" />
@@ -141,6 +143,7 @@
     <orderEntry type="library" scope="PROVIDED" name="minitest (v5.25.5, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="mission_control-jobs (v1.1.0, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="msgpack (v1.8.0, chruby: ruby-3.4.4) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="multi_xml (v0.7.2, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="neo4j-ruby-driver (v4.4.6, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="net-http (v0.6.0, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="net-imap (v0.5.9, chruby: ruby-3.4.4) [gem]" level="application" />
@@ -153,7 +156,7 @@
     <orderEntry type="library" scope="PROVIDED" name="nio4r (v2.7.4, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="nokogiri (v1.18.9, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="oj (v3.16.11, chruby: ruby-3.4.4) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="openai (v0.16.0, chruby: ruby-3.4.4) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="openai (v0.17.1, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="orm_adapter (v0.5.0, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="ostruct (v0.6.3, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="parallel (v1.27.0, chruby: ruby-3.4.4) [gem]" level="application" />
@@ -161,7 +164,7 @@
     <orderEntry type="library" scope="PROVIDED" name="pdf-reader (v2.14.1, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="pg (v1.6.1, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="pg_search (v2.3.7, chruby: ruby-3.4.4) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="positioning (v0.4.6, chruby: ruby-3.4.4) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="positioning (v0.4.7, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="pp (v0.6.2, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="prettyprint (v0.2.0, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="prism (v1.4.0, chruby: ruby-3.4.4) [gem]" level="application" />
@@ -173,6 +176,7 @@
     <orderEntry type="library" scope="PROVIDED" name="raabro (v1.4.0, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="racc (v1.8.1, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="rack (v3.2.0, chruby: ruby-3.4.4) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="rack-cors (v3.0.0, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="rack-session (v2.1.1, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="rack-test (v2.2.0, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="rackup (v2.2.1, chruby: ruby-3.4.4) [gem]" level="application" />
@@ -186,9 +190,10 @@
     <orderEntry type="library" scope="PROVIDED" name="rb-inotify (v0.11.1, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="rbtree (v0.4.6, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="rdoc (v6.14.2, chruby: ruby-3.4.4) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="redcarpet (v3.6.1, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="redis (v5.4.1, chruby: ruby-3.4.4) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="redis-client (v0.25.1, chruby: ruby-3.4.4) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="regexp_parser (v2.11.0, chruby: ruby-3.4.4) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="redis-client (v0.25.2, chruby: ruby-3.4.4) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="regexp_parser (v2.11.1, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="reline (v0.6.2, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="responders (v3.1.1, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="rexml (v3.4.1, chruby: ruby-3.4.4) [gem]" level="application" />
@@ -201,7 +206,7 @@
     <orderEntry type="library" scope="PROVIDED" name="rubocop (v1.79.2, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="rubocop-ast (v1.46.0, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="rubocop-performance (v1.25.0, chruby: ruby-3.4.4) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="rubocop-rails (v2.32.0, chruby: ruby-3.4.4) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="rubocop-rails (v2.33.0, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="rubocop-rails-omakase (v1.1.0, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="ruby-progressbar (v1.13.0, chruby: ruby-3.4.4) [gem]" level="application" />
     <orderEntry type="library" scope="PROVIDED" name="ruby-rc4 (v0.1.5, chruby: ruby-3.4.4) [gem]" level="application" />
@@ -279,6 +284,9 @@
     <entry key="config/cable">
       <value>file://$MODULE_DIR$/config/cable.yml</value>
     </entry>
+    <entry key="config/cache">
+      <value>file://$MODULE_DIR$/config/cache.yml</value>
+    </entry>
     <entry key="config/database">
       <value>file://$MODULE_DIR$/config/database.yml</value>
     </entry>
@@ -300,8 +308,8 @@
     <entry key="config/routes.rb">
       <value>file://$MODULE_DIR$/config/routes.rb</value>
     </entry>
-    <entry key="config/secrets">
-      <value>file://$MODULE_DIR$/config</value>
+    <entry key="config/solid_cache">
+      <value>file://$MODULE_DIR$/config/solid_cache.yml</value>
     </entry>
     <entry key="db">
       <value>file://$MODULE_DIR$/db</value>
@@ -335,6 +343,11 @@
     </entry>
     <entry key="public/stylesheets">
       <value>file://$MODULE_DIR$/public/stylesheets</value>
+    </entry>
+    <entry key="test/mailers/previews">
+      <value>file://$MODULE_DIR$/spec/mailers/previews</value>
+      <value>file://$MODULE_DIR$/test/mailers/previews</value>
+      <value>file://$MODULE_DIR$/test/mailers/previews</value>
     </entry>
     <entry key="tmp">
       <value>file://$MODULE_DIR$/tmp</value>

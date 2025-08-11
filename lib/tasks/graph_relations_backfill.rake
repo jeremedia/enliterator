@@ -3,6 +3,116 @@
 namespace :enliterator do
   namespace :graph do
     namespace :relations do
+      desc "Deterministic fallback: create co_occurs_with relations within each item to ensure visible edges"
+      task :cooccurrence_fallback, [:batch_id] => :environment do |t, args|
+        batch_id = args[:batch_id] || ENV['BATCH_ID']
+        unless batch_id
+          puts "Usage: rails enliterator:graph:relations:cooccurrence_fallback[batch_id]"
+          puts "   or: BATCH_ID=123 rails enliterator:graph:relations:cooccurrence_fallback"
+          exit 1
+        end
+
+        batch = IngestBatch.find_by(id: batch_id)
+        unless batch
+          puts "ERROR: Batch ##{batch_id} not found"
+          exit 1
+        end
+
+        puts "=" * 80
+        puts "CO-OCCURRENCE FALLBACK - Batch ##{batch.id}: #{batch.name}"
+        puts "=" * 80
+
+        total_created = 0
+        errors = []
+
+        batch.ingest_items.find_each.with_index do |item, idx|
+          begin
+            # Collect entities extracted from this item (by provenance custom_terms)
+            entities = []
+            %w[Idea Manifest Experience Practical Evolutionary Emanation].each do |pool_name|
+              pool_class = pool_name.constantize
+              pool_class.joins(:provenance_and_rights)
+                        .where("provenance_and_rights.custom_terms->>'extraction_batch' = ?", batch.id.to_s)
+                        .where("provenance_and_rights.custom_terms->>'extraction_item' = ?", item.id.to_s)
+                        .select(:id)
+                        .find_each do |entity|
+                entities << { type: pool_name, id: entity.id }
+              end
+            end
+
+            next if entities.size < 2
+
+            # Create a simple chain of co_occurs_with edges to avoid combinatorial explosion
+            pub = item.respond_to?(:publishable) ? item.publishable : item.provenance_and_rights&.publishability
+            train = item.respond_to?(:training_eligible) ? item.training_eligible : item.provenance_and_rights&.training_eligibility
+
+            rights = ProvenanceAndRights.find_or_create_by!(
+              source_ids: ["cooccurrence_fallback_#{batch.id}_#{item.id}"],
+              collection_method: "cooccurrence_fallback",
+              consent_status: "implicit_consent",
+              license_type: "custom",
+              valid_time_start: Time.current,
+              publishability: !!pub,
+              training_eligibility: !!train,
+              quarantined: false,
+              custom_terms: {
+                'extraction_batch' => batch.id,
+                'stage' => 'cooccurrence_fallback',
+                'item_id' => item.id
+              }
+            )
+
+            # Link consecutive pairs deterministically
+            entities.sort_by! { |e| [e[:type], e[:id]] }
+            entities.each_cons(2) do |a, b|
+              begin
+                Relational.create!(
+                  relation_type: 'co_occurs_with',
+                  source_type: a[:type],
+                  source_id: a[:id],
+                  target_type: b[:type],
+                  target_id: b[:id],
+                  strength: 0.5,
+                  valid_time_start: Time.current,
+                  provenance_and_rights: rights,
+                  repr_text: "#{a[:type]}##{a[:id]} co_occurs_with #{b[:type]}##{b[:id]}"
+                )
+                total_created += 1
+              rescue => e
+                errors << "Item #{item.id}: #{e.message}"
+              end
+            end
+          rescue => e
+            errors << "Item #{item.id}: #{e.message}"
+          end
+        end
+
+        puts "Created #{total_created} co_occurs_with relational records"
+        if errors.any?
+          puts "Errors (first 10):"
+          errors.first(10).each { |m| puts "  - #{m}" }
+        end
+
+        # Now run EdgeLoader to create graph edges
+        if total_created > 0
+          puts "Running EdgeLoader to write edges to Neo4j..."
+          ekn = batch.ekn
+          if ekn
+            driver = Graph::Connection.instance.driver
+            driver.session(database: ekn.neo4j_database_name) do |session|
+              session.write_transaction do |tx|
+                loader = Graph::EdgeLoader.new(tx, batch)
+                result = loader.load_all
+                puts "EdgeLoader: #{result[:total_edges]} edges created (including rights); co_occurs_with count: #{result[:by_verb]['co_occurs_with'] rescue 0}"
+              end
+            end
+          else
+            puts "WARNING: No EKN associated with batch, skipping EdgeLoader"
+          end
+        end
+
+        puts "Done."
+      end
       desc "Backfill relations for a batch using existing entities (relation extraction only)"
       task :backfill, [:batch_id] => :environment do |t, args|
         batch_id = args[:batch_id] || ENV['BATCH_ID']

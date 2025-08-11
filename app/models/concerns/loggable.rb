@@ -52,15 +52,31 @@ module Loggable
 
   # Define methods to create or access logs with specific labels
   def find_or_create_log(label = "log")
+    # Don't try to create logs if the parent isn't saved yet
+    return nil unless persisted?
+    
     Rails.logger.silence do
-    logs.find_or_create_by(label: label)
+      logs.find_or_create_by(label: label)
     end
   end
 
   def add_log_entry(log_text, log_label = "log", status = "")
+    # Skip logging if the parent record isn't saved
+    unless persisted?
+      ap "[DEFERRED LOG] #{log_text}"
+      Rails.logger.info "[Loggable] Skipping log entry - parent not persisted: #{log_text}"
+      return
+    end
+    
     log = find_or_create_log(log_label)
-    log_entry = log.log_items.create(text: log_text, status: status)
-    ap "<-LOG #{log_entry.id}-> #{log_text}"
+    # ensure log is created before adding entry
+    if log && log.persisted?
+      log_entry = log.log_items.create(text: log_text, status: status)
+      ap "<-LOG #{log_entry.id}-> #{log_text}"
+    else
+      ap "Could not create log with label '#{log_label}'"
+      return
+    end
     
     # Broadcast progress updates for SchemaRequest logs to SlackChannel UI
     if defined?(SchemaRequest) && self.is_a?(SchemaRequest) && should_broadcast_log_message?(log_text)

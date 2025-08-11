@@ -73,6 +73,8 @@
 #  index_api_calls_on_user_id_and_created_at                  (user_id,created_at)
 #
 class ApiCall < ApplicationRecord
+
+  include Loggable
   include CurrentUserTrackable
   include CurrentEknTrackable
 
@@ -193,7 +195,7 @@ class ApiCall < ApplicationRecord
   # Track the API call execution
   def track_execution(&block)
     start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC, :millisecond)
-
+    log "Tracking API call execution: #{id} - #{service_name} #{endpoint}"
     begin
       result = yield(self)
 
@@ -222,6 +224,7 @@ class ApiCall < ApplicationRecord
       end_time = Process.clock_gettime(Process::CLOCK_MONOTONIC, :millisecond)
       self.response_time_ms = end_time - start_time
       save!
+      log "API call execution completed: #{id} - #{service_name} #{endpoint} (#{status})"
     end
   end
 
@@ -389,6 +392,7 @@ class ApiCall < ApplicationRecord
 
   def calculate_total_cost
     self.total_cost = (input_cost || 0) + (output_cost || 0)
+    log "Calculating total cost: #{total_cost} (input: #{input_cost}, output: #{output_cost})"
   end
 
   def set_environment
@@ -396,6 +400,8 @@ class ApiCall < ApplicationRecord
   end
 
   def check_usage_limits
+    # log "API call created: #{id} - #{service_name} #{endpoint} (#{status})"
+
     return unless expensive? || slow? || high_token_usage?
 
     Rails.logger.warn "High-cost API call: #{to_analytics_json.to_json}"

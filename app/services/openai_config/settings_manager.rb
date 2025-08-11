@@ -3,10 +3,30 @@
 module OpenaiConfig
   class SettingsManager < ApplicationService
     class << self
-      def model_for(task)
+      def model_for(task, content_length: nil)
         task = task.to_s
+        
+        # For extraction tasks, use smart model selection based on content length
+        if task == 'extraction' && content_length
+          return smart_extraction_model_for(content_length)
+        end
+        
         setting = OpenaiSetting.active.find_by(key: "model_#{task}")
         setting&.value || default_model_for(task)
+      end
+      
+      # Smart model selection for extraction based on content length
+      def smart_extraction_model_for(content_length)
+        # gpt-5-mini-2025-08-07: 400K context, 128K output tokens (preferred)
+        # gpt-4.1-mini-2025-04-14: 1,047,576 context, 32K output tokens (fallback for very long content)
+        
+        if content_length > 400_000  # 400K chars = ~114K tokens, near gpt-5-mini limit
+          Rails.logger.info "Using gpt-4.1-mini-2025-04-14 for long content (#{content_length} chars)"
+          'gpt-4.1-mini-2025-04-14'
+        else
+          Rails.logger.info "Using gpt-5-mini-2025-08-07 for content (#{content_length} chars)"
+          'gpt-5-mini-2025-08-07'
+        end
       end
       
       def prompt_for(service_class)
@@ -196,18 +216,19 @@ module OpenaiConfig
       def supported_models_for(task_type)
         case task_type.to_s
         when 'extraction'
-          # Models that support Structured Outputs (2025 models)
-          ["gpt-4.1", "gpt-4.1-2025-04-14", "gpt-4.1-mini", "gpt-4.1-mini-2025-04-14", "gpt-4o", "chatgpt-4o-latest"]
+          # Models that support Structured Outputs (August 2025 models)
+          ["gpt-5-mini-2025-08-07", "gpt-5-2025-08-07", "gpt-4.1-2025-04-14", 
+           "gpt-4.1-mini-2025-04-14", "gpt-4o", "chatgpt-4o-latest"]
         when 'answer', 'conversation'
-          # All models that can generate text (2025 models)
-          ["gpt-4.1", "gpt-4.1-2025-04-14", "gpt-4.1-mini", "gpt-4.1-mini-2025-04-14", 
-           "gpt-4.1-nano", "gpt-4.1-nano-2025-04-14", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]
+          # All models that can generate text (August 2025 models)
+          ["gpt-5-2025-08-07", "gpt-5-mini-2025-08-07", "gpt-5-nano-2025-08-07",
+           "gpt-4.1-2025-04-14", "gpt-4.1-mini-2025-04-14", "gpt-4.1-nano-2025-04-14"]
         when 'routing'
-          # Fast, cheap models for routing (2025 models)
-          ["gpt-4.1-nano", "gpt-4.1-nano-2025-04-14", "gpt-4.1-mini", "gpt-3.5-turbo"]
+          # Fast, cheap models for routing (August 2025 models)
+          ["gpt-5-nano-2025-08-07", "gpt-4.1-nano-2025-04-14", "gpt-4.1-mini-2025-04-14"]
         when 'fine_tune'
-          # Models that support fine-tuning (verified from API)
-          ["gpt-4.1-mini", "gpt-4.1-mini-2025-04-14", "gpt-4.1-nano", "gpt-4.1-nano-2025-04-14", "gpt-3.5-turbo"]
+          # Models that support fine-tuning (verified models)
+          ["gpt-4.1-mini-2025-04-14", "gpt-4.1-nano-2025-04-14"]
         else
           []
         end
@@ -218,15 +239,15 @@ module OpenaiConfig
       def default_model_for(task)
         case task.to_s
         when 'extraction'
-          ENV.fetch("OPENAI_MODEL", "gpt-4.1")  # Latest 2025 model
+          ENV.fetch("OPENAI_MODEL", "gpt-5-mini-2025-08-07")  # Default extraction model
         when 'answer'
-          ENV.fetch("OPENAI_MODEL_ANSWER", "gpt-4.1")  # Latest 2025 model
+          ENV.fetch("OPENAI_MODEL_ANSWER", "gpt-5-2025-08-07")  # High-quality answers
         when 'routing'
-          ENV.fetch("OPENAI_FT_MODEL", "gpt-4.1-nano")  # Fast 2025 nano model
+          ENV.fetch("OPENAI_FT_MODEL", "gpt-5-nano-2025-08-07")  # Fast routing
         when 'fine_tune', 'fine_tune_base'
-          ENV.fetch("OPENAI_FT_BASE", "gpt-4.1-mini")  # 2025 mini model for fine-tuning
+          ENV.fetch("OPENAI_FT_BASE", "gpt-4.1-mini-2025-04-14")  # Fine-tuning base
         else
-          "gpt-4.1"  # Default to latest 2025 model
+          "gpt-5-mini-2025-08-07"  # Default to gpt-5-mini
         end
       end
       

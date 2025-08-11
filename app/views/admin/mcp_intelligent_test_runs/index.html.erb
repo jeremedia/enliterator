@@ -1,0 +1,222 @@
+<%# app/views/admin/mcp_intelligent_test_runs/index.html.erb %>
+<% content_for :title, "Intelligent MCP Test Runs" %>
+
+<div class="container mx-auto px-6 py-8">
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-2">🧠 Intelligent MCP Evaluation Dashboard</h1>
+    <p class="text-gray-600">Real-time intelligence assessing intelligence - EKN personality and framework compliance evaluation</p>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white rounded-lg shadow p-6">
+      <div class="flex items-center">
+        <div class="p-3 rounded-full bg-blue-500 bg-opacity-10">
+          <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+          </svg>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm font-medium text-gray-500">Total Evaluations</p>
+          <p class="text-2xl font-semibold text-gray-900"><%= @stats[:total_runs] %></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6">
+      <div class="flex items-center">
+        <div class="p-3 rounded-full bg-green-500 bg-opacity-10">
+          <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+          </svg>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm font-medium text-gray-500">Average Score</p>
+          <p class="text-2xl font-semibold text-gray-900"><%= (@stats[:average_score] * 100).round(1) %>%</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6">
+      <div class="flex items-center">
+        <div class="p-3 rounded-full bg-purple-500 bg-opacity-10">
+          <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm font-medium text-gray-500">Success Rate</p>
+          <p class="text-2xl font-semibold text-gray-900"><%= @stats[:success_rate] %>%</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6">
+      <div class="flex items-center">
+        <div class="p-3 rounded-full bg-yellow-500 bg-opacity-10">
+          <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+          </svg>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm font-medium text-gray-500">Claude Code API</p>
+          <p class="text-2xl font-semibold text-gray-900"><%= @stats[:evaluator_breakdown]['claude_code_api'] || 0 %></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="bg-white rounded-lg shadow p-6 mb-8">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">Filters</h3>
+    <%= form_with url: admin_mcp_intelligent_test_runs_path, local: true, method: :get, class: "grid grid-cols-1 md:grid-cols-4 gap-4" do |form| %>
+      <div>
+        <%= form.select :ekn_id, options_from_collection_for_select(@ekns, :id, :name, params[:ekn_id]), 
+            { prompt: "All EKNs" }, 
+            { class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" } %>
+      </div>
+      
+      <div>
+        <%= form.select :evaluator_type, [
+          ['All Evaluators', ''],
+          ['Claude Code API', 'claude_code_api'],
+          ['OpenAI Proxy', 'openai_proxy'],
+          ['Fallback', 'fallback']
+        ], { selected: params[:evaluator_type] }, 
+        { class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" } %>
+      </div>
+      
+      <div>
+        <%= form.select :status, [
+          ['All Statuses', ''],
+          ['Completed', 'completed'],
+          ['Failed', 'failed'],
+          ['Running', 'running'],
+          ['Timeout', 'timeout']
+        ], { selected: params[:status] }, 
+        { class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" } %>
+      </div>
+      
+      <div>
+        <%= form.submit "Filter", class: "w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500" %>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Test Runs Table -->
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h3 class="text-lg font-semibold text-gray-900">Recent Evaluations</h3>
+    </div>
+    
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EKN</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Test Case</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Evaluator</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Logs</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% @intelligent_test_runs.each do |run| %>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex items-center">
+                  <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                    <span class="text-sm font-medium text-gray-700"><%= run.ekn.name.first.upcase %></span>
+                  </div>
+                  <div class="ml-4">
+                    <div class="text-sm font-medium text-gray-900"><%= run.ekn.name %></div>
+                    <div class="text-sm text-gray-500"><%= run.ekn.slug %></div>
+                  </div>
+                </div>
+              </td>
+              
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-gray-900"><%= run.mcp_test_case.name %></div>
+                <div class="text-sm text-gray-500">Run #<%= run.mcp_test_run.id %></div>
+              </td>
+              
+              <td class="px-6 py-4 whitespace-nowrap">
+                <% if run.overall_score %>
+                  <% score_percent = (run.overall_score * 100).round %>
+                  <div class="flex items-center">
+                    <div class="text-sm font-medium text-gray-900"><%= score_percent %>%</div>
+                    <div class="ml-2">
+                      <% if score_percent >= 80 %>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Excellent</span>
+                      <% elsif score_percent >= 70 %>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Good</span>
+                      <% elsif score_percent >= 60 %>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Needs Work</span>
+                      <% else %>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Poor</span>
+                      <% end %>
+                    </div>
+                  </div>
+                <% else %>
+                  <span class="text-gray-400">N/A</span>
+                <% end %>
+              </td>
+              
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                  <%= run.evaluator_type == 'claude_code_api' ? 'bg-purple-100 text-purple-800' : 
+                      run.evaluator_type == 'openai_proxy' ? 'bg-blue-100 text-blue-800' : 
+                      'bg-gray-100 text-gray-800' %>">
+                  <%= run.evaluator_type.humanize %>
+                </span>
+              </td>
+              
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                  <%= run.status == 'completed' ? 'bg-green-100 text-green-800' : 
+                      run.status == 'failed' ? 'bg-red-100 text-red-800' : 
+                      run.status == 'running' ? 'bg-yellow-100 text-yellow-800' : 
+                      'bg-gray-100 text-gray-800' %>">
+                  <%= run.status.humanize %>
+                </span>
+              </td>
+              
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <%= run.duration_ms ? "#{run.duration_ms}ms" : "N/A" %>
+              </td>
+              
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <% log_count = run.logs.first&.log_items&.count || 0 %>
+                <span class="inline-flex items-center">
+                  <svg class="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                  </svg>
+                  <%= log_count %> entries
+                </span>
+              </td>
+              
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <%= link_to admin_mcp_intelligent_test_run_path(run), 
+                    class: "text-blue-600 hover:text-blue-900 inline-flex items-center" do %>
+                  <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                  </svg>
+                  View Logs
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Simple pagination info -->
+  <div class="mt-6 text-center text-sm text-gray-500">
+    Showing <%= @intelligent_test_runs.count %> most recent evaluations
+  </div>
+</div>

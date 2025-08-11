@@ -6,19 +6,28 @@
   <div class="bg-white border-b border-gray-200 px-6 py-4">
     <div class="flex items-center justify-between">
       <div class="flex items-center space-x-4">
-        <a href="/ekn/<%= @ekn.slug %>/chat" class="text-gray-600 hover:text-gray-900">
+        <%= link_to ekn_path(ekn_slug: @ekn.slug), class: "text-gray-600 hover:text-gray-900" do %>
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
           </svg>
-        </a>
+        <% end %>
         <div>
-          <h1 class="text-xl font-semibold text-gray-900"><%= @ekn.name %></h1>
+          <h1 class="text-xl font-semibold text-gray-900">Chat with <%= @ekn.name %></h1>
           <p class="text-sm text-gray-500">Conversation #<%= @conversation.id %></p>
         </div>
       </div>
       
-      <!-- Settings and Actions -->
-      <div class="flex items-center space-x-2">
+      <!-- Right-aligned Back Link and Settings -->
+      <div class="flex items-center space-x-4">
+        <%= link_to ekn_path(ekn_slug: @ekn.slug), class: "text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center space-x-1" do %>
+          <span>Back to Navigator</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+          </svg>
+        <% end %>
+        
+        <!-- Settings and Actions -->
+        <div class="flex items-center space-x-2">
         <!-- Model selector -->
         <div class="relative" data-controller="dropdown">
           <button data-action="click->dropdown#toggle" class="flex items-center space-x-1 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
@@ -45,6 +54,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
           </svg>
         </button>
+        </div>
       </div>
     </div>
   </div>

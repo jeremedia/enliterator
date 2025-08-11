@@ -11,16 +11,16 @@
 module Mcp
   class FetchTool
     # ChatGPT requires exactly this response format
-    # Arguments: id (string)
+    # Arguments: id (string), ekn (optional EKN object)
     # Returns: { id, title, text, url, metadata }
-    def self.call(id:)
+    def self.call(id:, ekn: nil)
       return { error: "ID is required" } if id.blank?
       
       # Parse entity ID (could be just a number or "entity_123" format)
       entity_id = id.to_s.gsub(/^entity_/, '').to_i
       
-      # Get the default EKN
-      ekn = Ekn.find_by(slug: 'meta-enliterator') || Ekn.first
+      # Use provided EKN or fallback to meta-enliterator
+      ekn = ekn || Ekn.find_by(slug: 'meta-enliterator') || Ekn.first
       return { error: "No EKN available" } unless ekn
       
       Rails.logger.info "MCP FetchTool: fetching entity #{entity_id} from EKN #{ekn.slug}"

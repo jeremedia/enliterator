@@ -1,0 +1,553 @@
+<% content_for :title, "#{@ekn.name} - Knowledge Entities" %>
+<% content_for :description, "Browse all #{@total_entities} knowledge entities extracted from #{@ekn.name}, organized by source document and filterable by knowledge pool type." %>
+
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+  <!-- Header Navigation -->
+  <div class="border-b border-indigo-200/50 bg-white/70 backdrop-blur-sm sticky top-0 z-10">
+    <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">
+            <span class="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+              Knowledge Entities
+            </span>
+          </h1>
+          <p class="text-gray-600 mt-1">All <%= number_with_delimiter(@total_entities) %> entities from <%= @ekn.name %></p>
+        </div>
+        
+        <div class="flex items-center gap-4">
+          <%= link_to ekn_path(ekn_slug: @ekn.slug), 
+                      class: "px-4 py-2 bg-white/70 hover:bg-white/90 border border-gray-200 rounded-lg transition-colors text-gray-700 hover:text-gray-900" do %>
+            ← Back to Overview
+          <% end %>
+          
+          <%= link_to ekn_dashboard_path(ekn_slug: @ekn.slug),
+                      class: "px-6 py-2 bg-white/70 hover:bg-white/90 border border-gray-200 rounded-lg transition-colors text-gray-700 hover:text-gray-900" do %>
+            Analytics Dashboard
+          <% end %>
+
+          <%= link_to chat_index_path(ekn_slug: @ekn.slug), 
+                      class: "px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg transition-colors font-medium" do %>
+            Start Conversation
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+    
+    <!-- Page Header -->
+    <div class="mb-8">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-2xl font-bold text-gray-900 mb-2">Browse by Source Document</h2>
+          <p class="text-gray-600">All <%= number_with_delimiter(@total_entities) %> entities grouped by their original source documents</p>
+        </div>
+        
+        <!-- Quick Stats -->
+        <div class="bg-white/70 backdrop-blur-sm rounded-lg p-4 border border-indigo-200/50 shadow-sm">
+          <div class="text-2xl font-bold text-indigo-600"><%= number_with_delimiter(@total_entities) %></div>
+          <div class="text-sm text-gray-600">Total Entities</div>
+        </div>
+      </div>
+      
+      <!-- Pool Distribution -->
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <% @pool_counts.sort_by { |_, count| -count }.each do |pool, count| %>
+          <div class="bg-white/70 backdrop-blur-sm rounded-lg p-3 border border-indigo-200/30 shadow-sm text-center hover:shadow-md transition-shadow">
+            <div class="text-lg font-bold text-gray-900"><%= number_with_delimiter(count) %></div>
+            <div class="text-sm text-gray-600"><%= pool.pluralize %></div>
+          </div>
+        <% end %>
+      </div>
+      
+      <!-- Ten Pool Canon Explanation (Collapsible) -->
+      <div class="mb-6">
+        <button id="pool-explanation-toggle" 
+                class="flex items-center gap-2 text-indigo-700 hover:text-indigo-800 font-medium transition-colors"
+                onclick="togglePoolExplanation()">
+          <svg id="pool-chevron" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+          </svg>
+          What are the Ten Pool Canon knowledge types?
+        </button>
+        
+        <div id="pool-explanation" class="hidden mt-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-6 border border-indigo-200/50">
+          <div class="grid md:grid-cols-2 gap-6">
+            <div class="space-y-4">
+              <div>
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-lg">💡</span>
+                  <h4 class="font-semibold text-gray-900">Ideas</h4>
+                </div>
+                <p class="text-sm text-gray-600">Conceptual frameworks, principles, theories, and abstract thinking that guide understanding and decision-making.</p>
+              </div>
+              
+              <div>
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-lg">🔧</span>
+                  <h4 class="font-semibold text-gray-900">Practicals</h4>
+                </div>
+                <p class="text-sm text-gray-600">Step-by-step methods, procedures, techniques, and actionable how-to knowledge for accomplishing specific tasks.</p>
+              </div>
+              
+              <div>
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-lg">🌟</span>
+                  <h4 class="font-semibold text-gray-900">Experiences</h4>
+                </div>
+                <p class="text-sm text-gray-600">Personal accounts, testimonials, case studies, and lived experiences that provide context and insight.</p>
+              </div>
+              
+              <div>
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-lg">🏗️</span>
+                  <h4 class="font-semibold text-gray-900">Manifests</h4>
+                </div>
+                <p class="text-sm text-gray-600">Concrete implementations, documents, artifacts, and tangible expressions of ideas and practices.</p>
+              </div>
+              
+              <div>
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-lg">👤</span>
+                  <h4 class="font-semibold text-gray-900">Characters</h4>
+                </div>
+                <p class="text-sm text-gray-600">People, personas, roles, and human actors who participate in or influence the knowledge domain.</p>
+              </div>
+            </div>
+            
+            <div class="space-y-4">
+              <div>
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-lg">⏰</span>
+                  <h4 class="font-semibold text-gray-900">Time</h4>
+                </div>
+                <p class="text-sm text-gray-600">Temporal elements including periods, events, schedules, deadlines, and chronological relationships.</p>
+              </div>
+              
+              <div>
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-lg">🗺️</span>
+                  <h4 class="font-semibold text-gray-900">Space</h4>
+                </div>
+                <p class="text-sm text-gray-600">Geographic locations, physical places, spatial relationships, and environmental contexts.</p>
+              </div>
+              
+              <div>
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-lg">🔄</span>
+                  <h4 class="font-semibold text-gray-900">Lifecycle</h4>
+                </div>
+                <p class="text-sm text-gray-600">Processes, workflows, stages, phases, and evolutionary patterns that describe how things develop over time.</p>
+              </div>
+              
+              <div>
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-lg">🔮</span>
+                  <h4 class="font-semibold text-gray-900">Symbolic</h4>
+                </div>
+                <p class="text-sm text-gray-600">Metaphors, symbols, cultural meanings, representations, and abstract significance beyond literal interpretation.</p>
+              </div>
+              
+              <div>
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-lg">🔗</span>
+                  <h4 class="font-semibold text-gray-900">Relators</h4>
+                </div>
+                <p class="text-sm text-gray-600">Connections, relationships, dependencies, and associations that link different knowledge elements together.</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-6 pt-4 border-t border-indigo-200/50">
+            <p class="text-sm text-gray-700 italic">
+              The <strong>Ten Pool Canon</strong> provides a comprehensive framework for organizing knowledge by capturing not just facts, 
+              but the relationships, contexts, and human elements that give information meaning and utility.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="mb-6">
+      <div class="bg-white/70 backdrop-blur-sm rounded-lg p-4 border border-indigo-200/50 shadow-sm">
+        <div class="flex flex-wrap items-center gap-4 mb-4">
+          <h3 class="text-lg font-semibold text-gray-900">Filters</h3>
+          
+          <!-- Pool Filter -->
+          <div class="flex flex-wrap gap-2">
+            <% @pool_counts.keys.sort.each do |pool| %>
+              <button type="button" 
+                      class="pool-filter px-3 py-1 rounded-full text-sm border transition-all duration-200
+                             <%= @selected_pools.include?(pool) ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-white/50 border-gray-300 text-gray-700 hover:bg-white/80 hover:border-gray-400' %>"
+                      data-pool="<%= pool %>">
+                <%= pool %>
+                <span class="ml-1 text-xs opacity-70">(<%= number_with_delimiter(@pool_counts[pool]) %>)</span>
+              </button>
+            <% end %>
+          </div>
+        </div>
+        
+        <!-- Search -->
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <input type="text" 
+                   id="entity-search"
+                   placeholder="Search entities by name or description..."
+                   value="<%= @search_query %>"
+                   class="w-full px-4 py-2 bg-white/80 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+          </div>
+          <button id="search-btn" 
+                  class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors duration-200">
+            Search
+          </button>
+          <button id="clear-filters" 
+                  class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200">
+            Clear
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Status -->
+    <div class="mb-6 flex items-center justify-between">
+      <div class="text-gray-700">
+        Showing <%= number_with_delimiter(@total_entities) %> entities
+        <% if @selected_pools.any? || @search_query.present? %>
+          <span class="text-indigo-600">(filtered)</span>
+        <% end %>
+        across <%= pluralize(@entities_by_source.size, 'source document') %>
+        <% if @total_pages > 1 %>
+          <span class="text-gray-500 ml-2">
+            (Page <%= @page %> of <%= @total_pages %>)
+          </span>
+        <% end %>
+      </div>
+      
+      <div class="text-sm text-gray-600">
+        <% if @selected_pools.any? %>
+          Pools: <%= @selected_pools.join(', ') %>
+        <% end %>
+        <% if @search_query.present? %>
+          <span class="ml-4">Search: "<%= @search_query %>"</span>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Entities by Source Document -->
+    <div class="space-y-6" id="entities-container">
+      <% @paginated_entities.each do |source_document, data| %>
+        <div class="bg-white/70 backdrop-blur-sm rounded-lg border border-indigo-200/50 shadow-sm overflow-hidden">
+          <!-- Source Document Header -->
+          <div class="bg-gradient-to-r from-indigo-50 to-purple-50 px-6 py-4 border-b border-indigo-200/30">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-1"><%= source_document %></h3>
+                <div class="text-sm text-gray-600">
+                  Batch #<%= data[:batch_id] %> • 
+                  <%= pluralize(data[:total], 'entity', 'entities') %> across 
+                  <%= pluralize(data[:pools].size, 'pool') %>
+                </div>
+              </div>
+              
+              <!-- Pool Summary -->
+              <div class="flex gap-2">
+                <% data[:pools].each do |pool, entities| %>
+                  <span class="px-2 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-full border border-indigo-200">
+                    <%= pool %>: <%= entities.size %>
+                  </span>
+                <% end %>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Entities Grid -->
+          <div class="p-6">
+            <% data[:pools].each do |pool, entities| %>
+              <div class="mb-6 last:mb-0">
+                <h4 class="text-lg font-semibold text-indigo-700 mb-3 flex items-center">
+                  <span class="w-3 h-3 bg-indigo-500 rounded-full mr-2"></span>
+                  <%= pool.pluralize %> (<%= entities.size %>)
+                </h4>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <% entities.each do |entity| %>
+                    <div class="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-gray-200/50 hover:border-indigo-300 hover:shadow-md transition-all duration-200 cursor-pointer entity-card"
+                         data-entity-id="<%= entity['id'] %>">
+                      <div class="flex items-start justify-between mb-2">
+                        <h5 class="font-medium text-gray-900 text-sm leading-tight flex-1 mr-2">
+                          <%= truncate(entity['label'], length: 60) %>
+                        </h5>
+                        
+                        <!-- Rights Indicators -->
+                        <div class="flex gap-1">
+                          <% if entity['rights_publishable'] %>
+                            <span class="w-2 h-2 bg-green-500 rounded-full" title="Publicly publishable"></span>
+                          <% else %>
+                            <span class="w-2 h-2 bg-red-500 rounded-full" title="Publication restricted"></span>
+                          <% end %>
+                          
+                          <% if entity['rights_training'] %>
+                            <span class="w-2 h-2 bg-blue-500 rounded-full" title="Training eligible"></span>
+                          <% else %>
+                            <span class="w-2 h-2 bg-gray-400 rounded-full" title="Training restricted"></span>
+                          <% end %>
+                        </div>
+                      </div>
+                      
+                      <% if entity['abstract'].present? %>
+                        <p class="text-xs text-gray-600 mb-3 line-clamp-2">
+                          <%= truncate(entity['abstract'], length: 120) %>
+                        </p>
+                      <% end %>
+                      
+                      <div class="flex items-center justify-between text-xs text-gray-500">
+                        <span class="bg-gray-100 px-2 py-1 rounded-full">
+                          ID: <%= entity['id'] %>
+                        </span>
+                        <span>
+                          <%= pool %>
+                        </span>
+                      </div>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <!-- Loading State (initially hidden) -->
+    <div id="loading-state" class="hidden text-center py-12">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+      <div class="text-gray-600 mt-2">Loading entities...</div>
+    </div>
+
+    <!-- Pagination -->
+    <% if @total_pages > 1 %>
+      <div class="mt-8 flex items-center justify-center">
+        <nav class="flex items-center gap-1">
+          <% if @page > 1 %>
+            <%= link_to entities_path(ekn_slug: @ekn.slug, **params.permit(:pools, :search).merge(page: @page - 1)), 
+                        class: "px-3 py-2 bg-white/70 text-gray-700 hover:bg-white/90 border border-gray-200 hover:border-gray-300 rounded-lg transition-colors duration-200 flex items-center gap-1" do %>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+              </svg>
+              Previous
+            <% end %>
+          <% else %>
+            <span class="px-3 py-2 bg-gray-100 text-gray-400 rounded-lg flex items-center gap-1 border border-gray-200">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+              </svg>
+              Previous
+            </span>
+          <% end %>
+          
+          <!-- Page numbers -->
+          <% start_page = [1, @page - 2].max %>
+          <% end_page = [start_page + 4, @total_pages].min %>
+          <% start_page = [end_page - 4, 1].max if end_page - start_page < 4 %>
+          
+          <% (start_page..end_page).each do |page_num| %>
+            <% if page_num == @page %>
+              <span class="px-3 py-2 bg-indigo-600 text-white rounded-lg font-medium">
+                <%= page_num %>
+              </span>
+            <% else %>
+              <%= link_to entities_path(ekn_slug: @ekn.slug, **params.permit(:pools, :search).merge(page: page_num)), 
+                          class: "px-3 py-2 bg-white/70 text-gray-700 hover:bg-white/90 border border-gray-200 hover:border-gray-300 rounded-lg transition-colors duration-200" do %>
+                <%= page_num %>
+              <% end %>
+            <% end %>
+          <% end %>
+          
+          <% if @page < @total_pages %>
+            <%= link_to entities_path(ekn_slug: @ekn.slug, **params.permit(:pools, :search).merge(page: @page + 1)), 
+                        class: "px-3 py-2 bg-white/70 text-gray-700 hover:bg-white/90 border border-gray-200 hover:border-gray-300 rounded-lg transition-colors duration-200 flex items-center gap-1" do %>
+              Next
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            <% end %>
+          <% else %>
+            <span class="px-3 py-2 bg-gray-100 text-gray-400 rounded-lg flex items-center gap-1 border border-gray-200">
+              Next
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            </span>
+          <% end %>
+        </nav>
+      </div>
+    <% end %>
+
+    <!-- Empty State -->
+    <% if @paginated_entities.empty? %>
+      <div class="text-center py-12">
+        <div class="text-6xl mb-4">🔍</div>
+        <h3 class="text-xl font-semibold text-gray-900 mb-2">No entities found</h3>
+        <p class="text-gray-600 mb-4">
+          <% if @selected_pools.any? || @search_query.present? %>
+            Try adjusting your filters or search criteria.
+          <% else %>
+            This EKN doesn't have any extracted entities yet.
+          <% end %>
+        </p>
+        <button id="reset-filters" 
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors duration-200">
+          Clear All Filters
+        </button>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<!-- Entity Modal (placeholder for future detail view) -->
+<div id="entity-modal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl">
+    <div class="p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-semibold text-gray-900">Entity Details</h3>
+        <button id="close-modal" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      <div id="entity-modal-content">
+        <!-- Content loaded via JavaScript -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Pool explanation toggle function
+function togglePoolExplanation() {
+  const explanation = document.getElementById('pool-explanation');
+  const chevron = document.getElementById('pool-chevron');
+  
+  if (explanation.classList.contains('hidden')) {
+    explanation.classList.remove('hidden');
+    chevron.style.transform = 'rotate(90deg)';
+  } else {
+    explanation.classList.add('hidden');
+    chevron.style.transform = 'rotate(0deg)';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('entity-search');
+  const searchBtn = document.getElementById('search-btn');
+  const clearBtn = document.getElementById('clear-filters');
+  const resetBtn = document.getElementById('reset-filters');
+  const poolFilters = document.querySelectorAll('.pool-filter');
+  const entitiesContainer = document.getElementById('entities-container');
+  const loadingState = document.getElementById('loading-state');
+  const entityModal = document.getElementById('entity-modal');
+  const entityCards = document.querySelectorAll('.entity-card');
+  
+  let selectedPools = <%= raw @selected_pools.to_json %>;
+  let currentSearch = '<%= j @search_query %>';
+  
+  // Filter functions
+  function updateFilters() {
+    const params = new URLSearchParams();
+    if (selectedPools.length > 0) {
+      params.set('pools', selectedPools.join(','));
+    }
+    if (currentSearch) {
+      params.set('search', currentSearch);
+    }
+    // Reset to page 1 when filtering
+    params.set('page', '1');
+    
+    const url = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+    window.location.href = url;
+  }
+  
+  // Pool filter clicks
+  poolFilters.forEach(filter => {
+    filter.addEventListener('click', function() {
+      const pool = this.dataset.pool;
+      if (selectedPools.includes(pool)) {
+        selectedPools = selectedPools.filter(p => p !== pool);
+        this.classList.remove('bg-indigo-600', 'border-indigo-500', 'text-white');
+        this.classList.add('bg-white/50', 'border-gray-300', 'text-gray-700', 'hover:bg-white/80', 'hover:border-gray-400');
+      } else {
+        selectedPools.push(pool);
+        this.classList.add('bg-indigo-600', 'border-indigo-500', 'text-white');
+        this.classList.remove('bg-white/50', 'border-gray-300', 'text-gray-700', 'hover:bg-white/80', 'hover:border-gray-400');
+      }
+    });
+  });
+  
+  // Search functionality
+  searchBtn.addEventListener('click', function() {
+    currentSearch = searchInput.value.trim();
+    updateFilters();
+  });
+  
+  searchInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      currentSearch = this.value.trim();
+      updateFilters();
+    }
+  });
+  
+  // Clear filters
+  if (clearBtn) {
+    clearBtn.addEventListener('click', function() {
+      selectedPools = [];
+      currentSearch = '';
+      searchInput.value = '';
+      updateFilters();
+    });
+  }
+  
+  if (resetBtn) {
+    resetBtn.addEventListener('click', function() {
+      selectedPools = [];
+      currentSearch = '';
+      searchInput.value = '';
+      updateFilters();
+    });
+  }
+  
+  // Entity card clicks (placeholder for detail modal)
+  entityCards.forEach(card => {
+    card.addEventListener('click', function() {
+      const entityId = this.dataset.entityId;
+      // Future: Load entity details and show modal
+      console.log('Entity clicked:', entityId);
+    });
+  });
+  
+  // Modal close
+  if (document.getElementById('close-modal')) {
+    document.getElementById('close-modal').addEventListener('click', function() {
+      entityModal.classList.add('hidden');
+    });
+  }
+  
+  // Click outside modal to close
+  entityModal.addEventListener('click', function(e) {
+    if (e.target === this) {
+      this.classList.add('hidden');
+    }
+  });
+});
+</script>
+
+<style>
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}</style>

@@ -1,0 +1,320 @@
+<%# app/views/admin/mcp_intelligent_test_runs/show.html.erb %>
+<% content_for :title, "Intelligent Evaluation Log ##{@intelligent_test_run.id}" %>
+
+<div class="container mx-auto px-6 py-8">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">
+        🧠 Intelligent Evaluation #<%= @intelligent_test_run.id %>
+      </h1>
+      <p class="text-gray-600">
+        <%= @intelligent_test_run.ekn.name %> • <%= @intelligent_test_run.mcp_test_case.name %>
+      </p>
+    </div>
+    <%= link_to admin_mcp_intelligent_test_runs_path, 
+        class: "inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50" do %>
+      <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+      </svg>
+      Back to Dashboard
+    <% end %>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Main Content -->
+    <div class="lg:col-span-2 space-y-8">
+      <!-- Evaluation Summary -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">📊 Evaluation Summary</h2>
+        <div class="grid grid-cols-2 gap-6">
+          <div>
+            <h3 class="text-sm font-medium text-gray-500 mb-2">Overall Score</h3>
+            <% if @intelligent_test_run.overall_score %>
+              <% score_percent = (@intelligent_test_run.overall_score * 100).round %>
+              <div class="flex items-center">
+                <div class="text-3xl font-bold text-gray-900"><%= score_percent %>%</div>
+                <div class="ml-3">
+                  <% if score_percent >= 80 %>
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">Excellent</span>
+                  <% elsif score_percent >= 70 %>
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">Good</span>
+                  <% elsif score_percent >= 60 %>
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">Needs Work</span>
+                  <% else %>
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">Poor</span>
+                  <% end %>
+                </div>
+              </div>
+            <% else %>
+              <div class="text-3xl font-bold text-gray-400">N/A</div>
+            <% end %>
+          </div>
+          
+          <div class="space-y-4">
+            <div class="flex justify-between">
+              <span class="text-sm font-medium text-gray-500">Status:</span>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                <%= @intelligent_test_run.status == 'completed' ? 'bg-green-100 text-green-800' : 
+                    @intelligent_test_run.status == 'failed' ? 'bg-red-100 text-red-800' : 
+                    'bg-yellow-100 text-yellow-800' %>">
+                <%= @intelligent_test_run.status.humanize %>
+              </span>
+            </div>
+            
+            <div class="flex justify-between">
+              <span class="text-sm font-medium text-gray-500">Evaluator:</span>
+              <span class="text-sm text-gray-900"><%= @intelligent_test_run.evaluator_type.humanize %></span>
+            </div>
+            
+            <div class="flex justify-between">
+              <span class="text-sm font-medium text-gray-500">Duration:</span>
+              <span class="text-sm text-gray-900"><%= @intelligent_test_run.duration_ms || 0 %>ms</span>
+            </div>
+            
+            <div class="flex justify-between">
+              <span class="text-sm font-medium text-gray-500">Started:</span>
+              <span class="text-sm text-gray-900">
+                <%= @intelligent_test_run.started_at&.strftime("%Y-%m-%d %H:%M:%S") || "N/A" %>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detailed Assessment -->
+      <% if @evaluation_details.present? %>
+        <div class="bg-white rounded-lg shadow p-6">
+          <h2 class="text-xl font-semibold text-gray-900 mb-4">🔍 Detailed Assessment</h2>
+          
+          <% %w[framework_compliance personality_authenticity semantic_relevance personality_evolution].each do |dimension| %>
+            <% if @evaluation_details[dimension].present? %>
+              <div class="mb-6 p-4 border border-gray-200 rounded-lg">
+                <div class="flex items-center justify-between mb-3">
+                  <h4 class="text-lg font-medium text-gray-900">
+                    <%= dimension.humanize %>
+                  </h4>
+                  <% if @evaluation_details[dimension]['score'] %>
+                    <span class="text-xl font-bold text-gray-900">
+                      <%= (@evaluation_details[dimension]['score'] * 100).round %>%
+                    </span>
+                  <% end %>
+                </div>
+                
+                <% if @evaluation_details[dimension]['assessment'] %>
+                  <p class="text-gray-700 mb-3"><%= @evaluation_details[dimension]['assessment'] %></p>
+                <% end %>
+                
+                <% if @evaluation_details[dimension]['evidence']&.any? %>
+                  <div class="mb-3">
+                    <h5 class="text-sm font-medium text-green-600 mb-2">✅ Evidence:</h5>
+                    <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                      <% @evaluation_details[dimension]['evidence'].each do |evidence| %>
+                        <li><%= evidence %></li>
+                      <% end %>
+                    </ul>
+                  </div>
+                <% end %>
+                
+                <% if @evaluation_details[dimension]['issues']&.any? %>
+                  <div>
+                    <h5 class="text-sm font-medium text-red-600 mb-2">⚠️ Issues:</h5>
+                    <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                      <% @evaluation_details[dimension]['issues'].each do |issue| %>
+                        <li><%= issue %></li>
+                      <% end %>
+                    </ul>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+
+      <!-- Key Findings & Recommendations -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <% if @intelligent_test_run.key_findings.any? %>
+          <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">💡 Key Findings</h3>
+            <ul class="space-y-2">
+              <% @intelligent_test_run.key_findings.each do |finding| %>
+                <li class="flex items-start">
+                  <svg class="w-5 h-5 text-blue-500 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  <span class="text-sm text-gray-700"><%= finding %></span>
+                </li>
+              <% end %>
+            </ul>
+          </div>
+        <% end %>
+
+        <% if @intelligent_test_run.recommendations.any? %>
+          <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">🎯 Recommendations</h3>
+            <ul class="space-y-2">
+              <% @intelligent_test_run.recommendations.each do |rec| %>
+                <li class="flex items-start">
+                  <svg class="w-5 h-5 text-green-500 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  <span class="text-sm text-gray-700"><%= rec %></span>
+                </li>
+              <% end %>
+            </ul>
+          </div>
+        <% end %>
+      </div>
+
+      <!-- Detailed Log Trail -->
+      <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h2 class="text-xl font-semibold text-gray-900">📜 Detailed Log Trail</h2>
+          <p class="text-sm text-gray-500 mt-1">
+            Chronological execution log • <%= @log_entries.count %> entries
+          </p>
+        </div>
+        
+        <div class="max-h-96 overflow-y-auto">
+          <% if @log_entries.any? %>
+            <div class="divide-y divide-gray-200">
+              <% @log_entries.each_with_index do |entry, index| %>
+                <div class="px-6 py-4 hover:bg-gray-50">
+                  <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                      <span class="inline-flex items-center justify-center h-6 w-6 rounded-full bg-gray-100 text-xs font-medium text-gray-600">
+                        <%= index + 1 %>
+                      </span>
+                    </div>
+                    <div class="ml-4 flex-1">
+                      <div class="flex items-center justify-between">
+                        <p class="text-sm text-gray-900 font-mono"><%= entry.text %></p>
+                        <p class="text-xs text-gray-500">
+                          <%= entry.created_at.strftime("%H:%M:%S.%L") %>
+                        </p>
+                      </div>
+                      <% if entry.status.present? && entry.status != "info" %>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium 
+                          <%= entry.status == 'error' ? 'bg-red-100 text-red-800' : 
+                              entry.status == 'warn' ? 'bg-yellow-100 text-yellow-800' : 
+                              'bg-blue-100 text-blue-800' %>">
+                          <%= entry.status.upcase %>
+                        </span>
+                      <% end %>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          <% else %>
+            <div class="px-6 py-8 text-center text-gray-500">
+              <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+              <p class="mt-2 text-sm">No log entries found</p>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="space-y-6">
+      <!-- EKN Information -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">🤖 EKN Information</h3>
+        <div class="space-y-3">
+          <div>
+            <p class="text-sm font-medium text-gray-500">Name</p>
+            <p class="text-sm text-gray-900"><%= @intelligent_test_run.ekn.name %></p>
+          </div>
+          
+          <div>
+            <p class="text-sm font-medium text-gray-500">Slug</p>
+            <p class="text-sm text-gray-900"><%= @intelligent_test_run.ekn.slug %></p>
+          </div>
+          
+          <div>
+            <p class="text-sm font-medium text-gray-500">Domain</p>
+            <p class="text-sm text-gray-900"><%= @intelligent_test_run.ekn.domain_type.humanize %></p>
+          </div>
+          
+          <div>
+            <p class="text-sm font-medium text-gray-500">Status</p>
+            <p class="text-sm text-gray-900"><%= @intelligent_test_run.ekn.status.humanize %></p>
+          </div>
+          
+          <% if @intelligent_test_run.ekn.literacy_score %>
+            <div>
+              <p class="text-sm font-medium text-gray-500">Literacy Score</p>
+              <p class="text-sm text-gray-900"><%= @intelligent_test_run.ekn.literacy_score.round(1) %></p>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- Test Context -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">🧪 Test Context</h3>
+        <div class="space-y-3">
+          <div>
+            <p class="text-sm font-medium text-gray-500">Test Case</p>
+            <p class="text-sm text-gray-900"><%= @intelligent_test_run.mcp_test_case.name %></p>
+          </div>
+          
+          <div>
+            <p class="text-sm font-medium text-gray-500">Test Suite</p>
+            <p class="text-sm text-gray-900"><%= @intelligent_test_run.mcp_test_run.mcp_test_suite.name %></p>
+          </div>
+          
+          <div>
+            <p class="text-sm font-medium text-gray-500">Expected Query</p>
+            <p class="text-sm text-gray-900 bg-gray-50 p-2 rounded font-mono">
+              <%= @intelligent_test_run.mcp_test_case.expected_query %>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Related Evaluations -->
+      <% if @related_runs.any? %>
+        <div class="bg-white rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">📈 Related Evaluations</h3>
+          <div class="space-y-3">
+            <% @related_runs.each do |run| %>
+              <div class="flex items-center justify-between p-2 bg-gray-50 rounded">
+                <div>
+                  <p class="text-sm font-medium text-gray-900">
+                    <%= link_to "Run ##{run.id}", admin_mcp_intelligent_test_run_path(run), 
+                        class: "text-blue-600 hover:text-blue-800" %>
+                  </p>
+                  <p class="text-xs text-gray-500">
+                    <%= run.created_at.strftime("%m/%d %H:%M") %>
+                  </p>
+                </div>
+                <% if run.overall_score %>
+                  <span class="text-sm font-medium text-gray-900">
+                    <%= (run.overall_score * 100).round %>%
+                  </span>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <!-- Error Details (if failed) -->
+      <% if @intelligent_test_run.failed? && @intelligent_test_run.error_message.present? %>
+        <div class="bg-white rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold text-red-600 mb-4">❌ Error Details</h3>
+          <div class="bg-red-50 border border-red-200 rounded p-4">
+            <p class="text-sm text-red-800 font-mono">
+              <%= @intelligent_test_run.error_message %>
+            </p>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

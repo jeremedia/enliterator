@@ -262,6 +262,10 @@ GEM
       listen
       rails (>= 7.0.0)
       zeitwerk
+    httparty (0.23.1)
+      csv
+      mini_mime (>= 1.0.0)
+      multi_xml (>= 0.5.2)
     i18n (1.14.7)
       concurrent-ruby (~> 1.0)
     ice_nine (0.11.2)
@@ -334,6 +338,8 @@ GEM
       stimulus-rails
       turbo-rails
     msgpack (1.8.0)
+    multi_xml (0.7.2)
+      bigdecimal (~> 3.1)
     neo4j-ruby-driver (4.4.6)
       activesupport (>= 5.2.0)
       async (< 2.13)
@@ -374,7 +380,7 @@ GEM
     oj (3.16.11)
       bigdecimal (>= 3.0)
       ostruct (>= 0.2)
-    openai (0.16.0)
+    openai (0.17.1)
       connection_pool
     orm_adapter (0.5.0)
     ostruct (0.6.3)
@@ -397,7 +403,7 @@ GEM
     pg_search (2.3.7)
       activerecord (>= 6.1)
       activesupport (>= 6.1)
-    positioning (0.4.6)
+    positioning (0.4.7)
       activerecord (>= 6.1)
       activesupport (>= 6.1)
     pp (0.6.2)
@@ -470,9 +476,9 @@ GEM
     redcarpet (3.6.1)
     redis (5.4.1)
       redis-client (>= 0.22.0)
-    redis-client (0.25.1)
+    redis-client (0.25.2)
       connection_pool
-    regexp_parser (2.11.0)
+    regexp_parser (2.11.1)
     reline (0.6.2)
       io-console (~> 0.5)
     responders (3.1.1)
@@ -515,7 +521,7 @@ GEM
       lint_roller (~> 1.1)
       rubocop (>= 1.75.0, < 2.0)
       rubocop-ast (>= 1.38.0, < 2.0)
-    rubocop-rails (2.32.0)
+    rubocop-rails (2.33.0)
       activesupport (>= 4.2.0)
       lint_roller (~> 1.1)
       rack (>= 1.1)
@@ -663,6 +669,7 @@ DEPENDENCIES
   fast_blank
   friendly_id (~> 5.5)
   hotwire-spark
+  httparty (~> 0.23.1)
   importmap-rails
   jsonapi-serializer
   kamal
@@ -673,7 +680,7 @@ DEPENDENCIES
   mission_control-jobs
   neo4j-ruby-driver
   oj
-  openai (~> 0.16.0)
+  openai
   pdf-reader
   pg (~> 1.1)
   pg_search

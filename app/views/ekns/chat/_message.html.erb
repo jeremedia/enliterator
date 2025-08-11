@@ -15,7 +15,76 @@
     
     <!-- Message content -->
     <div class="flex-1">
-      <div class="<%= message.role == 'user' ? 'bg-indigo-100' : 'bg-white' %> rounded-lg px-4 py-3 shadow-sm">
+      <% is_error = message.metadata&.dig('is_error') || message.metadata&.dig('error').present? %>
+      <div class="<%= message.role == 'user' ? 'bg-indigo-100' : (is_error ? 'bg-red-50 border-red-300 border' : 'bg-white') %> rounded-lg px-4 py-3 shadow-sm">
+        <% if message.role == 'assistant' %>
+          <!-- Real-time MCP Trace Container (always present, updated via Turbo Stream) -->
+          <div id="message-<%= message.id %>-trace" class="mb-3">
+            <% if message.metadata&.dig('mcp_trace').present? %>
+              <% traces = message.metadata['mcp_trace'] %>
+              <% latest_trace = traces.last %>
+              <% trace_count = traces.size %>
+              <details class="mb-2">
+                <summary class="cursor-pointer p-2 bg-gray-50 rounded text-xs text-gray-600 font-mono hover:bg-gray-100 transition-colors">
+                  <span class="font-semibold">🔍 Process Trace (<%= trace_count %>)</span>
+                  <span class="ml-2 text-gray-500"><%= latest_trace %></span>
+                </summary>
+                <div class="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-600 font-mono max-h-48 overflow-y-auto">
+                  <% traces.each do |trace| %>
+                    <div class="ml-2 trace-line"><%= trace %></div>
+                  <% end %>
+                </div>
+              </details>
+            <% end %>
+          </div>
+          
+          <!-- Real-time Tool Calls Container -->
+          <div id="message-<%= message.id %>-tools" class="mb-3">
+            <% if message.metadata&.dig('tool_calls').present? || message.mcp_tool_calls.any? %>
+              <% 
+                # Combine all tool calls for counting and summary
+                all_tools = []
+                if message.metadata&.dig('tool_calls').present?
+                  all_tools += message.metadata['tool_calls'].map { |tc| { name: tc['name'], timestamp: tc['timestamp'] } }
+                end
+                all_tools += message.mcp_tool_calls.map { |mcp| { name: mcp.tool_name, timestamp: mcp.created_at.strftime("%I:%M:%S %p") } }
+                
+                tool_count = all_tools.size
+                latest_tool = all_tools.last
+              %>
+              
+              <details class="mb-2">
+                <summary class="cursor-pointer p-2 bg-gray-50 rounded text-xs text-gray-600 font-mono hover:bg-gray-100 transition-colors">
+                  <span class="font-semibold">🔧 Tools Used (<%= tool_count %>)</span>
+                  <span class="ml-2 text-gray-500"><%= latest_tool&.dig(:name) %></span>
+                </summary>
+                <div class="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-600 font-mono max-h-48 overflow-y-auto">
+                  <!-- Tool calls from metadata -->
+                  <% if message.metadata&.dig('tool_calls').present? %>
+                    <% message.metadata['tool_calls'].each do |tool_call| %>
+                      <div class="ml-2 tool-call">
+                        <span class="font-medium"><%= tool_call['name'] %></span>
+                        <span class="text-gray-400 text-xs ml-2"><%= tool_call['timestamp'] %></span>
+                      </div>
+                    <% end %>
+                  <% end %>
+                  
+                  <!-- Tool calls from McpToolCall records -->
+                  <% message.mcp_tool_calls.each do |mcp_call| %>
+                    <div class="ml-2 tool-call">
+                      <span class="font-medium"><%= mcp_call.tool_name %></span>
+                      <span class="text-gray-400 text-xs ml-2"><%= mcp_call.created_at.strftime("%I:%M:%S %p") %></span>
+                      <% if mcp_call.duration_ms %>
+                        <span class="text-gray-400 text-xs">(<%= mcp_call.duration_ms %>ms)</span>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </div>
+              </details>
+            <% end %>
+          </div>
+        <% end %>
+        
         <div id="message-<%= message.id %>-content" 
              class="prose prose-sm max-w-none"
              data-controller="markdown"

@@ -27,6 +27,21 @@ Rails.application.routes.draw do
   
   # EKN-scoped routes (top-level)
   scope "/ekn/:ekn_slug" do
+    # Main EKN pages
+    get "", to: "ekns/main#show", as: :ekn  # Landing page
+    get "dashboard", to: "ekns/main#dashboard", as: :ekn_dashboard  # Impressive dashboard
+    get "pipeline", to: "ekns/main#pipeline", as: :ekn_pipeline  # Stage-by-stage pipeline
+    get "training", to: "ekns/main#training", as: :ekn_training  # Training methodology
+    get "entities/:id", to: "ekns/main#entity", as: :ekn_entity  # Entity details for popover
+    
+    # Knowledge Entities listing
+    resources :entities, controller: 'ekns/entities', only: [:index, :show], param: :id do
+      collection do
+        get :search
+        get :filter
+      end
+    end
+    
     # Legacy ask interface
     get "ask", to: "navigator/ask#show", as: :ekn_ask
     get "ask/metrics", to: "navigator/ask#metrics", as: :ekn_ask_metrics
@@ -43,6 +58,13 @@ Rails.application.routes.draw do
         post :export
         post :retry
         patch :update_settings
+      end
+    end
+
+    # Detailed Import Stats
+    resources :imports, controller: 'ekns/import_stats', only: [:index] do
+      member do
+        get :details
       end
     end
   end
@@ -78,6 +100,10 @@ Rails.application.routes.draw do
   # Legacy welcome page (remove after transition)
   get "welcome" => "welcome#index"
   
+  # Public MCP Logs (for demonstration)
+  get "mcp_logs", to: "public_mcp_logs#index"
+  get "mcp_logs/:id", to: "public_mcp_logs#show", as: :public_mcp_log
+  
   # Admin interface
   namespace :admin do
     # Pipeline Runs monitoring
@@ -87,6 +113,14 @@ Rails.application.routes.draw do
         post :pause
         post :cancel
         get :logs
+      end
+    end
+    
+    # MCP Tool Calls monitoring
+    resources :mcp_tool_calls, only: [:index, :show] do
+      collection do
+        get :recent
+        get :failed
       end
     end
     
@@ -126,6 +160,13 @@ Rails.application.routes.draw do
     
     # EKN API Usage Analytics
     resources :ekn_usage, only: [:index, :show]
+    
+    # Intelligent MCP Test Runs - "Intelligence Assessing Intelligence"
+    resources :mcp_intelligent_test_runs, only: [:index, :show] do
+      collection do
+        get :analytics
+      end
+    end
     
     # Admin dashboard
     get '/', to: 'dashboard#index', as: :dashboard

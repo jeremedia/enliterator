@@ -29,7 +29,8 @@ module Ekns
         model_config: {
           model_name: OpenaiConfig::SettingsManager.model_for(:answer),
           temperature: 0.7,
-          max_tokens: 2000
+          max_tokens: 2000,
+          use_mcp_tools: true  # ALWAYS ENABLE MCP TOOLS
         }
       )
       
@@ -65,12 +66,29 @@ module Ekns
           ]
         end
       end
-      
+
+
+      #log if mcp tools are enabled
+      if @conversation.model_config&.dig('use_mcp_tools') || params[:use_mcp] == 'true'
+        Rails.logger.info "MCP tools enabled for conversation #{@conversation.id}"
+      else
+        Rails.logger.info "MCP tools not enabled for conversation #{@conversation.id}"
+      end
       # Process AI response in background
-      ChatResponseJob.perform_later(
-        conversation_id: @conversation.id,
-        message_id: @user_message.id
-      )
+      # Use MCP-enabled job if configured
+      if @conversation.model_config&.dig('use_mcp_tools') || params[:use_mcp] == 'true'
+        Rails.logger.info "Using ChatResponseWithMcpJob for conversation #{@conversation.id}"
+        ChatResponseWithMcpJob.perform_later(
+          conversation_id: @conversation.id,
+          message_id: @user_message.id
+        )
+      else
+        Rails.logger.info "Using regular ChatResponseJob for conversation #{@conversation.id}"
+        ChatResponseJob.perform_later(
+          conversation_id: @conversation.id,
+          message_id: @user_message.id
+        )
+      end
     end
     
     def update_settings

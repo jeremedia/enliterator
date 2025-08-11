@@ -48,3 +48,6 @@ pin_all_from "app/javascript/navigator", under: "navigator"
 pin "hotwire-spark", to: "hotwire-spark.js", preload: true
 # Ensure Turbo can import ActionCable src entry
 pin "@rails/actioncable/src", to: "@rails--actioncable--src.js" # pinned for turbo-rails
+
+# Markdown parsing for real-time streaming
+pin "marked" # @16.1.2

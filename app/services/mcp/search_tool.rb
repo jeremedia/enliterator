@@ -11,13 +11,13 @@
 module Mcp
   class SearchTool
     # ChatGPT requires exactly this response format
-    # Arguments: query (string)
+    # Arguments: query (string), ekn (optional EKN object)
     # Returns: { results: [ { id, title, text, url } ] }
-    def self.call(query:)
+    def self.call(query:, ekn: nil)
       return { results: [] } if query.blank?
       
-      # Get the default EKN (Meta-Enliterator)
-      ekn = Ekn.find_by(slug: 'meta-enliterator') || Ekn.first
+      # Use provided EKN or fallback to meta-enliterator
+      ekn = ekn || Ekn.find_by(slug: 'meta-enliterator') || Ekn.first
       return { results: [] } unless ekn
       
       Rails.logger.info "MCP SearchTool: query='#{query}' for EKN #{ekn.slug}"

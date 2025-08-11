@@ -1,0 +1,120 @@
+<%= turbo_frame_tag "item-#{@item.id}-details" do %>
+<div class="grid md:grid-cols-2 gap-6">
+  <!-- Rights Summary & Content Sample -->
+  <div>
+    <h3 class="text-sm font-semibold text-white mb-2">Rights</h3>
+    <% if @item.provenance_and_rights %>
+      <% rs = @item.provenance_and_rights.rights_summary %>
+      <div class="text-xs text-gray-300 space-y-1">
+        <div>License: <span class="text-blue-300"><%= rs[:license] %></span></div>
+        <div>Consent: <span class="text-blue-300"><%= rs[:consent] %></span></div>
+        <div>Publishable: <span class="text-blue-300"><%= rs[:publishable] %></span></div>
+        <div>Training eligible: <span class="text-blue-300"><%= rs[:training_eligible] %></span></div>
+        <% if rs[:attribution] %><div>Attribution: <%= rs[:attribution] %></div><% end %>
+      </div>
+    <% else %>
+      <div class="text-xs text-gray-400">No rights record linked.</div>
+    <% end %>
+
+    <div class="mt-4">
+      <details>
+        <summary class="cursor-pointer select-none text-sm text-gray-200">Show content sample</summary>
+        <pre class="mt-2 p-3 bg-black/50 rounded text-xs whitespace-pre-wrap text-gray-200 max-h-48 overflow-auto"><%= @item.content_sample.to_s.truncate(4000) %></pre>
+      </details>
+    </div>
+
+    <div class="mt-4">
+      <h3 class="text-sm font-semibold text-white mb-2">API Calls (related)</h3>
+      <% if @api_calls.any? %>
+        <ul class="space-y-1 text-xs text-gray-300">
+          <% @api_calls.each do |call| %>
+            <li class="flex justify-between gap-3">
+              <span><%= call.service_name %> · <%= call.endpoint %> · <%= call.model_used %></span>
+              <span class="text-gray-400"><%= call.total_tokens %> tok · $<%= (call.total_cost || 0).round(4) %></span>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <div class="text-xs text-gray-400">No API calls found for this file.</div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Entities & Relationships from Graph with pagination -->
+  <div>
+    <h3 class="text-sm font-semibold text-white mb-2">Entities</h3>
+    <% if @details[:entities].any? %>
+      <div class="max-h-60 overflow-auto border border-white/10 rounded">
+        <table class="w-full text-xs">
+          <thead class="bg-white/10">
+            <tr>
+              <th class="text-left p-2">Pool</th>
+              <th class="text-left p-2">Name</th>
+              <th class="text-left p-2">Repr</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @details[:entities].each do |e| %>
+              <tr class="odd:bg-white/5">
+                <td class="p-2 text-gray-300"><%= e['pool'] %></td>
+                <td class="p-2 text-white"><%= e['name'] %></td>
+                <td class="p-2 text-gray-300"><%= e['repr'] %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+      <div class="mt-2 flex justify-between text-xs text-gray-300">
+        <% ep = @details[:entities_page] || 1 %>
+        <div>
+          <% if ep > 1 %>
+            <%= link_to "← Prev", details_import_path(ekn_slug: @ekn.slug, id: @item.id, include_rights: @include_rights, entities_page: ep - 1, rels_page: @details[:rels_page]), data: { turbo_frame: "item-#{@item.id}-details" }, class: "px-2 py-1 bg-white/10 rounded" %>
+          <% end %>
+        </div>
+        <div>
+          <% if @details[:entities].size >= (@details[:per_page] || 25) %>
+            <%= link_to "Next →", details_import_path(ekn_slug: @ekn.slug, id: @item.id, include_rights: @include_rights, entities_page: ep + 1, rels_page: @details[:rels_page]), data: { turbo_frame: "item-#{@item.id}-details" }, class: "px-2 py-1 bg-white/10 rounded" %>
+          <% end %>
+        </div>
+      </div>
+    <% else %>
+      <div class="text-xs text-gray-400">No entities found for this file in graph (check rights/batch correlation).</div>
+    <% end %>
+
+    <h3 class="text-sm font-semibold text-white mb-2 mt-4">Relationships</h3>
+    <% if @details[:relationships].any? %>
+      <div class="max-h-60 overflow-auto border border-white/10 rounded">
+        <table class="w-full text-xs">
+          <thead class="bg-white/10">
+            <tr>
+              <th class="text-left p-2">Path</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @details[:relationships].each do |r| %>
+              <tr class="odd:bg-white/5">
+                <td class="p-2 text-gray-200"><%= r['path_text'] %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+      <div class="mt-2 flex justify-between text-xs text-gray-300">
+        <% rp = @details[:rels_page] || 1 %>
+        <div>
+          <% if rp > 1 %>
+            <%= link_to "← Prev", details_import_path(ekn_slug: @ekn.slug, id: @item.id, include_rights: @include_rights, entities_page: @details[:entities_page], rels_page: rp - 1), data: { turbo_frame: "item-#{@item.id}-details" }, class: "px-2 py-1 bg-white/10 rounded" %>
+          <% end %>
+        </div>
+        <div>
+          <% if @details[:relationships].size >= (@details[:per_page] || 25) %>
+            <%= link_to "Next →", details_import_path(ekn_slug: @ekn.slug, id: @item.id, include_rights: @include_rights, entities_page: @details[:entities_page], rels_page: rp + 1), data: { turbo_frame: "item-#{@item.id}-details" }, class: "px-2 py-1 bg-white/10 rounded" %>
+          <% end %>
+        </div>
+      </div>
+    <% else %>
+      <div class="text-xs text-gray-400">No relationships found among this file's entities.</div>
+    <% end %>
+  </div>
+</div>
+<% end %>

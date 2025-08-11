@@ -21,6 +21,9 @@
 #  index_conversations_on_status            (status)
 #
 class Conversation < ApplicationRecord
+
+  include Loggable
+
   has_many :messages, dependent: :destroy
   # User association removed - can be added later when user management is implemented
   belongs_to :ingest_batch, optional: true
@@ -133,6 +136,7 @@ class Conversation < ApplicationRecord
   
   # Add a message to the conversation
   def add_message(role:, content:, metadata: {})
+    log "Adding message to conversation #{id} - Role: #{role}, Content: #{content.truncate(100)}"
     message = messages.create!(
       role: role,
       content: content,
@@ -163,6 +167,7 @@ class Conversation < ApplicationRecord
   
   # Build context for OpenAI calls
   def build_context(include_history: true, history_limit: 10)
+    log "Building context for conversation #{id} - Include history: #{include_history}, Limit: #{history_limit}"
     context = {
       conversation_id: id,
       user_expertise: expertise_level || 'intermediate',
@@ -197,6 +202,8 @@ class Conversation < ApplicationRecord
   private
   
   def set_default_model_config
+    # Skip logging if not persisted to avoid ActiveRecord errors
+    log "Setting default model configuration for conversation #{id}" if persisted?
     self.model_name ||= default_model
     self.temperature ||= default_temperature
     self.max_tokens ||= default_max_tokens
@@ -209,6 +216,7 @@ class Conversation < ApplicationRecord
   def set_initial_status
     self.status ||= 'active'
     self.last_activity_at ||= Time.current
+    log "Initial status set to #{status} for conversation #{id}"
   end
   
   def default_model

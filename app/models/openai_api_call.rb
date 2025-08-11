@@ -157,6 +157,7 @@ class OpenaiApiCall < ApiCall
     else
       calculate_text_costs!
     end
+    log "Costs calculated: input=#{input_cost}, output=#{output_cost}, total=#{total_cost}"
   end
   
   def extract_usage_data(result)
@@ -203,7 +204,7 @@ class OpenaiApiCall < ApiCall
         code: error.response.dig('error', 'code')
       }
     end
-    
+    log "Extracted OpenAI error details: #{details[:openai_error]}" if details[:openai_error]
     details
   end
   

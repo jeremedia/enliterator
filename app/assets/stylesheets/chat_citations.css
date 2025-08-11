@@ -1,0 +1,58 @@
+/* Chat Citations Styling - Clean and minimal */
+.prose p{
+    margin: 0 0 16px; /* 1.5x bottom margin (was 8px) */
+    line-height: 1.6; /* Increased line height for readability */
+}
+/* Clean list styling with increased spacing and margins */
+.prose ul {
+  list-style: none;
+  margin: 32px 16px; /* 2x top/bottom margin (was 16px) */
+  padding: 0;
+}
+
+.prose ul > li {
+
+  border-radius: 3px;
+  padding: 8px 16px;
+  margin-bottom: 12px; /* 1.5x spacing between entries (was 8px) */
+  list-style: none;
+}
+
+.prose ul > li:last-child {
+  margin-bottom: 0;
+}
+
+/* Style entity links - remove underline completely */
+.prose li a[data-node-id] {
+  color: #111827; /* text-gray-900 */
+  font-weight: 500; /* font-medium */
+  text-decoration: none !important;
+  display: inline;
+  transition: color 0.15s ease-in-out;
+  background-color: rgba(219, 234, 254, 0.34); /* light blue bg-blue-50 */
+    padding: 2px 4px; /* Slight padding for better clickability */
+}
+
+.prose li a[data-node-id]:hover {
+  color: #4338ca; /* text-indigo-700 */
+  text-decoration: none !important;
+}
+
+.prose li a[data-node-id]:hover::after {
+  content: ' →';
+  color: #6366f1; /* text-indigo-500 */
+  font-weight: normal;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .prose ul {
+    margin: 24px 0;
+    margin-left: 8px;
+  }
+  
+  .prose ul > li {
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+}

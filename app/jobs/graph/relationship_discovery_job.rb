@@ -57,6 +57,9 @@ module Graph
         
         # Step 5: Validate graph connectivity
         validate_graph_connectivity
+
+        # Step 6: Run additional bridge candidate pass to boost inter-pool edges with evidence
+        run_bridge_candidate_pass
         
         log_progress "✅ Relationship discovery complete"
         log_progress "   Clusters processed: #{@metrics[:clusters_processed]}"
@@ -220,6 +223,92 @@ module Graph
             end
           end
         end
+      end
+    end
+
+    # Additional pass: deterministic candidate bridges per item with LLM validation on evidence snippets
+    def run_bridge_candidate_pass
+      builder = Graph::BridgeCandidateBuilder.new(batch: @batch)
+      total_new = 0
+      driver = Graph::Connection.instance.driver
+      allowed_pairs = Graph::BridgeCandidateBuilder::ALLOWED_PAIRS
+
+      builder.each_item_candidates do |item, candidates|
+        candidates.each do |cand|
+          # Prepare entities array for strict ID grounding
+          entities = [
+            { pool_type: cand.source[:pool].downcase, label: cand.source[:label], id: cand.source[:id].to_s },
+            { pool_type: cand.target[:pool].downcase, label: cand.target[:label], id: cand.target[:id].to_s }
+          ]
+
+          result = Pools::RelationExtractionService.new(
+            content: item.content,
+            entities: entities,
+            evidence_snippets: cand.evidence,
+            allowed_pairs: allowed_pairs
+          ).extract
+
+          next unless result[:success]
+          next if result[:relations].blank?
+
+          result[:relations].each do |rel|
+            verb = rel[:verb]
+            src_pool = rel[:source][:pool_type].to_s.capitalize
+            tgt_pool = rel[:target][:pool_type].to_s.capitalize
+            src_id = rel[:source][:id]&.to_i || cand.source[:id]
+            tgt_id = rel[:target][:id]&.to_i || cand.target[:id]
+
+            # Skip if relation already exists
+            next if Relational.where(relation_type: verb, source_type: src_pool, source_id: src_id, target_type: tgt_pool, target_id: tgt_id).exists?
+
+            # Rights provenance for bridge
+            rights = ProvenanceAndRights.find_or_create_by!(
+              source_ids: ["bridge_candidate_#{@batch.id}_#{item.id}"],
+              collection_method: "bridge_candidate_llm",
+              consent_status: "implicit_consent",
+              license_type: "custom",
+              valid_time_start: Time.current,
+              publishability: item.provenance_and_rights&.publishability || false,
+              training_eligibility: item.provenance_and_rights&.training_eligibility || false,
+              quarantined: false,
+              custom_terms: {
+                'extraction_batch' => @batch.id,
+                'stage' => 'bridge_candidate_pass',
+                'item_id' => item.id,
+                'evidence' => Array(cand.evidence).first(3)
+              }
+            )
+
+            # Create relational row
+            Relational.create!(
+              relation_type: verb,
+              source_type: src_pool,
+              source_id: src_id,
+              target_type: tgt_pool,
+              target_id: tgt_id,
+              strength: rel[:confidence] || 0.7,
+              valid_time_start: Time.current,
+              provenance_and_rights: rights,
+              repr_text: "#{cand.source[:label]} #{verb} #{cand.target[:label]}"
+            )
+            total_new += 1
+          end
+        rescue => e
+          log_progress "Bridge pass error for item #{item.id}: #{e.message}", level: :warn
+        end
+      end
+
+      # Write to Neo4j if new relations were created
+      if total_new > 0
+        driver.session(database: @ekn.neo4j_database_name) do |session|
+          session.write_transaction do |tx|
+            loader = Graph::EdgeLoader.new(tx, @batch)
+            loader.load_all
+          end
+        end
+        log_progress "Bridge candidate pass created #{total_new} relations", level: :info
+      else
+        log_progress "Bridge candidate pass found no new relations", level: :info
       end
     end
     

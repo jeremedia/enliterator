@@ -1,0 +1,112 @@
+<% content_for :title, "#{@ekn.name} – Pipeline Provenance" %>
+<% content_for :description, "Stage-by-stage account of inputs, transformations, and outputs for #{@ekn.name}." %>
+
+<div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-indigo-900 text-white">
+  <!-- Header -->
+  <div class="border-b border-white/10 bg-black/20 backdrop-blur-sm sticky top-0 z-10">
+    <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            <%= @ekn.name %> — Pipeline Provenance
+          </h1>
+          <p class="text-gray-300 mt-1">A technical, auditable account of how inputs become a literate knowledge navigator.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <%= link_to ekn_path(ekn_slug: @ekn.slug), class: "px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-white" do %>
+            ← Back to Overview
+          <% end %>
+          <%= link_to ekn_dashboard_path(ekn_slug: @ekn.slug), class: "px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-white" do %>
+            Analytics Dashboard
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary row -->
+  <div class="bg-gradient-to-r from-indigo-600/30 to-purple-600/30 border-b border-white/10">
+    <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 grid md:grid-cols-4 gap-4">
+      <div class="text-center">
+        <div class="text-3xl font-bold text-blue-300"><%= number_with_delimiter(@input[:total_items]) %></div>
+        <div class="text-sm text-gray-200">Ingested Files</div>
+      </div>
+      <div class="text-center">
+        <div class="text-3xl font-bold text-purple-300"><%= number_with_delimiter(@basic[:total_nodes]) %></div>
+        <div class="text-sm text-gray-200">Graph Nodes</div>
+      </div>
+      <div class="text-center">
+        <div class="text-3xl font-bold text-indigo-300"><%= number_with_delimiter(@basic[:total_relationships]) %></div>
+        <div class="text-sm text-gray-200">Graph Relationships</div>
+      </div>
+      <div class="text-center">
+        <div class="text-3xl font-bold text-cyan-300"><%= @rights[:publishable] %> / <%= @rights[:total_rights_records] %></div>
+        <div class="text-sm text-gray-200">Publishable Rights</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Inputs -->
+  <div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+    <div class="bg-black/40 backdrop-blur-sm rounded-xl p-6 border border-white/10 mb-8">
+      <h2 class="text-xl font-bold mb-4">Inputs</h2>
+      <div class="grid md:grid-cols-3 gap-6 text-sm">
+        <div>
+          <div class="text-gray-300 mb-1">Media Types</div>
+          <ul class="space-y-1">
+            <% @input[:media_types].each do |mt, c| %>
+              <li class="flex justify-between"><span class="text-gray-200"><%= mt %></span><span class="text-blue-300 font-semibold"><%= c %></span></li>
+            <% end %>
+          </ul>
+        </div>
+        <div>
+          <div class="text-gray-300 mb-1">Quarantined Items</div>
+          <div class="text-yellow-300 font-semibold"><%= @input[:quarantined] %></div>
+        </div>
+        <div>
+          <div class="text-gray-300 mb-1">Batches</div>
+          <ul class="space-y-1">
+            <% @batches.each do |b| %>
+              <li class="flex justify-between"><span class="text-gray-200">Batch #<%= b.id %> — <%= b.name %></span><span class="text-purple-300 font-semibold"><%= b.ingest_items.count %> files</span></li>
+            <% end %>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stages -->
+    <div class="space-y-6">
+      <% @stages.each do |st| %>
+        <div class="bg-black/40 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="text-sm text-gray-400">Stage <%= st[:number] %></div>
+              <h3 class="text-lg font-semibold text-white"><%= st[:name] %></h3>
+              <p class="text-gray-300 mt-1"><%= st[:description] %></p>
+            </div>
+            <div>
+              <% status = st[:status] %>
+              <span class="px-3 py-1 rounded-full text-xs font-semibold <%= case status
+                when 'completed' then 'bg-green-500/20 text-green-300'
+                when 'in_progress' then 'bg-yellow-500/20 text-yellow-300'
+                when 'failed' then 'bg-red-500/20 text-red-300'
+                else 'bg-white/10 text-gray-200'
+              end %>"><%= status.to_s.humanize %></span>
+            </div>
+          </div>
+          <% if st[:metrics].present? %>
+            <div class="mt-4 grid md:grid-cols-3 gap-4 text-sm">
+              <% st[:metrics].each do |k, v| %>
+                <div class="bg-white/5 rounded p-3">
+                  <div class="text-gray-300"><%= k.to_s.humanize %></div>
+                  <div class="text-indigo-300 font-semibold"><%= v.is_a?(Float) ? v.round(3) : v %></div>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+

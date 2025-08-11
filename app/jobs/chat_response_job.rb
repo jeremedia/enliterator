@@ -73,34 +73,72 @@ class ChatResponseJob < ApplicationJob
     # Get the last user message
     last_user_message = conversation.messages.where(role: 'user').last
     
-    # Use QueryOrchestrator to get relevant context if we have a user query
+    # Use personality-aware routing and synthesis for knowledge context
     knowledge_context = nil
+    synthesized_response = nil
+    
     if last_user_message && conversation.ekn
       begin
-        Rails.logger.info "Using QueryOrchestrator for: #{last_user_message.content}"
-        orchestrator = QueryOrchestrator.new(ekn: conversation.ekn, conversation: conversation)
-        orchestration_result = orchestrator.process(last_user_message.content)
+        Rails.logger.info "Using personality-aware processing for: #{last_user_message.content}"
         
-        if orchestration_result && !orchestration_result[:error]
-          knowledge_context = orchestration_result[:context_for_llm]
-          Rails.logger.info "Orchestrator provided #{knowledge_context&.length || 0} chars of context"
+        # Step 1: Personality-aware routing
+        if conversation.ekn.ekn_personality_profile&.ready_for_chat?
+          router = PersonalityToolRouter.new(conversation.ekn, last_user_message.content)
+          routing_result = router.route_with_personality
           
-          # Store metadata about what was found
-          if assistant_message = conversation.messages.where(role: 'assistant').last
-            assistant_message.metadata.merge!(
-              orchestration: {
-                tool_used: orchestration_result[:tool_used],
-                confidence: orchestration_result[:confidence],
-                results_count: orchestration_result[:results][:items]&.size || 0,
-                canonical_entities: orchestration_result[:canonical_entities],
-                detected_pools: orchestration_result[:detected_pools]
-              }
-            )
+          if routing_result[:success]
+            # Step 2: Execute tool with personality-enhanced parameters
+            orchestrator = QueryOrchestrator.new(ekn: conversation.ekn, conversation: conversation)
+            
+            # Override the routing with personality-aware results
+            tool_result = execute_personality_aware_query(orchestrator, routing_result)
+            
+            if tool_result && !tool_result[:error]
+              # Step 3: Synthesize response using personality
+              synthesizer = PersonalityResponseSynthesizer.new(conversation.ekn)
+              synthesized_response = synthesizer.synthesize_response(
+                tool_result,
+                { query: last_user_message.content, routing: routing_result }
+              )
+              
+              knowledge_context = build_personality_context(tool_result, routing_result, synthesized_response)
+              
+              Rails.logger.info "Personality-aware processing provided #{knowledge_context&.length || 0} chars of context"
+              
+              # Store enhanced metadata about personality processing
+              if assistant_message = conversation.messages.where(role: 'assistant').last
+                assistant_message.metadata.merge!(
+                  personality_processing: {
+                    archetype: conversation.ekn.ekn_personality_profile.base_archetype,
+                    tool_used: routing_result[:primary_tool],
+                    confidence: routing_result[:confidence],
+                    routing_reasoning: routing_result[:reasoning],
+                    query_transformation: routing_result[:query_transformation],
+                    results_count: tool_result[:results][:items]&.size || 0,
+                    canonical_entities: routing_result[:canonical_entities],
+                    detected_pools: routing_result[:detected_pools],
+                    synthesized_length: synthesized_response&.length || 0
+                  }
+                )
+              end
+            else
+              Rails.logger.warn "Personality-aware tool execution failed, falling back to basic orchestrator"
+              knowledge_context = fallback_to_basic_orchestrator(conversation, last_user_message, assistant_message)
+            end
+          else
+            Rails.logger.warn "Personality-aware routing failed, falling back to basic orchestrator"
+            knowledge_context = fallback_to_basic_orchestrator(conversation, last_user_message, assistant_message)
           end
+        else
+          Rails.logger.info "EKN personality profile not ready, using basic orchestrator"
+          knowledge_context = fallback_to_basic_orchestrator(conversation, last_user_message, assistant_message)
         end
+        
       rescue => e
-        Rails.logger.error "QueryOrchestrator failed: #{e.message}"
-        # Continue without orchestration context
+        Rails.logger.error "Personality-aware processing failed: #{e.message}"
+        Rails.logger.error e.backtrace.first(5).join("\n")
+        # Fall back to basic orchestrator
+        knowledge_context = fallback_to_basic_orchestrator(conversation, last_user_message, assistant_message)
       end
     end
     
@@ -126,6 +164,17 @@ class ChatResponseJob < ApplicationJob
   end
   
   def build_system_prompt(ekn)
+    # Use personality-aware system prompt builder
+    if ekn.ekn_personality_profile&.ready_for_chat?
+      builder = PersonalityPromptBuilder.new(ekn)
+      builder.build_system_prompt(context: 'chat', include_knowledge_context: true)
+    else
+      # Fallback to basic system prompt if personality profile not ready
+      build_fallback_system_prompt(ekn)
+    end
+  end
+  
+  def build_fallback_system_prompt(ekn)
     batch = ekn.ingest_batches.last
     
     # Get actual counts from the database
@@ -316,35 +365,117 @@ class ChatResponseJob < ApplicationJob
   
   
   def handle_error(conversation, assistant_message, error)
-    Rails.logger.error "Chat response error: #{error.message}"
-    Rails.logger.error error.backtrace.join("\n")
+    Rails.logger.error "ChatResponseJob Error: #{error.class} - #{error.message}"
+    Rails.logger.error error.backtrace.first(10).join("\n")
+    
+    # Format error message for user
+    error_message = format_error_for_user(error)
     
     # Create or update assistant message with error
     if assistant_message.nil?
       assistant_message = conversation.messages.create!(
         role: 'assistant',
-        content: 'Error occurred',
+        content: error_message,
         metadata: {
-          error: true,
-          error_message: error.message,
+          error: error.message,
           error_class: error.class.name,
-          error_backtrace: Rails.env.development? ? error.backtrace.first(10) : nil
+          error_backtrace: error.backtrace.first(3),
+          is_error: true,
+          completed_at: Time.current
         }
+      )
+      
+      # Broadcast the error message
+      Turbo::StreamsChannel.broadcast_append_to(
+        "conversation_#{conversation.id}",
+        target: "messages",
+        partial: "ekns/chat/message",
+        locals: { message: assistant_message, ekn: conversation.ekn }
       )
     else
       assistant_message.update!(
-        content: 'Error occurred',
+        content: error_message,
         metadata: assistant_message.metadata.merge(
-          error: true,
-          streaming: false,
-          error_message: error.message,
+          error: error.message,
           error_class: error.class.name,
-          error_backtrace: Rails.env.development? ? error.backtrace.first(10) : nil
+          error_backtrace: error.backtrace.first(3),
+          is_error: true,
+          streaming: false,
+          completed_at: Time.current
         )
       )
+      
+      # Broadcast the updated error message
+      broadcast_message_update(conversation, assistant_message)
     end
     
-    # Render error with full details in development
+    # Broadcast error notification
+    broadcast_error_notification(conversation, assistant_message, error)
+    
+    # ALWAYS hide typing indicator on error
+    broadcast_typing_indicator(conversation, typing: false)
+  end
+  
+  def format_error_for_user(error)
+    case error
+    when ActiveRecord::StatementInvalid
+      "❌ Database error: #{error.message.split('\n').first}"
+    when Net::OpenTimeout, Net::ReadTimeout
+      "❌ Connection timeout: The AI service is taking too long to respond. Please try again."
+    when StandardError
+      if error.message.include?("401")
+        "❌ Authentication error: Unable to connect to AI service."
+      elsif error.message.include?("rate_limit")
+        "❌ Rate limit exceeded: Please wait a moment and try again."
+      else
+        "❌ Error: #{error.message}\n\nPlease try again."
+      end
+    else
+      "❌ Unexpected error: #{error.message}"
+    end
+  end
+  
+  def broadcast_error_notification(conversation, message, error)
+    # Broadcast error alert
+    Turbo::StreamsChannel.broadcast_prepend_to(
+      "conversation_#{conversation.id}",
+      target: "messages",
+      html: <<~HTML
+        <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-4 animate-pulse" id="error-#{message.id}">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+              </svg>
+            </div>
+            <div class="ml-3">
+              <h3 class="text-sm font-medium text-red-800">Error Processing Response</h3>
+              <div class="mt-2 text-sm text-red-700">
+                <p>#{error.message.split('\n').first.truncate(200)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      HTML
+    )
+  end
+  
+  def broadcast_typing_indicator(conversation, typing:)
+    if typing
+      Turbo::StreamsChannel.broadcast_append_to(
+        "conversation_#{conversation.id}",
+        target: "messages",
+        partial: "ekns/chat/typing_indicator"
+      )
+    else
+      Turbo::StreamsChannel.broadcast_remove_to(
+        "conversation_#{conversation.id}",
+        target: "typing_indicator"
+      )
+    end
+  end
+  
+  # Render error with full details in development
     error_html = render_error_message(error, assistant_message)
     
     Turbo::StreamsChannel.broadcast_replace_to(
@@ -447,6 +578,139 @@ class ChatResponseJob < ApplicationJob
     end
   end
   
+  def execute_personality_aware_query(orchestrator, routing_result)
+    # Extract the tool and parameters from routing result
+    tool_name = routing_result[:primary_tool]
+    tool_params = routing_result[:tool_params]
+    
+    # Build a mock routing result that the orchestrator expects
+    mock_routing = {
+      query: routing_result[:query_transformation] || tool_params[:query],
+      normalized_query: routing_result[:query_transformation] || tool_params[:query],
+      primary_tool: tool_name,
+      tool_params: tool_params,
+      confidence: routing_result[:confidence],
+      reasoning: routing_result[:reasoning],
+      canonical_entities: routing_result[:canonical_entities],
+      detected_pools: routing_result[:detected_pools]
+    }
+    
+    # Use the orchestrator's execute_tool method indirectly
+    begin
+      case tool_name
+      when 'search'
+        tool = Mcp::Tools::SimpleSearchTool.new(ekn: orchestrator.ekn)
+        result = tool.execute(**tool_params.symbolize_keys)
+      when 'fetch'
+        tool = Mcp::Tools::FetchTool.new(ekn: orchestrator.ekn) if defined?(Mcp::Tools::FetchTool)
+        result = tool&.execute(**tool_params.symbolize_keys)
+      when 'bridge'
+        tool = Mcp::Tools::BridgeTool.new(ekn: orchestrator.ekn) if defined?(Mcp::Tools::BridgeTool)
+        result = tool&.execute(**tool_params.symbolize_keys)
+      else
+        # Fallback to search
+        tool = Mcp::Tools::SimpleSearchTool.new(ekn: orchestrator.ekn)
+        result = tool.execute(query: tool_params[:query] || routing_result[:query_transformation], top_k: 10)
+      end
+      
+      if result
+        # Format result similar to orchestrator output
+        {
+          success: true,
+          results: { items: result[:items] || [], meta: result[:meta] || {} },
+          tool_used: tool_name,
+          confidence: routing_result[:confidence],
+          reasoning: routing_result[:reasoning],
+          canonical_entities: routing_result[:canonical_entities],
+          detected_pools: routing_result[:detected_pools],
+          citations: build_citations_from_results(result[:items] || []),
+          path_sentences: extract_path_sentences(result[:items] || []),
+          enrichments: []
+        }
+      else
+        { error: "Tool execution returned nil result" }
+      end
+      
+    rescue => e
+      Rails.logger.error "Personality-aware tool execution error: #{e.message}"
+      { error: e.message }
+    end
+  end
+  
+  def build_citations_from_results(items)
+    items.map do |item|
+      {
+        entity_id: item[:entity_id],
+        entity_name: item[:entity_name] || item[:title] || "Unknown",
+        entity_type: item[:entity_type] || "Entity",
+        relevance: item[:similarity] || item[:relevance] || 0.0
+      }
+    end
+  end
+  
+  def extract_path_sentences(items)
+    items.map { |item| item[:path_preview] }.compact.uniq
+  end
+  
+  def build_personality_context(tool_result, routing_result, synthesized_response)
+    context_parts = []
+    
+    # Add routing context
+    context_parts << "Query Processing: #{routing_result[:reasoning]}"
+    context_parts << "Tool Used: #{routing_result[:primary_tool]} (Confidence: #{(routing_result[:confidence] * 100).round}%)"
+    
+    # Add results summary  
+    if tool_result[:results][:items]&.any?
+      items_summary = tool_result[:results][:items].first(3).map do |item|
+        "- #{item[:entity_name]} (#{item[:entity_type]})"
+      end.join("\n")
+      
+      context_parts << "Key Results:\n#{items_summary}"
+    end
+    
+    # Add path information
+    if tool_result[:path_sentences]&.any?
+      context_parts << "Connections: #{tool_result[:path_sentences].first(2).join(' → ')}"
+    end
+    
+    # Add synthesized guidance
+    if synthesized_response && synthesized_response.length > 100
+      # Extract key guidance from synthesized response
+      guidance = synthesized_response.split("\n").first(3).join("\n")
+      context_parts << "Response Guidance: #{guidance}"
+    end
+    
+    context_parts.join("\n\n")
+  end
+  
+  def fallback_to_basic_orchestrator(conversation, last_user_message, assistant_message)
+    Rails.logger.info "Using basic QueryOrchestrator for: #{last_user_message.content}"
+    orchestrator = QueryOrchestrator.new(ekn: conversation.ekn, conversation: conversation)
+    orchestration_result = orchestrator.process(last_user_message.content)
+    
+    if orchestration_result && !orchestration_result[:error]
+      knowledge_context = orchestration_result[:context_for_llm]
+      Rails.logger.info "Basic orchestrator provided #{knowledge_context&.length || 0} chars of context"
+      
+      # Store basic metadata
+      if assistant_message
+        assistant_message.metadata.merge!(
+          basic_orchestration: {
+            tool_used: orchestration_result[:tool_used],
+            confidence: orchestration_result[:confidence],
+            results_count: orchestration_result[:results][:items]&.size || 0,
+            canonical_entities: orchestration_result[:canonical_entities],
+            detected_pools: orchestration_result[:detected_pools]
+          }
+        )
+      end
+      
+      return knowledge_context
+    end
+    
+    nil
+  end
+
   def estimate_tokens(text)
     # Rough estimate: 1 token ≈ 4 characters
     return 0 if text.nil? || text.empty?

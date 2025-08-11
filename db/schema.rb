@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_08_205235) do
+ActiveRecord::Schema[8.0].define(version: 2025_08_11_185955) do
   create_schema "ekn_11"
   create_schema "ekn_12"
   create_schema "ekn_13"
@@ -133,6 +133,23 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_08_205235) do
     t.index ["user_id"], name: "index_api_calls_on_user_id"
   end
 
+  create_table "characters", force: :cascade do |t|
+    t.string "label"
+    t.string "role_type"
+    t.string "title"
+    t.text "biography"
+    t.boolean "active"
+    t.boolean "has_agency"
+    t.datetime "valid_time_start"
+    t.text "repr_text"
+    t.bigint "provenance_and_rights_id", null: false
+    t.integer "batch_id"
+    t.string "entity_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provenance_and_rights_id"], name: "index_characters_on_provenance_and_rights_id"
+  end
+
   create_table "conversation_histories", force: :cascade do |t|
     t.string "conversation_id"
     t.string "user_id"
@@ -159,6 +176,34 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_08_205235) do
     t.index ["ingest_batch_id"], name: "index_conversations_on_ingest_batch_id"
     t.index ["last_activity_at"], name: "index_conversations_on_last_activity_at"
     t.index ["status"], name: "index_conversations_on_status"
+  end
+
+  create_table "ekn_personality_profiles", force: :cascade do |t|
+    t.bigint "ekn_id", null: false
+    t.json "knowledge_sources_fingerprint"
+    t.json "ten_pool_preferences"
+    t.json "response_patterns"
+    t.json "domain_expertise"
+    t.json "canonical_vocabulary"
+    t.json "relationship_styles"
+    t.json "voice_characteristics"
+    t.json "interaction_patterns"
+    t.json "evolution_history"
+    t.integer "personality_version", default: 1, null: false
+    t.datetime "last_significant_change_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "base_archetype"
+    t.json "mcp_tool_preferences", default: {}
+    t.json "query_transformation_style", default: {}
+    t.json "communication_signature", default: {}
+    t.json "expertise_depth_map", default: {}
+    t.json "visualization_driving_patterns", default: {}
+    t.json "learning_adaptation_style", default: {}
+    t.index ["base_archetype"], name: "index_ekn_personality_profiles_on_base_archetype"
+    t.index ["ekn_id"], name: "index_ekn_personality_profiles_on_ekn_id", unique: true
+    t.index ["last_significant_change_at"], name: "index_ekn_personality_profiles_on_last_significant_change_at"
+    t.index ["personality_version"], name: "index_ekn_personality_profiles_on_personality_version"
   end
 
   create_table "ekn_pipeline_runs", force: :cascade do |t|
@@ -259,10 +304,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_08_205235) do
     t.index ["provenance_and_rights_id"], name: "index_emanations_on_provenance_and_rights_id"
     t.index ["valid_time_start", "valid_time_end"], name: "index_emanations_on_valid_time_start_and_valid_time_end"
   end
-
-# Could not dump table "embeddings" because of following StandardError
-#   Unknown type 'vector(1536)' for column 'embedding'
-
 
   create_table "evidence_experiences", force: :cascade do |t|
     t.bigint "evidence_id", null: false
@@ -514,6 +555,13 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_08_205235) do
     t.string "quarantine_reason"
     t.string "file_hash"
     t.integer "file_size"
+    t.string "extraction_method"
+    t.string "extraction_model_used"
+    t.string "routing_tier"
+    t.integer "estimated_tokens"
+    t.integer "content_length_chars"
+    t.json "markitdown_metadata"
+    t.index ["extraction_method"], name: "index_ingest_items_on_extraction_method"
     t.index ["ingest_batch_id"], name: "index_ingest_items_on_ingest_batch_id"
     t.index ["lexicon_status"], name: "index_ingest_items_on_lexicon_status"
     t.index ["media_type"], name: "index_ingest_items_on_media_type"
@@ -521,6 +569,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_08_205235) do
     t.index ["pool_item_type", "pool_item_id"], name: "index_ingest_items_on_pool_item_type_and_pool_item_id"
     t.index ["pool_status"], name: "index_ingest_items_on_pool_status"
     t.index ["provenance_and_rights_id"], name: "index_ingest_items_on_provenance_and_rights_id"
+    t.index ["routing_tier"], name: "index_ingest_items_on_routing_tier"
     t.index ["source_hash"], name: "index_ingest_items_on_source_hash", unique: true
     t.index ["triage_status"], name: "index_ingest_items_on_triage_status"
   end
@@ -590,6 +639,22 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_08_205235) do
     t.index ["surface_forms"], name: "index_lexicon_and_ontologies_on_surface_forms", using: :gin
     t.index ["term"], name: "index_lexicon_and_ontologies_on_term", unique: true
     t.index ["valid_time_start", "valid_time_end"], name: "idx_on_valid_time_start_valid_time_end_5b95b14d20"
+  end
+
+  create_table "lifecycles", force: :cascade do |t|
+    t.string "label"
+    t.string "stage_type"
+    t.integer "sequence_order"
+    t.boolean "is_active"
+    t.text "description"
+    t.datetime "valid_time_start"
+    t.text "repr_text"
+    t.bigint "provenance_and_rights_id", null: false
+    t.integer "batch_id"
+    t.string "entity_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provenance_and_rights_id"], name: "index_lifecycles_on_provenance_and_rights_id"
   end
 
   create_table "log_items", force: :cascade do |t|
@@ -662,6 +727,122 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_08_205235) do
     t.index ["valid_time_start", "valid_time_end"], name: "index_manifests_on_valid_time_start_and_valid_time_end"
   end
 
+  create_table "mcp_intelligent_test_runs", force: :cascade do |t|
+    t.bigint "mcp_test_run_id", null: false
+    t.bigint "mcp_test_case_id", null: false
+    t.bigint "ekn_id", null: false
+    t.string "evaluator_type", null: false
+    t.string "status", null: false
+    t.json "agent_context"
+    t.json "evaluation_results"
+    t.json "performance_metrics"
+    t.datetime "started_at"
+    t.datetime "completed_at"
+    t.integer "duration_ms"
+    t.text "error_message"
+    t.float "overall_score"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ekn_id", "completed_at"], name: "index_mcp_intelligent_test_runs_on_ekn_id_and_completed_at"
+    t.index ["ekn_id"], name: "index_mcp_intelligent_test_runs_on_ekn_id"
+    t.index ["evaluator_type"], name: "index_mcp_intelligent_test_runs_on_evaluator_type"
+    t.index ["mcp_test_case_id"], name: "index_mcp_intelligent_test_runs_on_mcp_test_case_id"
+    t.index ["mcp_test_run_id", "status"], name: "index_mcp_intelligent_test_runs_on_mcp_test_run_id_and_status"
+    t.index ["mcp_test_run_id"], name: "index_mcp_intelligent_test_runs_on_mcp_test_run_id"
+    t.index ["overall_score"], name: "index_mcp_intelligent_test_runs_on_overall_score"
+    t.index ["status"], name: "index_mcp_intelligent_test_runs_on_status"
+  end
+
+  create_table "mcp_test_cases", force: :cascade do |t|
+    t.bigint "mcp_test_suite_id", null: false
+    t.string "name", null: false
+    t.json "variable_overrides"
+    t.json "expectations"
+    t.text "description"
+    t.boolean "enabled", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["enabled"], name: "index_mcp_test_cases_on_enabled"
+    t.index ["mcp_test_suite_id", "name"], name: "index_mcp_test_cases_on_mcp_test_suite_id_and_name", unique: true
+    t.index ["mcp_test_suite_id"], name: "index_mcp_test_cases_on_mcp_test_suite_id"
+  end
+
+  create_table "mcp_test_executions", force: :cascade do |t|
+    t.bigint "mcp_test_run_id", null: false
+    t.bigint "mcp_test_case_id", null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "started_at"
+    t.datetime "completed_at"
+    t.json "execution_metrics"
+    t.json "assertion_results"
+    t.text "error_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["mcp_test_case_id"], name: "index_mcp_test_executions_on_mcp_test_case_id"
+    t.index ["mcp_test_run_id", "mcp_test_case_id"], name: "idx_mcp_test_exec_unique", unique: true
+    t.index ["mcp_test_run_id"], name: "index_mcp_test_executions_on_mcp_test_run_id"
+    t.index ["started_at"], name: "index_mcp_test_executions_on_started_at"
+    t.index ["status"], name: "index_mcp_test_executions_on_status"
+  end
+
+  create_table "mcp_test_runs", force: :cascade do |t|
+    t.bigint "mcp_test_suite_id", null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "started_at"
+    t.datetime "completed_at"
+    t.json "summary_metrics"
+    t.text "error_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["mcp_test_suite_id", "created_at"], name: "index_mcp_test_runs_on_mcp_test_suite_id_and_created_at"
+    t.index ["mcp_test_suite_id"], name: "index_mcp_test_runs_on_mcp_test_suite_id"
+    t.index ["started_at"], name: "index_mcp_test_runs_on_started_at"
+    t.index ["status"], name: "index_mcp_test_runs_on_status"
+  end
+
+  create_table "mcp_test_suites", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "saved_prompt_id", null: false
+    t.json "base_variables"
+    t.json "test_config"
+    t.text "description"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_mcp_test_suites_on_name", unique: true
+    t.index ["saved_prompt_id"], name: "index_mcp_test_suites_on_saved_prompt_id"
+  end
+
+  create_table "mcp_tool_calls", force: :cascade do |t|
+    t.bigint "ekn_id", null: false
+    t.bigint "conversation_id"
+    t.bigint "message_id"
+    t.string "tool_name"
+    t.string "tool_id"
+    t.jsonb "arguments"
+    t.jsonb "request_data"
+    t.jsonb "response_data"
+    t.string "status"
+    t.datetime "started_at"
+    t.datetime "completed_at"
+    t.text "error_message"
+    t.string "server_label"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "client_name"
+    t.string "client_version"
+    t.string "client_ip"
+    t.boolean "is_external_call", default: false, null: false
+    t.bigint "mcp_test_execution_id"
+    t.string "openai_request_id"
+    t.index ["client_name", "created_at"], name: "index_mcp_tool_calls_on_client_name_and_created_at"
+    t.index ["conversation_id"], name: "index_mcp_tool_calls_on_conversation_id"
+    t.index ["ekn_id"], name: "index_mcp_tool_calls_on_ekn_id"
+    t.index ["is_external_call"], name: "index_mcp_tool_calls_on_is_external_call"
+    t.index ["mcp_test_execution_id"], name: "index_mcp_tool_calls_on_mcp_test_execution_id"
+    t.index ["message_id"], name: "index_mcp_tool_calls_on_message_id"
+    t.index ["openai_request_id"], name: "index_mcp_tool_calls_on_openai_request_id"
+  end
+
   create_table "messages", force: :cascade do |t|
     t.bigint "conversation_id", null: false
     t.integer "role"
@@ -671,6 +852,31 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_08_205235) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["conversation_id"], name: "index_messages_on_conversation_id"
+  end
+
+  create_table "meta_creation_assessments", force: :cascade do |t|
+    t.bigint "ekn_id", null: false
+    t.bigint "mcp_test_run_id"
+    t.integer "assessment_type", null: false
+    t.integer "assessment_status", default: 0, null: false
+    t.decimal "overall_score", precision: 4, scale: 3, null: false
+    t.json "assessment_criteria"
+    t.json "evaluation_results"
+    t.json "meta_enliterator_performance"
+    t.json "personality_health_metrics"
+    t.json "user_satisfaction_indicators"
+    t.json "improvement_recommendations"
+    t.json "meta_learning_evidence"
+    t.json "context_data"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["assessment_status"], name: "index_meta_creation_assessments_on_assessment_status"
+    t.index ["assessment_type", "overall_score"], name: "idx_on_assessment_type_overall_score_48738b2adf"
+    t.index ["assessment_type"], name: "index_meta_creation_assessments_on_assessment_type"
+    t.index ["ekn_id", "created_at"], name: "index_meta_creation_assessments_on_ekn_id_and_created_at"
+    t.index ["ekn_id"], name: "index_meta_creation_assessments_on_ekn_id"
+    t.index ["mcp_test_run_id"], name: "index_meta_creation_assessments_on_mcp_test_run_id"
+    t.index ["overall_score"], name: "index_meta_creation_assessments_on_overall_score"
   end
 
   create_table "method_pool_practicals", force: :cascade do |t|
@@ -905,6 +1111,24 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_08_205235) do
     t.index ["valid_time_start", "valid_time_end"], name: "index_relationals_on_valid_time_start_and_valid_time_end"
   end
 
+  create_table "relators", force: :cascade do |t|
+    t.string "label"
+    t.string "relation_type"
+    t.string "source_label"
+    t.string "target_label"
+    t.decimal "strength"
+    t.boolean "bidirectional"
+    t.text "description"
+    t.datetime "valid_time_start"
+    t.text "repr_text"
+    t.bigint "provenance_and_rights_id", null: false
+    t.integer "batch_id"
+    t.string "entity_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provenance_and_rights_id"], name: "index_relators_on_provenance_and_rights_id"
+  end
+
   create_table "risk_practicals", force: :cascade do |t|
     t.bigint "risk_id", null: false
     t.bigint "practical_id", null: false
@@ -943,6 +1167,24 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_08_205235) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["browser_session_id"], name: "index_sessions_on_browser_session_id", unique: true
+  end
+
+  create_table "spaces", force: :cascade do |t|
+    t.string "label"
+    t.string "spatial_type"
+    t.string "region"
+    t.string "country"
+    t.decimal "latitude"
+    t.decimal "longitude"
+    t.text "description"
+    t.datetime "valid_time_start"
+    t.text "repr_text"
+    t.bigint "provenance_and_rights_id", null: false
+    t.integer "batch_id"
+    t.string "entity_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provenance_and_rights_id"], name: "index_spaces_on_provenance_and_rights_id"
   end
 
   create_table "spatials", force: :cascade do |t|
@@ -991,6 +1233,124 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_08_205235) do
     t.index ["status"], name: "index_stage_completions_on_status"
   end
 
+  create_table "symbolics", force: :cascade do |t|
+    t.string "label"
+    t.string "symbol_type"
+    t.text "meaning"
+    t.text "cultural_context"
+    t.datetime "valid_time_start"
+    t.text "repr_text"
+    t.bigint "provenance_and_rights_id", null: false
+    t.integer "batch_id"
+    t.string "entity_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provenance_and_rights_id"], name: "index_symbolics_on_provenance_and_rights_id"
+  end
+
+  create_table "time_entities", force: :cascade do |t|
+    t.string "label"
+    t.string "temporal_type"
+    t.text "description"
+    t.datetime "start_time"
+    t.datetime "end_time"
+    t.boolean "recurring"
+    t.datetime "valid_time_start"
+    t.text "repr_text"
+    t.bigint "provenance_and_rights_id", null: false
+    t.integer "batch_id"
+    t.string "entity_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provenance_and_rights_id"], name: "index_time_entities_on_provenance_and_rights_id"
+  end
+
+  create_table "training_question_sets", force: :cascade do |t|
+    t.bigint "ekn_id", null: false
+    t.string "name", null: false
+    t.text "description"
+    t.string "generation_method", null: false
+    t.json "generation_metadata", default: {}
+    t.string "status", default: "pending"
+    t.integer "question_count", default: 0
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ekn_id", "name"], name: "index_training_question_sets_on_ekn_id_and_name", unique: true
+    t.index ["ekn_id"], name: "index_training_question_sets_on_ekn_id"
+    t.index ["generation_method"], name: "index_training_question_sets_on_generation_method"
+    t.index ["status"], name: "index_training_question_sets_on_status"
+  end
+
+  create_table "training_questions", force: :cascade do |t|
+    t.bigint "training_question_set_id", null: false
+    t.bigint "ekn_id", null: false
+    t.text "question_text", null: false
+    t.string "question_type", null: false
+    t.string "archetype_focus"
+    t.string "difficulty_level", default: "medium"
+    t.json "expected_knowledge_areas", default: []
+    t.json "generation_source", default: {}
+    t.json "evaluation_criteria", default: {}
+    t.text "ideal_response_outline"
+    t.boolean "active", default: true
+    t.integer "times_asked", default: 0
+    t.float "avg_score", default: 0.0
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["difficulty_level", "active"], name: "index_training_questions_on_difficulty_level_and_active"
+    t.index ["ekn_id", "archetype_focus"], name: "index_training_questions_on_ekn_id_and_archetype_focus"
+    t.index ["ekn_id"], name: "index_training_questions_on_ekn_id"
+    t.index ["question_type"], name: "index_training_questions_on_question_type"
+    t.index ["training_question_set_id", "question_type"], name: "idx_on_training_question_set_id_question_type_d559b9b2db"
+    t.index ["training_question_set_id"], name: "index_training_questions_on_training_question_set_id"
+  end
+
+  create_table "training_responses", force: :cascade do |t|
+    t.bigint "training_run_id", null: false
+    t.bigint "training_question_id", null: false
+    t.bigint "ekn_id", null: false
+    t.text "response_text"
+    t.float "response_time_seconds"
+    t.json "tool_usage", default: {}
+    t.json "personality_metadata", default: {}
+    t.float "accuracy_score", default: 0.0
+    t.float "completeness_score", default: 0.0
+    t.float "personality_authenticity_score", default: 0.0
+    t.float "overall_score", default: 0.0
+    t.text "evaluation_notes"
+    t.json "evaluation_metadata", default: {}
+    t.boolean "human_reviewed", default: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_training_responses_on_created_at"
+    t.index ["ekn_id", "overall_score"], name: "index_training_responses_on_ekn_id_and_overall_score"
+    t.index ["ekn_id"], name: "index_training_responses_on_ekn_id"
+    t.index ["training_question_id"], name: "index_training_responses_on_training_question_id"
+    t.index ["training_run_id", "training_question_id"], name: "idx_on_training_run_id_training_question_id_8ca65df8e0"
+    t.index ["training_run_id"], name: "index_training_responses_on_training_run_id"
+  end
+
+  create_table "training_runs", force: :cascade do |t|
+    t.bigint "ekn_id", null: false
+    t.bigint "training_question_set_id", null: false
+    t.string "run_name"
+    t.text "run_description"
+    t.string "status", default: "pending"
+    t.integer "total_questions", default: 0
+    t.integer "completed_questions", default: 0
+    t.float "overall_score", default: 0.0
+    t.json "archetype_scores", default: {}
+    t.json "run_metadata", default: {}
+    t.datetime "started_at"
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ekn_id", "status"], name: "index_training_runs_on_ekn_id_and_status"
+    t.index ["ekn_id"], name: "index_training_runs_on_ekn_id"
+    t.index ["started_at"], name: "index_training_runs_on_started_at"
+    t.index ["training_question_set_id"], name: "index_training_runs_on_training_question_set_id"
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "email", default: "", null: false
     t.string "encrypted_password", default: "", null: false
@@ -1036,8 +1396,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_08_205235) do
   add_foreign_key "actor_manifests", "manifests"
   add_foreign_key "actors", "provenance_and_rights", column: "provenance_and_rights_id"
   add_foreign_key "api_calls", "ekns"
+  add_foreign_key "characters", "provenance_and_rights", column: "provenance_and_rights_id"
   add_foreign_key "conversations", "ekns"
   add_foreign_key "conversations", "ingest_batches"
+  add_foreign_key "ekn_personality_profiles", "ekns"
   add_foreign_key "ekn_pipeline_runs", "ekns"
   add_foreign_key "ekn_pipeline_runs", "ingest_batches"
   add_foreign_key "emanation_ideas", "emanations"
@@ -1068,13 +1430,27 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_08_205235) do
   add_foreign_key "ingest_items", "provenance_and_rights", column: "provenance_and_rights_id"
   add_foreign_key "intent_and_tasks", "provenance_and_rights", column: "provenance_and_rights_id"
   add_foreign_key "lexicon_and_ontologies", "provenance_and_rights", column: "provenance_and_rights_id"
+  add_foreign_key "lifecycles", "provenance_and_rights", column: "provenance_and_rights_id"
   add_foreign_key "log_items", "logs"
   add_foreign_key "manifest_experiences", "experiences"
   add_foreign_key "manifest_experiences", "manifests"
   add_foreign_key "manifest_spatials", "manifests"
   add_foreign_key "manifest_spatials", "spatials"
   add_foreign_key "manifests", "provenance_and_rights", column: "provenance_and_rights_id"
+  add_foreign_key "mcp_intelligent_test_runs", "ekns"
+  add_foreign_key "mcp_intelligent_test_runs", "mcp_test_cases"
+  add_foreign_key "mcp_intelligent_test_runs", "mcp_test_runs"
+  add_foreign_key "mcp_test_cases", "mcp_test_suites"
+  add_foreign_key "mcp_test_executions", "mcp_test_cases"
+  add_foreign_key "mcp_test_executions", "mcp_test_runs"
+  add_foreign_key "mcp_test_runs", "mcp_test_suites"
+  add_foreign_key "mcp_tool_calls", "conversations"
+  add_foreign_key "mcp_tool_calls", "ekns"
+  add_foreign_key "mcp_tool_calls", "mcp_test_executions"
+  add_foreign_key "mcp_tool_calls", "messages"
   add_foreign_key "messages", "conversations"
+  add_foreign_key "meta_creation_assessments", "ekns"
+  add_foreign_key "meta_creation_assessments", "mcp_test_runs"
   add_foreign_key "method_pool_practicals", "method_pools"
   add_foreign_key "method_pool_practicals", "practicals"
   add_foreign_key "method_pools", "provenance_and_rights", column: "provenance_and_rights_id"
@@ -1086,10 +1462,25 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_08_205235) do
   add_foreign_key "practicals", "provenance_and_rights", column: "provenance_and_rights_id"
   add_foreign_key "prompt_versions", "prompts"
   add_foreign_key "relationals", "provenance_and_rights", column: "provenance_and_rights_id"
+  add_foreign_key "relators", "provenance_and_rights", column: "provenance_and_rights_id"
   add_foreign_key "risk_practicals", "practicals"
   add_foreign_key "risk_practicals", "risks"
   add_foreign_key "risks", "provenance_and_rights", column: "provenance_and_rights_id"
+  add_foreign_key "spaces", "provenance_and_rights", column: "provenance_and_rights_id"
   add_foreign_key "spatials", "provenance_and_rights", column: "provenance_and_rights_id"
   add_foreign_key "stage_completions", "ekns"
   add_foreign_key "stage_completions", "ingest_batches"
+  add_foreign_key "symbolics", "provenance_and_rights", column: "provenance_and_rights_id"
+  add_foreign_key "time_entities", "provenance_and_rights", column: "provenance_and_rights_id"
+  add_foreign_key "training_question_sets", "ekns"
+  add_foreign_key "training_questions", "ekns"
+  add_foreign_key "training_questions", "ekns", name: "fk_training_questions_ekn"
+  add_foreign_key "training_questions", "training_question_sets"
+  add_foreign_key "training_responses", "ekns"
+  add_foreign_key "training_responses", "ekns", name: "fk_training_responses_ekn"
+  add_foreign_key "training_responses", "training_questions"
+  add_foreign_key "training_responses", "training_runs"
+  add_foreign_key "training_runs", "ekns"
+  add_foreign_key "training_runs", "ekns", name: "fk_training_runs_ekn"
+  add_foreign_key "training_runs", "training_question_sets"
 end

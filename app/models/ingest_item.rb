@@ -132,6 +132,10 @@ class IngestItem < ApplicationRecord
   scope :triaged, -> { where(triage_status: ['completed', 'quarantined']) }
   scope :with_rights, -> { where.not(provenance_and_rights_id: nil) }
   scope :quarantined, -> { where(triage_status: 'quarantined') }
+  scope :markitdown_processed, -> { where(extraction_method: 'markitdown') }
+  scope :legacy_processed, -> { where(extraction_method: 'legacy') }
+  scope :tier_1_routing, -> { where(routing_tier: 'tier_1') }
+  scope :tier_2_routing, -> { where(routing_tier: 'tier_2') }
   
   # Callbacks
   before_validation :set_defaults
@@ -147,6 +151,25 @@ class IngestItem < ApplicationRecord
   
   def has_rights?
     provenance_and_rights_id.present?
+  end
+  
+  # MarkItDown integration methods
+  def markitdown_supported?
+    return false if file_path.blank?
+    extension = File.extname(file_path).downcase
+    Ingest::TokenAwareMarkitdownService.supported_formats.include?(extension)
+  end
+  
+  def markitdown_processed?
+    extraction_method == 'markitdown'
+  end
+  
+  def routing_info
+    markitdown_metadata&.dig('routing_info') || {}
+  end
+  
+  def token_estimate
+    estimated_tokens || (content_length_chars / 4.0).ceil if content_length_chars
   end
   
   def quarantine!(reason)

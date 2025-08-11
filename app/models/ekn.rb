@@ -44,6 +44,17 @@ class Ekn < ApplicationRecord
   has_many :stage_completions, dependent: :destroy  # Track stage completion status
   belongs_to :session, optional: true  # For pre-auth ownership
   
+  # EKN Personality and Assessment
+  has_one :ekn_personality_profile, dependent: :destroy
+  has_many :meta_creation_assessments, dependent: :destroy
+  
+  # Training Questions System
+  has_many :training_question_sets, dependent: :destroy
+  has_many :training_questions, dependent: :destroy
+  has_many :training_runs, dependent: :destroy
+  has_many :training_responses, dependent: :destroy
+  has_many :mcp_intelligent_test_runs, dependent: :destroy
+  
   # Core identity validation
   validates :name, presence: true
   validates :status, inclusion: { in: %w[initializing active archived failed] }

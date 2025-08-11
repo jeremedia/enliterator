@@ -33,9 +33,9 @@ class Relational < ApplicationRecord
   include HasRights
   include TimeTrackable
 
-  # Enums - from spec Relation Verb Glossary (closed set)
+  # Enums - from spec Relation Verb Glossary (closed set) + Universal content support
   enum :relation_type, {
-    # Forward relationships
+    # Forward relationships - Original spec
     embodies: "embodies",
     elicits: "elicits",
     influences: "influences",
@@ -48,14 +48,28 @@ class Relational < ApplicationRecord
     supports: "supports",
     refutes: "refutes",
     diffuses_through: "diffuses_through",
-    # Reverse relationships
+    # Reverse relationships - Original spec  
     is_embodiment_of: "is_embodiment_of",
     is_elicited_by: "is_elicited_by",
     is_influenced_by: "is_influenced_by",
     is_refined_by: "is_refined_by",
     has_version: "has_version",
     hosts: "hosts",
-    validates: "validates"
+    validates: "validates",
+    # Universal content support - Geopolitical/Research relations
+    bilateral_cooperation: "bilateral_cooperation",
+    bilateral_partnership: "bilateral_partnership", 
+    partnership: "partnership",
+    cooperation: "cooperation",
+    interdependence: "interdependence",
+    collaboration: "collaboration",
+    alliance: "alliance",
+    agreement: "agreement",
+    treaty: "treaty",
+    # Generic fallbacks
+    relates_to: "relates_to",
+    connected_to: "connected_to",
+    associated_with: "associated_with"
   }, prefix: true
 
   # Polymorphic associations
@@ -71,7 +85,7 @@ class Relational < ApplicationRecord
   validate :valid_relation_direction
 
   # Scopes
-  scope :forward_relations, -> { where(relation_type: %w[embodies elicits influences refines version_of co_occurs_with located_at adjacent_to validated_by supports refutes diffuses_through]) }
+  scope :forward_relations, -> { where(relation_type: %w[embodies elicits influences refines version_of co_occurs_with located_at adjacent_to validated_by supports refutes diffuses_through bilateral_cooperation bilateral_partnership partnership cooperation interdependence collaboration alliance agreement treaty relates_to connected_to associated_with]) }
   scope :reverse_relations, -> { where(relation_type: %w[is_embodiment_of is_elicited_by is_influenced_by is_refined_by has_version hosts validates]) }
   scope :between, ->(source, target) { where(source: source, target: target) }
   scope :involving, ->(entity) { where(source: entity).or(where(target: entity)) }

@@ -180,15 +180,23 @@ module Graph
     end
     
     def build_manifest_properties(manifest)
+      tb = manifest.respond_to?(:time_bounds) ? manifest.time_bounds : nil
+      tb_start = nil
+      tb_end = nil
+      if tb.is_a?(Hash)
+        tb_start = tb['start'] || tb[:start]
+        tb_end = tb['end'] || tb[:end]
+      end
+
       {
         id: manifest.id,
         label: manifest.label,
         type: manifest.manifest_type,
         # Ensure arrays/hashes are Neo4j-compatible
         components: sanitize_for_neo4j(manifest.components),
-        time_bounds_start: manifest.time_bounds_start.to_s,
-        time_bounds_end: manifest.time_bounds_end&.to_s,
-        valid_time_start: manifest.valid_time_start.to_s,
+        time_bounds_start: tb_start&.to_s,
+        time_bounds_end: tb_end&.to_s,
+        valid_time_start: manifest.valid_time_start&.to_s,
         valid_time_end: manifest.valid_time_end&.to_s,
         repr_text: manifest.repr_text,
         rights_id: manifest.provenance_and_rights_id,

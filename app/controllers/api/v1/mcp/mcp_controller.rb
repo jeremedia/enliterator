@@ -7,7 +7,7 @@
 #
 # Architecture:
 # - JSON-RPC 2.0 protocol over HTTP/SSE
-# - Stateless tool-based architecture  
+# - Stateless tool-based architecture
 # - Real-time streaming responses
 # - API key authentication
 # - Graceful error handling
@@ -16,15 +16,12 @@
 # - search: Returns array of results with id, title, text, url
 # - fetch: Returns full document with id, title, text, url, metadata
 #
-module Api
-  module V1
-    module Mcp
-      class McpController < ApplicationController
+class Api::V1::Mcp::McpController < ApplicationController
         include ActionController::Live  # Required for Server-Sent Events
-        
+
         # Skip CSRF for API endpoints
         skip_before_action :verify_authenticity_token
-        
+
         # Main SSE endpoint for MCP protocol communication
         # Supports both GET and POST for maximum client compatibility
         # URL must end with /sse/ for ChatGPT compatibility
@@ -34,14 +31,14 @@ module Api
             render json: { error: "Unauthorized" }, status: :unauthorized
             return
           end
-          
+
           # Configure SSE headers - CRITICAL for proper streaming
           response.headers["Content-Type"] = "text/event-stream"
           response.headers["Cache-Control"] = "no-cache"
           response.headers["Connection"] = "keep-alive"
           response.headers["X-Accel-Buffering"] = "no"  # Prevent nginx buffering
           response.headers["Access-Control-Allow-Origin"] = "*"  # CORS for SSE
-          
+
           begin
             # Parse request - support both GET and POST
             if request.get?
@@ -61,27 +58,27 @@ module Api
             else
               # POST request - JSON in body
               request_body = request.body.read
-              
+
               if request_body.blank?
                 # Empty POST - client establishing connection
                 response.stream.write(": MCP Server Ready\n\n")
                 response.stream.close
                 return
               end
-              
+
               message = JSON.parse(request_body)
             end
-            
+
             # Log request for debugging
             Rails.logger.info "MCP Request: #{message['method']} (id: #{message['id']})"
-            
+
             # Route message to appropriate handler
             result = handle_mcp_message(message)
-            
+
             # Stream response using SSE format
             response.stream.write("event: message\n")
             response.stream.write("data: #{result.to_json}\n\n")
-            
+
           rescue JSON::ParserError => e
             # JSON-RPC 2.0 Parse Error (-32700)
             error_response = {
@@ -97,7 +94,7 @@ module Api
           rescue => e
             Rails.logger.error "MCP SSE error: #{e.message}"
             Rails.logger.error e.backtrace.first(10).join("\n")
-            
+
             # JSON-RPC 2.0 Internal Error (-32603)
             error_response = {
               jsonrpc: "2.0",
@@ -114,7 +111,7 @@ module Api
             response.stream.close
           end
         end
-        
+
         # Optional REST endpoint for testing
         def tools
           message = JSON.parse(request.body.read)
@@ -126,9 +123,9 @@ module Api
           Rails.logger.error "MCP tools error: #{e.message}"
           render json: { error: "Server error: #{e.message}" }, status: :internal_server_error
         end
-        
+
         private
-        
+
         # Main message router
         def handle_mcp_message(message)
           case message["method"]
@@ -150,15 +147,15 @@ module Api
             }
           end
         end
-        
+
         # Handle initialization handshake
         def handle_initialize_request(message)
           # Support multiple protocol versions
           client_version = message.dig("params", "protocolVersion")
-          supported_versions = ["2025-06-18", "2025-03-26", "0.1.0"]
-          
+          supported_versions = [ "2025-06-18", "2025-03-26", "0.1.0" ]
+
           protocol_version = supported_versions.include?(client_version) ? client_version : "2025-06-18"
-          
+
           {
             jsonrpc: "2.0",
             result: {
@@ -176,19 +173,19 @@ module Api
                   items: IngestItem.count,
                   entities: count_neo4j_nodes
                 },
-                tools_available: 2,  # search and fetch for ChatGPT
-                capabilities: ["semantic_search", "entity_extraction", "relationship_discovery"],
+                tools_available: 5,  # search, fetch, bridge, extract_and_link, analyze_pools
+                capabilities: [ "semantic_search", "entity_extraction", "relationship_discovery" ],
                 limits: {
                   max_top_k: 50,
                   max_relation_depth: 3,
-                  max_text_length: 8000
+                  max_text_length: 12000
                 }
               }
             },
             id: message["id"]
           }
         end
-        
+
         # Return list of available tools
         def handle_tools_list_request(message)
           {
@@ -206,7 +203,7 @@ module Api
                         description: "Natural language search query"
                       }
                     },
-                    required: ["query"]
+                    required: [ "query" ]
                   }
                 },
                 {
@@ -220,7 +217,74 @@ module Api
                         description: "Entity ID from search results"
                       }
                     },
-                    required: ["id"]
+                    required: [ "id" ]
+                  }
+                },
+                {
+                  name: "bridge",
+                  description: "Find paths connecting two entities in the knowledge graph",
+                  inputSchema: {
+                    type: "object",
+                    properties: {
+                      a: {
+                        type: "string",
+                        description: "First entity (name or ID)"
+                      },
+                      b: {
+                        type: "string",
+                        description: "Second entity (name or ID)"
+                      },
+                      max_paths: {
+                        type: "integer",
+                        description: "Maximum number of paths to return (default: 3)",
+                        default: 3
+                      }
+                    },
+                    required: [ "a", "b" ]
+                  }
+                },
+                {
+                  name: "extract_and_link",
+                  description: "Enhanced multi-pass extraction of Ten Pool Canon entities with high accuracy (Characters, Time, Space, Symbolic, etc.) and optional linking to knowledge graph",
+                  inputSchema: {
+                    type: "object",
+                    properties: {
+                      text: {
+                        type: "string",
+                        description: "Text to extract entities from (max 12000 chars)"
+                      },
+                      link_threshold: {
+                        type: "number",
+                        description: "Minimum confidence for linking (0-1, default: 0.7)",
+                        default: 0.7
+                      },
+                      mode: {
+                        type: "string",
+                        description: "Processing mode: extract, link, or extract_and_link",
+                        enum: [ "extract", "link", "extract_and_link" ],
+                        default: "extract"
+                      }
+                    },
+                    required: [ "text" ]
+                  }
+                },
+                {
+                  name: "analyze_pools",
+                  description: "Analyze text for Ten Pool Canon distribution and key entities",
+                  inputSchema: {
+                    type: "object",
+                    properties: {
+                      text: {
+                        type: "string",
+                        description: "Text to analyze (max 8000 chars)"
+                      },
+                      include_entities: {
+                        type: "boolean",
+                        description: "Include entity extraction in analysis (default: true)",
+                        default: true
+                      }
+                    },
+                    required: [ "text" ]
                   }
                 }
               ]
@@ -228,51 +292,102 @@ module Api
             id: message["id"]
           }
         end
-        
+
         # Execute tool calls
         def handle_tool_call(message)
           params = message["params"] || {}
           tool_name = params["name"]
           arguments = params["arguments"] || {}
+
+          # Extract metadata that might contain message_id, conversation_id, test context, etc.
+          # This could come from clientInfo, arguments, request headers, or OpenAI metadata
+          client_info = message.dig("params", "clientInfo") || {}
+          metadata = arguments.delete("_metadata") || {}
           
+          # Extract OpenAI request ID for test correlation
+          openai_request_id = extract_openai_request_id(message, metadata, client_info)
+
+          # Try to find identifiers from various sources
+          # 1. From headers (passed by our ChatResponseWithMcpJob)
+          message_id = request.headers["X-Message-Id"] || metadata["message_id"] || client_info["message_id"]
+          conversation_id = request.headers["X-Conversation-Id"] || metadata["conversation_id"] || client_info["conversation_id"]
+          ekn_id = request.headers["X-Ekn-Id"] || metadata["ekn_id"] || client_info["ekn_id"]
+          
+          # Extract test execution context if present (from MCP test automation)
+          test_execution_id = extract_test_execution_id(metadata, openai_request_id)
+
           Rails.logger.info "Tool call: #{tool_name} with args: #{arguments.inspect}"
-          
-          # Route to appropriate tool service
-          case tool_name
-          when "search"
-            result = ::Mcp::SearchTool.call(**arguments.symbolize_keys)
-          when "fetch"
-            result = ::Mcp::FetchTool.call(**arguments.symbolize_keys)
-          else
-            # Unknown tool error
-            return {
+          Rails.logger.info "Metadata: message_id=#{message_id}, conversation_id=#{conversation_id}, ekn_id=#{ekn_id}"
+          Rails.logger.info "OpenAI request ID: #{openai_request_id}" if openai_request_id
+          Rails.logger.info "Test execution ID: #{test_execution_id}" if test_execution_id
+
+          # Create McpToolCall record to track this request
+          mcp_call = create_mcp_tool_call(
+            tool_name: tool_name,
+            tool_id: message["id"],
+            arguments: arguments,
+            request_data: message,
+            message_id: message_id,
+            conversation_id: conversation_id,
+            ekn_id: ekn_id,
+            openai_request_id: openai_request_id,
+            test_execution_id: test_execution_id
+          )
+
+          begin
+            # Mark as executing
+            mcp_call.execute! if mcp_call
+
+            # Route to appropriate tool service (pass EKN from mcp_call)
+            tool_arguments = arguments.symbolize_keys.merge(ekn: mcp_call&.ekn)
+            case tool_name
+            when "search"
+              result = ::Mcp::SearchTool.call(**tool_arguments)
+            when "fetch"
+              result = ::Mcp::FetchTool.call(**tool_arguments)
+            when "bridge"
+              result = ::Mcp::BridgeTool.call(**tool_arguments)
+            when "extract_and_link"
+              result = ::Mcp::EnhancedExtractAndLinkTool.call(**tool_arguments)
+            when "analyze_pools"
+              result = ::Mcp::AnalyzePoolsTool.call(**tool_arguments)
+            else
+              # Unknown tool error
+              mcp_call.fail!("Unknown tool: #{tool_name}") if mcp_call
+              return {
+                jsonrpc: "2.0",
+                error: {
+                  code: -32602,
+                  message: "Unknown tool: #{tool_name}"
+                },
+                id: message["id"]
+              }
+            end
+
+            # Mark as completed with response
+            mcp_call.complete!(result) if mcp_call
+
+            # Format response according to MCP protocol
+            # MCP requires results wrapped in content array
+            {
               jsonrpc: "2.0",
-              error: {
-                code: -32602,
-                message: "Unknown tool: #{tool_name}"
+              result: {
+                content: [
+                  {
+                    type: "text",
+                    text: result.to_json
+                  }
+                ]
               },
               id: message["id"]
             }
-          end
-          
-          # Format response according to MCP protocol
-          # MCP requires results wrapped in content array
-          {
-            jsonrpc: "2.0",
-            result: {
-              content: [
-                {
-                  type: "text",
-                  text: result.to_json
-                }
-              ]
-            },
-            id: message["id"]
-          }
-        rescue => e
+          rescue => e
           Rails.logger.error "Tool call error (#{tool_name}): #{e.message}"
           Rails.logger.error e.backtrace.first(5).join("\n")
-          
+
+          # Mark as failed
+          mcp_call.fail!(e.message) if mcp_call
+
           {
             jsonrpc: "2.0",
             error: {
@@ -281,60 +396,169 @@ module Api
             },
             id: message["id"]
           }
+          end
         end
-        
+
+        # Create McpToolCall record to track the tool execution
+        def create_mcp_tool_call(tool_name:, tool_id:, arguments:, request_data:, message_id: nil, conversation_id: nil, ekn_id: nil, openai_request_id: nil, test_execution_id: nil)
+          # Extract client info for external call detection
+          client_info = request_data.dig("params", "clientInfo") || {}
+          
+          # Detect if this is an external call (OpenAI Playground, etc.)
+          is_external = external_call?(client_info, message_id, conversation_id)
+          
+          # Try to find the associated records if IDs are provided (internal calls only)
+          message = nil
+          conversation = nil
+          if !is_external
+            message = Message.find_by(id: message_id) if message_id
+            conversation = Conversation.find_by(id: conversation_id) if conversation_id
+            # Fall back to finding relationships for internal calls
+            conversation ||= message&.conversation
+          end
+          
+          # Find EKN - fallback to first EKN if not specified
+          ekn = Ekn.find_by(id: ekn_id) if ekn_id
+          ekn ||= conversation&.ekn || Ekn.first
+          
+          # Find test execution if provided
+          test_execution = McpTestExecution.find_by(id: test_execution_id) if test_execution_id
+
+          # Create the tracking record with external call support and test correlation
+          McpToolCall.create!(
+            tool_name: tool_name,
+            tool_id: tool_id,
+            arguments: arguments,
+            request_data: request_data,
+            message: message,
+            conversation: conversation,
+            ekn: ekn,
+            server_label: "enliterator",
+            status: "pending",
+            
+            # External call tracking fields
+            is_external_call: is_external,
+            client_name: client_info["name"],
+            client_version: client_info["version"],
+            client_ip: request.remote_ip,
+            
+            # Test correlation fields
+            openai_request_id: openai_request_id,
+            mcp_test_execution: test_execution
+          )
+        rescue => e
+          Rails.logger.error "Failed to create McpToolCall record: #{e.message}"
+          Rails.logger.error "External call: #{is_external}, Client: #{client_info}"
+          nil # Don't fail the tool call if we can't track it
+        end
+
+        private
+
+        # Detect if this is an external call from OpenAI Playground or other MCP clients
+        def external_call?(client_info, message_id, conversation_id)
+          # Check for OpenAI MCP client signature
+          return true if client_info&.dig("name") == "openai-mcp"
+          
+          # Check if both internal context IDs are missing
+          return true if message_id.blank? && conversation_id.blank?
+          
+          # Check for external IP ranges (OpenAI uses AWS, typically 52.x.x.x)
+          client_ip = request.remote_ip
+          return true if client_ip.start_with?("52.")
+          
+          false
+        end
+
         # Validate API key authentication
         def valid_mcp_auth?
           auth_header = request.headers["Authorization"]
           api_key = request.headers["X-API-Key"]
           expected_key = ENV["MCP_API_KEY"] || "test-key-123"
-          
+
           # Log what we're receiving for debugging
           if params.dig("params", "clientInfo", "name") == "openai-mcp"
             Rails.logger.info "OpenAI MCP client detected"
             Rails.logger.info "Authorization header: #{auth_header.present? ? 'Present' : 'Missing'}"
           end
-          
+
           # Check Bearer token (what OpenAI sends when you configure Access token)
           if auth_header&.start_with?("Bearer ")
             token = auth_header.split(" ").last
             return token == expected_key
           end
-          
+
           # Check X-API-Key header (alternative method)
           if api_key.present?
             return api_key == expected_key
           end
-          
+
           # For development/testing without auth
           if expected_key == "test-key-123"
             Rails.logger.warn "Using default test key - configure MCP_API_KEY for production"
             return true
           end
-          
+
           Rails.logger.warn "MCP auth failed - no valid authentication provided"
           false
         end
+
+        # Extract OpenAI request ID for test correlation
+        def extract_openai_request_id(message, metadata, client_info)
+          # Try multiple sources for OpenAI request ID
+          request_id = nil
+          
+          # 1. From OpenAI metadata in the test execution context
+          if metadata.dig("test_execution_context", "request_id")
+            request_id = metadata["test_execution_context"]["request_id"]
+          end
+          
+          # 2. From request headers (if OpenAI passes it)
+          request_id ||= request.headers["X-OpenAI-Request-Id"]
+          request_id ||= request.headers["OpenAI-Request-Id"]
+          
+          # 3. From client info or other metadata fields
+          request_id ||= client_info["request_id"]
+          request_id ||= metadata["openai_request_id"]
+          
+          # 4. Generate one if this appears to be a test call but has no ID
+          if request_id.blank? && metadata.dig("test_execution_context")
+            request_id = "generated_#{Time.now.to_i}_#{SecureRandom.hex(4)}"
+          end
+          
+          request_id
+        end
         
+        # Extract test execution ID from metadata
+        def extract_test_execution_id(metadata, openai_request_id)
+          # Direct test execution ID from metadata
+          test_execution_id = metadata.dig("test_execution_context", "test_execution_id")
+          
+          # If we have an OpenAI request ID, try to find existing test execution
+          if test_execution_id.blank? && openai_request_id.present?
+            # Look for existing tool calls with this request ID that have test executions
+            existing_call = McpToolCall.by_openai_request(openai_request_id).first
+            test_execution_id = existing_call&.mcp_test_execution_id
+          end
+          
+          test_execution_id
+        end
+
         # Helper to count Neo4j nodes
         def count_neo4j_nodes
           # Use the Meta-Enliterator EKN for stats
-          ekn = Ekn.find_by(slug: 'meta-enliterator')
+          ekn = Ekn.find_by(slug: "meta-enliterator")
           return 0 unless ekn
-          
+
           driver = Graph::Connection.instance.driver
           session = driver.session(database: ekn.neo4j_database_name)
-          
+
           result = session.run("MATCH (n) RETURN count(n) as count")
           count = result.single[:count] || 0
-          
+
           session.close
           count
         rescue => e
           Rails.logger.error "Failed to count Neo4j nodes: #{e.message}"
           0
         end
-      end
-    end
-  end
 end

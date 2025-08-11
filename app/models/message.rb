@@ -16,8 +16,12 @@
 #  index_messages_on_conversation_id  (conversation_id)
 #
 class Message < ApplicationRecord
+
+  include Loggable
+
   belongs_to :conversation
   belongs_to :prompt_version, optional: true
+  has_many :mcp_tool_calls, dependent: :destroy
   
   validates :role, presence: true
   validates :content, presence: true, unless: :streaming?
@@ -43,6 +47,13 @@ class Message < ApplicationRecord
   
   after_create :update_conversation_activity
   after_create :track_token_usage
+  after_create :log_message_creation
+
+  def log_message_creation
+    # Skip logging if conversation not persisted to avoid ActiveRecord errors
+    return unless conversation&.persisted?
+    log_info "Message created for conversation #{conversation_id} by #{role} at #{created_at}"
+  end
   
   # Track which model configuration was actually used for this message
   def record_model_config(config)
@@ -102,6 +113,18 @@ class Message < ApplicationRecord
   # Check if message had an error
   def error?
     error == true || error == 'true'
+  end
+  
+  # Check if message used MCP tools
+  def used_mcp_tools?
+    mcp_tool_calls.any? || metadata&.dig('tool_calls').present?
+  end
+  
+  # Get all MCP tool names used
+  def mcp_tool_names
+    names = mcp_tool_calls.pluck(:tool_name)
+    names += (metadata&.dig('tool_calls') || []).map { |tc| tc['name'] }
+    names.uniq.compact
   end
   
   private

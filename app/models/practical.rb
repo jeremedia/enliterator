@@ -39,7 +39,7 @@ class Practical < ApplicationRecord
   # Validations
   validates :goal, presence: true
   validates :repr_text, presence: true, length: { maximum: 500 }
-  validates :steps, presence: true
+  # Allow empty steps for extracted entities - they can be refined later
   validate :steps_array_valid
 
   # Scopes

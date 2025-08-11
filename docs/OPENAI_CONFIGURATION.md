@@ -46,19 +46,42 @@
 
 ### Critical Differences from Training Data
 
-The gem uses the **Responses API** with structured outputs, NOT the older chat completions pattern:
+The gem supports BOTH APIs for different purposes:
 
 ```ruby
-# ✅ CORRECT - Modern Responses API (v0.16.0+)
+# ✅ For Structured Output with Response Classes
 OPENAI.responses.create(
   model: model,  # from SettingsManager!
-  input: messages,
+  input: messages,  # Note: 'input' not 'messages'
   text: ResponseModelClass  # Class inheriting from BaseModel
 )
 
-# ❌ WRONG - Old pattern (pre-v0.16.0)
-OPENAI.chat.completions.create(...)  # Don't use this!
+# ✅ For JSON Schema Output (when you need response_format)
+OPENAI.chat.completions.create(
+  model: model,
+  messages: messages,
+  response_format: {
+    type: "json_schema",
+    json_schema: { ... }
+  }
+)
+
+# ✅ For MCP Tool Usage (external tools)
+OPENAI.responses.create(
+  model: model,
+  input: messages,
+  tools: [{
+    type: "mcp",
+    server_url: "https://mcp.example.com",
+    ...
+  }]
+)
 ```
+
+**IMPORTANT**: 
+- Use `responses.create` for MCP tools and response classes
+- Use `chat.completions.create` for JSON schema outputs
+- NEVER use `chat.completions` for MCP tools - it doesn't support them
 
 ### Required Base Classes
 
@@ -84,12 +107,17 @@ end
 
 These are the **ONLY** models that should be configured in production:
 
-| Task | Model | Purpose |
-|------|-------|---------|
-| **Extraction** | `gpt-5-mini` | Entity and term extraction with Structured Outputs |
-| **Answer** | `gpt-5` | High-quality conversational responses |
-| **Routing** | `gpt-5-nano` | Ultra-fast query routing and intent classification |
-| **Fine-tuning** | `gpt-4.1-mini` | Base model for fine-tuning |
+| Task | Model | Context Limit | Output Tokens | Purpose |
+|------|-------|---------------|---------------|---------|
+| **Extraction (Default)** | `gpt-5-mini-2025-08-07` | 400K chars | 128K tokens | Entity extraction with Structured Outputs |
+| **Extraction (Long)** | `gpt-4.1-mini-2025-04-14` | 1M chars | 32K tokens | Fallback for documents >400K chars |
+| **Answer** | `gpt-5-2025-08-07` | 400K chars | 128K tokens | High-quality conversational responses |
+| **Routing** | `gpt-5-nano-2025-08-07` | 128K chars | 32K tokens | Ultra-fast query routing and intent classification |
+| **Fine-tuning** | `gpt-4.1-mini-2025-04-14` | 1M chars | 32K tokens | Base model for fine-tuning |
+
+**🚨 SMART MODEL SELECTION**: For extraction tasks, the system automatically chooses:
+- **gpt-5-mini-2025-08-07** for content ≤400K characters (preferred - faster, cheaper, more output tokens)
+- **gpt-4.1-mini-2025-04-14** for content >400K characters (fallback - larger context window)
 
 **⚠️ CRITICAL**: These models are carefully selected for optimal performance and cost. DO NOT change them without explicit approval. They are configured through the Admin UI and should remain constant.
 

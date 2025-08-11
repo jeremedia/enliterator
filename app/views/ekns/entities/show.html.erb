@@ -1,0 +1,206 @@
+<% content_for :title, @entity['label'] %>
+<% content_for :description, "Detailed view of #{@entity['label']} - a #{@entity['pool']} entity from #{@ekn.name}" %>
+
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+  <div class="container mx-auto px-6 py-8">
+    
+    <!-- Entity Header -->
+    <div class="mb-8">
+      <div class="bg-gradient-to-r from-blue-900/30 to-purple-900/30 rounded-lg p-6 border border-blue-400/20">
+        <div class="flex items-start justify-between mb-4">
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="px-3 py-1 bg-blue-600/20 text-blue-300 text-sm rounded-full border border-blue-600/30">
+                <%= @entity['pool'] %>
+              </span>
+              <span class="text-sm text-gray-400">ID: <%= @entity['id'] %></span>
+            </div>
+            <h1 class="text-3xl font-bold text-white mb-3"><%= @entity['label'] %></h1>
+            
+            <% if @entity['abstract'].present? %>
+              <p class="text-gray-300 text-lg leading-relaxed"><%= @entity['abstract'] %></p>
+            <% end %>
+          </div>
+          
+          <!-- Rights Status -->
+          <div class="ml-6">
+            <div class="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
+              <h3 class="text-sm font-semibold text-white mb-3">Rights Status</h3>
+              <div class="space-y-2">
+                <div class="flex items-center gap-2">
+                  <% if @entity['rights_publishable'] %>
+                    <span class="w-3 h-3 bg-green-400 rounded-full"></span>
+                    <span class="text-sm text-green-300">Publicly Publishable</span>
+                  <% else %>
+                    <span class="w-3 h-3 bg-red-400 rounded-full"></span>
+                    <span class="text-sm text-red-300">Publication Restricted</span>
+                  <% end %>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                  <% if @entity['rights_training'] %>
+                    <span class="w-3 h-3 bg-blue-400 rounded-full"></span>
+                    <span class="text-sm text-blue-300">Training Eligible</span>
+                  <% else %>
+                    <span class="w-3 h-3 bg-gray-400 rounded-full"></span>
+                    <span class="text-sm text-gray-300">Training Restricted</span>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Representation Text -->
+        <% if @entity['repr_text'].present? && @entity['repr_text'] != @entity['label'] %>
+          <div class="bg-gray-800/30 rounded-lg p-4 border border-gray-700/30">
+            <h3 class="text-sm font-semibold text-gray-300 mb-2">Canonical Representation</h3>
+            <p class="text-gray-100 italic"><%= @entity['repr_text'] %></p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Source Information -->
+    <div class="mb-8">
+      <div class="bg-gray-800/30 rounded-lg p-6 border border-gray-700/50">
+        <h2 class="text-xl font-semibold text-white mb-4 flex items-center">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+          Source Information
+        </h2>
+        
+        <div class="grid md:grid-cols-2 gap-6">
+          <div>
+            <h3 class="font-medium text-gray-300 mb-2">Extraction Details</h3>
+            <div class="space-y-2 text-sm">
+              <div class="flex items-center justify-between">
+                <span class="text-gray-400">Batch ID:</span>
+                <span class="text-white"><%= @entity['batch_id'] %></span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-gray-400">Pool Type:</span>
+                <span class="text-blue-300"><%= @entity['pool'] %></span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-gray-400">Created:</span>
+                <span class="text-white">
+                  <%= Time.parse(@entity['created_at']).strftime("%B %d, %Y at %l:%M %p") if @entity['created_at'] %>
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <h3 class="font-medium text-gray-300 mb-2">Source Documents</h3>
+            <% if @entity['source_ids'] && @entity['source_ids'].any? %>
+              <div class="space-y-1">
+                <% @entity['source_ids'].each do |source_id| %>
+                  <div class="bg-gray-700/30 rounded px-3 py-1 text-sm text-gray-300">
+                    <%= source_id %>
+                  </div>
+                <% end %>
+              </div>
+            <% else %>
+              <div class="text-sm text-gray-400">No source IDs available</div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Relationships -->
+    <% if @entity['relationships'] && @entity['relationships'].any? %>
+      <div class="mb-8">
+        <div class="bg-gray-800/30 rounded-lg p-6 border border-gray-700/50">
+          <h2 class="text-xl font-semibold text-white mb-4 flex items-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+            </svg>
+            Related Entities
+            <span class="ml-2 text-sm font-normal text-gray-400">(<%= @entity['relationships'].size %>)</span>
+          </h2>
+          
+          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <% @entity['relationships'].each do |rel| %>
+              <% next if rel['label'].blank? %>
+              <div class="bg-gray-700/30 rounded-lg p-4 border border-gray-600/30 hover:border-blue-500/50 transition-all duration-200">
+                <div class="flex items-start justify-between mb-2">
+                  <h4 class="font-medium text-white text-sm leading-tight flex-1 mr-2">
+                    <%= truncate(rel['label'], length: 40) %>
+                  </h4>
+                  <span class="text-xs bg-purple-600/20 text-purple-300 px-2 py-1 rounded-full border border-purple-600/30">
+                    <%= rel['pool'] %>
+                  </span>
+                </div>
+                
+                <div class="flex items-center justify-between text-xs text-gray-400">
+                  <span class="bg-gray-600/50 px-2 py-1 rounded-full">
+                    <%= rel['relationship'] || 'related' %>
+                  </span>
+                  <span>ID: <%= rel['id'] %></span>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <!-- Actions -->
+    <div class="flex items-center justify-between">
+      <div>
+        <%= link_to entities_path(ekn_slug: @ekn.slug), 
+            class: "inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200" do %>
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+          </svg>
+          Back to Entities
+        <% end %>
+      </div>
+      
+      <div class="flex items-center gap-3">
+        <button onclick="window.print()" 
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+          </svg>
+          Print
+        </button>
+        
+        <button id="copy-link" 
+                class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors duration-200 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+          </svg>
+          Copy Link
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Copy link functionality
+  const copyLinkBtn = document.getElementById('copy-link');
+  
+  copyLinkBtn.addEventListener('click', function() {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      // Visual feedback
+      const originalText = copyLinkBtn.innerHTML;
+      copyLinkBtn.innerHTML = `
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+        Copied!
+      `;
+      
+      setTimeout(() => {
+        copyLinkBtn.innerHTML = originalText;
+      }, 2000);
+    });
+  });
+});
+</script>

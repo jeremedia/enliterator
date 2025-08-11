@@ -57,7 +57,7 @@ gem "rack-cors"
 
 # OpenAI integration - official OpenAI Ruby gem
 # OpenAI Ruby SDK (Responses API, streaming)
-gem "openai", "~> 0.16.0"
+gem "openai"
 
 # Neo4j for knowledge graph
 gem "neo4j-ruby-driver"
@@ -175,3 +175,5 @@ gem "activegraph", "~> 11.4"
 gem "annotate", github: "jeremedia/annotate_models"
 # Pagination
 gem "kaminari"
+
+gem "httparty", "~> 0.23.1"

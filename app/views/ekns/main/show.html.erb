@@ -1,0 +1,219 @@
+<% content_for :title, @ekn.name %>
+<% content_for :description, "Explore the #{@ekn.name} Knowledge Navigator - an interactive interface to #{@stats[:total_nodes]} interconnected entities across #{@stats[:pool_counts].keys.size} knowledge pools." %>
+
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+  <!-- Hero Section -->
+  <div class="relative overflow-hidden">
+    <!-- Background Pattern -->
+    <div class="absolute inset-0 opacity-5">
+      <svg class="w-full h-full" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="network-pattern" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+            <circle cx="10" cy="10" r="1" fill="currentColor"/>
+            <line x1="10" y1="10" x2="30" y2="10" stroke="currentColor" stroke-width="0.5"/>
+            <line x1="10" y1="10" x2="10" y2="30" stroke="currentColor" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#network-pattern)"/>
+      </svg>
+    </div>
+    
+    <div class="relative max-w-7xl mx-auto px-4 py-24 sm:px-6 lg:px-8">
+      <div class="text-center">
+        <h1 class="text-5xl md:text-7xl font-bold text-gray-900 mb-6 tracking-tight">
+          <span class="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+            <%= @ekn.name %>
+          </span>
+        </h1>
+        
+        <p class="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed text-center">
+          An <strong>Enliterated Knowledge Navigator</strong> containing <span class="font-bold text-indigo-600"><%= number_with_delimiter(@stats[:total_nodes]) %></span> interconnected entities across <span class="font-bold text-purple-600"><%= @stats[:pool_counts].keys.size %></span> knowledge pools, with <span class="font-bold text-blue-600"><%= number_with_delimiter(@stats[:total_relationships]) %></span> relationships mapping the hidden connections in your data.
+        </p>
+        
+        <!-- Key Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-12">
+          <div class="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg">
+            <div class="text-3xl font-bold text-indigo-600 mb-2"><%= number_with_delimiter(@stats[:total_nodes]) %></div>
+            <div class="text-gray-700 font-medium">Knowledge Entities</div>
+            <div class="text-sm text-gray-500 mt-1">Mapped & Connected</div>
+          </div>
+          
+          <div class="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg">
+            <div class="text-3xl font-bold text-purple-600 mb-2"><%= number_with_delimiter(@stats[:total_relationships]) %></div>
+            <div class="text-gray-700 font-medium">Relationships</div>
+            <div class="text-sm text-gray-500 mt-1">Semantic Connections</div>
+          </div>
+          
+          <div class="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg">
+            <div class="text-3xl font-bold text-blue-600 mb-2"><%= @stats[:pool_counts].keys.size %></div>
+            <div class="text-gray-700 font-medium">Knowledge Pools</div>
+            <div class="text-sm text-gray-500 mt-1">Ten Pool Canon</div>
+          </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap justify-center gap-4 mb-16 max-w-5xl mx-auto">
+          <%= link_to chat_index_path(ekn_slug: @ekn.slug), 
+                      class: "group bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-4 rounded-full font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-3" do %>
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.955 8.955 0 01-2.011-.228l-3.978 1.329A1.002 1.002 0 015 20H5c0-4.418 3.582-8 8-8s8 3.582 8 8z"/>
+            </svg>
+            Start Conversation
+            <div class="text-xs bg-white/20 px-2 py-1 rounded-full">Interactive</div>
+          <% end %>
+          
+          <%= link_to entities_path(ekn_slug: @ekn.slug), 
+                      class: "group bg-white text-gray-900 px-8 py-4 rounded-full font-semibold text-lg shadow-lg hover:shadow-xl border-2 border-gray-200 hover:border-gray-300 transform hover:scale-105 transition-all duration-200 flex items-center gap-3" do %>
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+            </svg>
+            Browse Entities
+            <div class="text-xs bg-gray-100 px-2 py-1 rounded-full"><%= number_with_delimiter(@stats[:total_nodes]) %></div>
+          <% end %>
+          
+          <%= link_to ekn_dashboard_path(ekn_slug: @ekn.slug), 
+                      class: "group bg-white text-gray-900 px-8 py-4 rounded-full font-semibold text-lg shadow-lg hover:shadow-xl border-2 border-gray-200 hover:border-gray-300 transform hover:scale-105 transition-all duration-200 flex items-center gap-3" do %>
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+            Explore Dashboard
+            <div class="text-xs bg-gray-100 px-2 py-1 rounded-full">Analytics</div>
+          <% end %>
+
+          <%= link_to ekn_pipeline_path(ekn_slug: @ekn.slug),
+                      class: "group bg-white text-gray-900 px-8 py-4 rounded-full font-semibold text-lg shadow-lg hover:shadow-xl border-2 border-gray-200 hover:border-gray-300 transform hover:scale-105 transition-all duration-200 flex items-center gap-3" do %>
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18"/>
+            </svg>
+            Pipeline Provenance
+            <div class="text-xs bg-gray-100 px-2 py-1 rounded-full">Stage-by-stage</div>
+          <% end %>
+
+          <%= link_to ekn_training_path(ekn_slug: @ekn.slug),
+                      class: "group bg-white text-gray-900 px-8 py-4 rounded-full font-semibold text-lg shadow-lg hover:shadow-xl border-2 border-gray-200 hover:border-gray-300 transform hover:scale-105 transition-all duration-200 flex items-center gap-3" do %>
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+            </svg>
+            Training Methodology
+            <div class="text-xs bg-gray-100 px-2 py-1 rounded-full">AI Personality</div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Knowledge Pools Preview -->
+  <div class="max-w-7xl mx-auto px-4 py-16 sm:px-6 lg:px-8">
+    <div class="text-center mb-12">
+      <h2 class="text-3xl font-bold text-gray-900 mb-4">Ten Pool Canon Distribution</h2>
+      <p class="text-gray-600 text-lg">Your knowledge organized across conceptual pools</p>
+    </div>
+    
+    <% if @stats[:pool_counts].any? %>
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-12">
+        <% @stats[:pool_counts].each do |pool, count| %>
+          <% next if pool.blank? || pool == 'Unknown' %>
+          <div class="bg-white rounded-xl p-4 text-center shadow-sm hover:shadow-md transition-shadow flex flex-col items-center justify-center">
+            <div class="text-2xl mb-2">
+              <%= case pool.downcase
+                  when 'idea' then '💡'
+                  when 'practical' then '🔧'
+                  when 'experience' then '🌟'
+                  when 'manifest' then '🏗️'
+                  when 'character' then '👤'
+                  when 'time' then '⏰'
+                  when 'space' then '🗺️'
+                  when 'lifecycle' then '🔄'
+                  when 'symbolic' then '🔮'
+                  when 'relator' then '🔗'
+                  else '◯'
+                  end %>
+            </div>
+            <div class="font-semibold text-gray-900"><%= pool.titleize %></div>
+            <div class="text-sm text-indigo-600 font-medium"><%= number_with_delimiter(count) %></div>
+            <% if @stats[:total_nodes] > 0 %>
+              <div class="text-xs text-gray-500 mt-1">
+                <%= ((count.to_f / @stats[:total_nodes]) * 100).round(1) %>%
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="text-center p-8 bg-white/50 rounded-xl">
+        <div class="text-gray-500 mb-4">
+          <svg class="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+          </svg>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-700 mb-2">Knowledge Graph Initializing</h3>
+        <p class="text-gray-600 max-w-md mx-auto">
+          Your knowledge navigator is being prepared. Pool distribution will appear once the graph data is populated.
+        </p>
+      </div>
+    <% end %>
+  </div>
+  
+  <!-- Recent Activity Preview -->
+  <% if @recent_activity.any? %>
+    <div class="bg-white/60 backdrop-blur-sm">
+      <div class="max-w-7xl mx-auto px-4 py-16 sm:px-6 lg:px-8">
+        <div class="text-center mb-8">
+          <h2 class="text-3xl font-bold text-gray-900 mb-4">Recent Conversations</h2>
+          <p class="text-gray-600">Latest interactions with your knowledge navigator</p>
+        </div>
+        
+        <div class="grid md:grid-cols-3 gap-6">
+          <% @recent_activity.each do |conversation| %>
+            <div class="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div class="flex items-center justify-between mb-3">
+                <div class="text-sm text-gray-500">
+                  <%= time_ago_in_words(conversation.last_activity_at) %> ago
+                </div>
+                <div class="text-sm bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full">
+                  <%= pluralize(conversation.messages.count, 'message') %>
+                </div>
+              </div>
+              
+              <% if conversation.messages.where(role: 'user').any? %>
+                <div class="text-gray-900 font-medium mb-2 truncate">
+                  "<%= conversation.messages.where(role: 'user').last.content.truncate(60) %>"
+                </div>
+              <% end %>
+              
+              <%= link_to "Continue Conversation", 
+                          chat_path(ekn_slug: @ekn.slug, id: conversation), 
+                          class: "inline-flex items-center justify-center text-indigo-600 hover:text-indigo-700 font-medium text-sm" %>
+            </div>
+          <% end %>
+        </div>
+        
+        <div class="text-center mt-8">
+          <%= link_to chat_index_path(ekn_slug: @ekn.slug), 
+                      class: "inline-flex items-center justify-center text-indigo-600 hover:text-indigo-700 font-medium" do %>
+            View All Conversations
+            <svg class="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+  
+  <!-- Footer -->
+  <div class="bg-gradient-to-r from-gray-900 to-gray-800 text-white">
+    <div class="max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
+      <div class="text-center">
+        <h3 class="text-xl font-semibold mb-4">Powered by Enliterator</h3>
+        <p class="text-gray-400 max-w-2xl mx-auto">
+          Transforming your data into literate technology that understands, connects, 
+          and converses about the knowledge within your datasets.
+        </p>
+        <div class="mt-6 text-sm text-gray-500 text-center">
+          Last updated: <%= @stats[:last_updated]&.strftime("%B %d, %Y") %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

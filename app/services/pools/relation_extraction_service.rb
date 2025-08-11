@@ -25,12 +25,14 @@ module Pools
   # Service to extract relationships between entities using the Relation Verb Glossary
   class RelationExtractionService < OpenaiConfig::BaseExtractionService
     
-    attr_reader :content, :entities, :verb_glossary
+    attr_reader :content, :entities, :verb_glossary, :evidence_snippets, :allowed_pairs
     
-    def initialize(content:, entities:, verb_glossary: nil)
+    def initialize(content:, entities:, verb_glossary: nil, evidence_snippets: [], allowed_pairs: {})
       @content = content
       @entities = Array(entities)
       @verb_glossary = normalize_verb_glossary(verb_glossary || Graph::EdgeLoader::VERB_GLOSSARY)
+      @evidence_snippets = Array(evidence_snippets).compact
+      @allowed_pairs = allowed_pairs.presence || {}
     end
     
     def call
@@ -104,12 +106,18 @@ module Pools
         ALLOWED VERBS (use exactly as shown):
         #{format_verb_glossary}
         
+        Constraints:
+        - Use ONLY the provided entity IDs and pool types; do not invent entities.
+        - Obey allowed pool-pairs when provided; otherwise use the verb glossary constraints.
+        - Prefer relationships with explicit textual evidence from the evidence snippets.
+        - Return evidence_span indexes that support each relation when possible.
+        
         Guidelines:
         1. ONLY use verbs from the allowed list above
-        2. Match entities to those provided in the entity list
-        3. Include text evidence when relationship is explicit
-        4. Set confidence based on clarity of relationship
-        5. Focus on explicit relationships, not implied ones
+        2. Match entities to those provided in the entity list (by ID and label)
+        3. Include text evidence when relationship is explicit (reference evidence_span indexes)
+        4. Set confidence based on clarity of relationship and evidence strength
+        5. Focus on explicit relationships, not implied ones unless multiple signals align
         6. Respect verb directionality (source -> verb -> target)
         
         Remember: If a relationship verb is not in the allowed list, DO NOT extract it.
@@ -122,6 +130,11 @@ module Pools
         
         Available entities (use these for source/target):
         #{format_entities}
+        
+        #{format_allowed_pairs}
+        
+        Evidence snippets (prefer these as support; reference by index):
+        #{format_evidence_snippets}
         
         Content to analyze:
         #{content.truncate(8000)}
@@ -136,6 +149,17 @@ module Pools
         target_desc = config[:target] == '*' ? 'any' : config[:target]
         "- #{verb}: #{source_desc} -> #{target_desc}"
       end.join("\n")
+    end
+
+    def format_evidence_snippets
+      return "(none provided)" if evidence_snippets.empty?
+      evidence_snippets.each_with_index.map { |s, i| "[#{i}] #{s.to_s.truncate(240)}" }.join("\n")
+    end
+
+    def format_allowed_pairs
+      return "" if @allowed_pairs.empty?
+      pairs = @allowed_pairs.flat_map { |src, tgts| Array(tgts).map { |t| "#{src} -> #{t}" } }
+      "Allowed pool-pairs: \n- " + pairs.join("\n- ")
     end
     
     def format_entities
@@ -198,4 +222,3 @@ module Pools
     end
   end
 end
-

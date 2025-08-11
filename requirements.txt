@@ -1,0 +1,4 @@
+# Python dependencies for Enliterator
+# Document conversion utility for LLM processing
+# Upgrade from currently installed 0.1.0a3 to latest stable
+markitdown[all]==0.1.2

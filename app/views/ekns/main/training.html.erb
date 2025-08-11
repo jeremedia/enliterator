@@ -1,0 +1,916 @@
+<% content_for :title, "Training Methodology - #{@ekn.name}" %>
+<% content_for :description, "Comprehensive training methodology for the #{@ekn.name} Knowledge Navigator, covering AI personality cultivation, archetype development, and systematic evaluation." %>
+
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+  <!-- Navigation Header -->
+  <div class="bg-white border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between py-4">
+        <div class="flex items-center space-x-4">
+          <%= link_to ekn_path(ekn_slug: @ekn.slug), class: "text-gray-600 hover:text-gray-900" do %>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+          <% end %>
+          <div>
+            <h1 class="text-xl font-semibold text-gray-900">Training Methodology</h1>
+            <p class="text-sm text-gray-500"><%= @ekn.name %> AI Personality Development</p>
+          </div>
+        </div>
+        
+        <%= link_to ekn_path(ekn_slug: @ekn.slug), class: "text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center space-x-1" do %>
+          <span>Back to Navigator</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+          </svg>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    
+    <!-- Overview Section -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
+      <div class="p-8">
+        <div class="text-center mb-8">
+          <h2 class="text-3xl font-bold text-gray-900 mb-4">AI Personality Training Methodology</h2>
+          <p class="text-xl text-gray-600 max-w-4xl mx-auto">
+            How we transform knowledge repositories into intelligent, conversational AI personalities with domain expertise and consistent communication patterns.
+          </p>
+        </div>
+        
+        <div class="grid md:grid-cols-3 gap-8">
+          <div class="text-center">
+            <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">Knowledge Foundation</h3>
+            <p class="text-gray-600">Start with rich knowledge graphs containing domain-specific content and relationships</p>
+          </div>
+          
+          <div class="text-center">
+            <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">Personality Cultivation</h3>
+            <p class="text-gray-600">Develop consistent AI archetypes with specialized communication patterns and expertise</p>
+          </div>
+          
+          <div class="text-center">
+            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">Systematic Evaluation</h3>
+            <p class="text-gray-600">Continuous assessment through structured questions and performance tracking</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Current Status -->
+    <% if @personality_profile || @stats[:total_questions] > 0 %>
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
+        <div class="p-6 border-b border-gray-200">
+          <h3 class="text-xl font-semibold text-gray-900">Current Training Status</h3>
+        </div>
+        <div class="p-6">
+          <div class="grid md:grid-cols-2 gap-8">
+            <!-- Personality Profile -->
+            <div>
+              <h4 class="text-lg font-medium text-gray-900 mb-4">AI Personality Profile</h4>
+              <% if @personality_profile %>
+                <div class="space-y-3">
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">Base Archetype</span>
+                    <span class="font-medium text-gray-900"><%= @personality_profile.base_archetype.humanize %></span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">Communication Style</span>
+                    <span class="font-medium text-gray-900"><%= @personality_profile.communication_signature['tone']&.humanize || 'Professional' %></span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">Chat Ready</span>
+                    <span class="<%= @personality_profile.ready_for_chat? ? 'text-green-600' : 'text-yellow-600' %>">
+                      <%= @personality_profile.ready_for_chat? ? '✅ Active' : '⚠️ Pending' %>
+                    </span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">MCP Tools</span>
+                    <span class="font-medium text-gray-900"><%= @personality_profile.mcp_tool_preferences.keys.count %> tools enabled</span>
+                  </div>
+                </div>
+              <% else %>
+                <div class="text-center p-4 bg-gray-50 rounded-lg">
+                  <p class="text-gray-500">No personality profile configured</p>
+                  <p class="text-sm text-gray-400 mt-1">Ready for personality development</p>
+                </div>
+              <% end %>
+            </div>
+            
+            <!-- Training Questions -->
+            <div>
+              <h4 class="text-lg font-medium text-gray-900 mb-4">Training Question Bank</h4>
+              <div class="space-y-3">
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Total Questions</span>
+                  <span class="font-medium text-gray-900"><%= @stats[:total_questions] %></span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Active Questions</span>
+                  <span class="font-medium text-green-600"><%= @stats[:active_questions] %></span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Question Types</span>
+                  <span class="font-medium text-gray-900"><%= @stats[:question_types].keys.count %> types</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Difficulty Levels</span>
+                  <span class="font-medium text-gray-900"><%= @stats[:difficulty_levels].keys.count %> levels</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <!-- Detailed Methodology -->
+    <div class="space-y-8">
+      
+      <!-- Phase 1: Foundation -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div class="p-6 border-b border-gray-200">
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm">1</div>
+            <h3 class="text-xl font-semibold text-gray-900">Knowledge Foundation</h3>
+          </div>
+        </div>
+        <div class="p-6">
+          <p class="text-gray-600 mb-6">
+            Building a comprehensive knowledge base through systematic document processing and graph construction.
+          </p>
+          
+          <div class="grid md:grid-cols-2 gap-6">
+            <div>
+              <h4 class="font-semibold text-gray-900 mb-3">Knowledge Graph Construction</h4>
+              <ul class="space-y-2 text-sm text-gray-600">
+                <li class="flex items-start">
+                  <svg class="w-4 h-4 text-indigo-600 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 8 8">
+                    <circle cx="4" cy="4" r="3"/>
+                  </svg>
+                  <span><strong>Document Processing:</strong> OCR, text extraction, content normalization</span>
+                </li>
+                <li class="flex items-start">
+                  <svg class="w-4 h-4 text-indigo-600 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 8 8">
+                    <circle cx="4" cy="4" r="3"/>
+                  </svg>
+                  <span><strong>Entity Extraction:</strong> Ten Pool Canon framework for consistent categorization</span>
+                </li>
+                <li class="flex items-start">
+                  <svg class="w-4 h-4 text-indigo-600 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 8 8">
+                    <circle cx="4" cy="4" r="3"/>
+                  </svg>
+                  <span><strong>Relationship Discovery:</strong> Semantic connections between entities</span>
+                </li>
+                <li class="flex items-start">
+                  <svg class="w-4 h-4 text-indigo-600 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 8 8">
+                    <circle cx="4" cy="4" r="3"/>
+                  </svg>
+                  <span><strong>Graph Assembly:</strong> Neo4j database with vector embeddings</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div>
+              <h4 class="font-semibold text-gray-900 mb-3">Domain Specialization</h4>
+              <ul class="space-y-2 text-sm text-gray-600">
+                <li class="flex items-start">
+                  <svg class="w-4 h-4 text-purple-600 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 8 8">
+                    <circle cx="4" cy="4" r="3"/>
+                  </svg>
+                  <span><strong>Lexicon Development:</strong> Domain-specific terminology and concepts</span>
+                </li>
+                <li class="flex items-start">
+                  <svg class="w-4 h-4 text-purple-600 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 8 8">
+                    <circle cx="4" cy="4" r="3"/>
+                  </svg>
+                  <span><strong>Rights & Provenance:</strong> Source tracking and usage permissions</span>
+                </li>
+                <li class="flex items-start">
+                  <svg class="w-4 h-4 text-purple-600 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 8 8">
+                    <circle cx="4" cy="4" r="3"/>
+                  </svg>
+                  <span><strong>Quality Scoring:</strong> Content relevance and completeness assessment</span>
+                </li>
+                <li class="flex items-start">
+                  <svg class="w-4 h-4 text-purple-600 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 8 8">
+                    <circle cx="4" cy="4" r="3"/>
+                  </svg>
+                  <span><strong>MCP Integration:</strong> Model Context Protocol tools for graph access</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phase 2: Personality Development -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div class="p-6 border-b border-gray-200">
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">2</div>
+            <h3 class="text-xl font-semibold text-gray-900">AI Personality Cultivation</h3>
+          </div>
+        </div>
+        <div class="p-6">
+          <p class="text-gray-600 mb-6">
+            Developing consistent AI archetypes with specialized communication patterns and domain expertise.
+          </p>
+          
+          <div class="grid md:grid-cols-3 gap-6">
+            <div>
+              <h4 class="font-semibold text-gray-900 mb-3">Archetype Selection</h4>
+              <div class="space-y-2 text-sm">
+                <div class="p-3 bg-indigo-50 rounded-lg">
+                  <div class="font-medium text-indigo-900">Domain Specialist</div>
+                  <div class="text-indigo-700">Expert knowledge, authoritative tone</div>
+                </div>
+                <div class="p-3 bg-gray-50 rounded-lg">
+                  <div class="font-medium text-gray-700">Precision Analyst</div>
+                  <div class="text-gray-600">Data-driven, systematic approach</div>
+                </div>
+                <div class="p-3 bg-gray-50 rounded-lg">
+                  <div class="font-medium text-gray-700">Creative Synthesizer</div>
+                  <div class="text-gray-600">Innovative, connecting ideas</div>
+                </div>
+                <div class="p-3 bg-gray-50 rounded-lg">
+                  <div class="font-medium text-gray-700">Systematic Explorer</div>
+                  <div class="text-gray-600">Methodical, comprehensive analysis</div>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h4 class="font-semibold text-gray-900 mb-3">Communication Patterns</h4>
+              <ul class="space-y-2 text-sm text-gray-600">
+                <li class="flex items-start">
+                  <svg class="w-4 h-4 text-purple-600 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 8 8">
+                    <circle cx="4" cy="4" r="3"/>
+                  </svg>
+                  <span><strong>Tone & Style:</strong> Professional, expert, approachable</span>
+                </li>
+                <li class="flex items-start">
+                  <svg class="w-4 h-4 text-purple-600 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 8 8">
+                    <circle cx="4" cy="4" r="3"/>
+                  </svg>
+                  <span><strong>Response Structure:</strong> Overview → Analysis → Recommendations</span>
+                </li>
+                <li class="flex items-start">
+                  <svg class="w-4 h-4 text-purple-600 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 8 8">
+                    <circle cx="4" cy="4" r="3"/>
+                  </svg>
+                  <span><strong>Source Citation:</strong> Always reference knowledge graph</span>
+                </li>
+                <li class="flex items-start">
+                  <svg class="w-4 h-4 text-purple-600 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 8 8">
+                    <circle cx="4" cy="4" r="3"/>
+                  </svg>
+                  <span><strong>Uncertainty Handling:</strong> Acknowledge limitations</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div>
+              <h4 class="font-semibold text-gray-900 mb-3">MCP Tool Suite</h4>
+              <div class="space-y-2 text-sm text-gray-600">
+                <div class="grid grid-cols-2 gap-2">
+                  <span class="flex items-center">
+                    <svg class="w-3 h-3 text-green-600 mr-1" fill="currentColor" viewBox="0 0 8 8">
+                      <circle cx="4" cy="4" r="3"/>
+                    </svg>
+                    <strong>Search</strong> (0.9)
+                  </span>
+                  <span class="flex items-center">
+                    <svg class="w-3 h-3 text-green-600 mr-1" fill="currentColor" viewBox="0 0 8 8">
+                      <circle cx="4" cy="4" r="3"/>
+                    </svg>
+                    <strong>Fetch</strong> (0.8)
+                  </span>
+                  <span class="flex items-center">
+                    <svg class="w-3 h-3 text-green-600 mr-1" fill="currentColor" viewBox="0 0 8 8">
+                      <circle cx="4" cy="4" r="3"/>
+                    </svg>
+                    <strong>Rights Check</strong> (0.8)
+                  </span>
+                  <span class="flex items-center">
+                    <svg class="w-3 h-3 text-green-600 mr-1" fill="currentColor" viewBox="0 0 8 8">
+                      <circle cx="4" cy="4" r="3"/>
+                    </svg>
+                    <strong>Bridge</strong> (0.7)
+                  </span>
+                  <span class="flex items-center">
+                    <svg class="w-3 h-3 text-yellow-600 mr-1" fill="currentColor" viewBox="0 0 8 8">
+                      <circle cx="4" cy="4" r="3"/>
+                    </svg>
+                    <strong>Analyze Pools</strong> (0.7)
+                  </span>
+                  <span class="flex items-center">
+                    <svg class="w-3 h-3 text-yellow-600 mr-1" fill="currentColor" viewBox="0 0 8 8">
+                      <circle cx="4" cy="4" r="3"/>
+                    </svg>
+                    <strong>Extract & Link</strong> (0.6)
+                  </span>
+                  <span class="flex items-center">
+                    <svg class="w-3 h-3 text-yellow-600 mr-1" fill="currentColor" viewBox="0 0 8 8">
+                      <circle cx="4" cy="4" r="3"/>
+                    </svg>
+                    <strong>Explain Path</strong> (0.6)
+                  </span>
+                  <span class="flex items-center">
+                    <svg class="w-3 h-3 text-orange-600 mr-1" fill="currentColor" viewBox="0 0 8 8">
+                      <circle cx="4" cy="4" r="3"/>
+                    </svg>
+                    <strong>Location Neighbors</strong> (0.5)
+                  </span>
+                  <span class="flex items-center">
+                    <svg class="w-3 h-3 text-gray-400 mr-1" fill="currentColor" viewBox="0 0 8 8">
+                      <circle cx="4" cy="4" r="3"/>
+                    </svg>
+                    <strong>Set/Clear Persona</strong> (0.3/0.2)
+                  </span>
+                </div>
+                <div class="text-xs text-gray-500 mt-2">
+                  <span class="text-green-600">●</span> High priority
+                  <span class="text-yellow-600 ml-2">●</span> Medium priority  
+                  <span class="text-orange-600 ml-2">●</span> Available
+                  <span class="text-gray-400 ml-2">●</span> Low priority
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phase 2.5: MCP Tool Mastery -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div class="p-6 border-b border-gray-200">
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center text-white font-bold text-sm">2.5</div>
+            <h3 class="text-xl font-semibold text-gray-900">MCP Tool Mastery & Usage Training</h3>
+          </div>
+        </div>
+        <div class="p-6">
+          <p class="text-gray-600 mb-6">
+            Each MCP (Model Context Protocol) tool requires specific training for optimal usage patterns and parameter selection.
+          </p>
+          
+          <div class="space-y-6">
+            <!-- Primary Research Tools -->
+            <div>
+              <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <span class="w-3 h-3 bg-green-600 rounded-full mr-2"></span>
+                Primary Research Tools
+              </h4>
+              <div class="grid md:grid-cols-2 gap-4">
+                
+                <!-- Search Tool -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                  <div class="flex items-center space-x-2 mb-3">
+                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h5 class="font-semibold text-gray-900">search (Priority: 0.9)</h5>
+                      <p class="text-sm text-gray-600">Semantic + graph search with rights filtering</p>
+                    </div>
+                  </div>
+                  <div class="text-sm space-y-2">
+                    <div><strong>Purpose:</strong> Primary knowledge discovery across the entire graph</div>
+                    <div><strong>Training Focus:</strong> Query optimization, pool-specific searches, rights awareness</div>
+                    <div class="bg-gray-50 p-2 rounded text-xs font-mono">
+                      Input: { query, top_k?, pools?, require_rights?, diversify_by_pool? }
+                    </div>
+                    <div><strong>Usage Patterns:</strong></div>
+                    <ul class="text-xs ml-4 space-y-1">
+                      <li>• Start broad, narrow with pool filters</li>
+                      <li>• Use diversify_by_pool for comprehensive coverage</li>
+                      <li>• Always include rights filtering for public content</li>
+                      <li>• Leverage trace information for explanation</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- Fetch Tool -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                  <div class="flex items-center space-x-2 mb-3">
+                    <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                      <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h5 class="font-semibold text-gray-900">fetch (Priority: 0.8)</h5>
+                      <p class="text-sm text-gray-600">Deep document retrieval with relationships</p>
+                    </div>
+                  </div>
+                  <div class="text-sm space-y-2">
+                    <div><strong>Purpose:</strong> Full document analysis with complete context</div>
+                    <div><strong>Training Focus:</strong> Relationship depth optimization, timeline analysis</div>
+                    <div class="bg-gray-50 p-2 rounded text-xs font-mono">
+                      Input: { id, include_relations?, relation_depth?, pools?, as_of? }
+                    </div>
+                    <div><strong>Usage Patterns:</strong></div>
+                    <ul class="text-xs ml-4 space-y-1">
+                      <li>• Use after search to get complete document details</li>
+                      <li>• Include relations for comprehensive analysis</li>
+                      <li>• Adjust relation_depth based on query complexity</li>
+                      <li>• Extract temporal context from timeline data</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- Bridge Tool -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                  <div class="flex items-center space-x-2 mb-3">
+                    <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                      <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h5 class="font-semibold text-gray-900">bridge (Priority: 0.7)</h5>
+                      <p class="text-sm text-gray-600">Find connections between concepts</p>
+                    </div>
+                  </div>
+                  <div class="text-sm space-y-2">
+                    <div><strong>Purpose:</strong> Discover hidden relationships and connection paths</div>
+                    <div><strong>Training Focus:</strong> Strategic concept linking, path interpretation</div>
+                    <div class="bg-gray-50 p-2 rounded text-xs font-mono">
+                      Input: { a, b, top_k? }
+                    </div>
+                    <div><strong>Usage Patterns:</strong></div>
+                    <ul class="text-xs ml-4 space-y-1">
+                      <li>• Connect disparate concepts (e.g., "climate change" → "security")</li>
+                      <li>• Use bridge_score to rank connection strength</li>
+                      <li>• Analyze path details for reasoning chains</li>
+                      <li>• Perfect for comparative and synthesis questions</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- Rights Check Tool -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                  <div class="flex items-center space-x-2 mb-3">
+                    <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                      <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h5 class="font-semibold text-gray-900">rights_check (Priority: 0.8)</h5>
+                      <p class="text-sm text-gray-600">Verify content usage permissions</p>
+                    </div>
+                  </div>
+                  <div class="text-sm space-y-2">
+                    <div><strong>Purpose:</strong> Ensure proper attribution and usage rights</div>
+                    <div><strong>Training Focus:</strong> Rights-aware responses, proper citation</div>
+                    <div class="bg-gray-50 p-2 rounded text-xs font-mono">
+                      Input: { ids[], intended_use }
+                    </div>
+                    <div><strong>Usage Patterns:</strong></div>
+                    <ul class="text-xs ml-4 space-y-1">
+                      <li>• Check before quoting or detailed analysis</li>
+                      <li>• Different rules for public vs internal vs training use</li>
+                      <li>• Always include rights info in responses</li>
+                      <li>• Essential for geopolitical content attribution</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Analysis & Processing Tools -->
+            <div>
+              <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <span class="w-3 h-3 bg-yellow-600 rounded-full mr-2"></span>
+                Analysis & Processing Tools
+              </h4>
+              <div class="grid md:grid-cols-2 gap-4">
+                
+                <!-- Extract and Link Tool -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                  <div class="flex items-center space-x-2 mb-3">
+                    <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                      <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h5 class="font-semibold text-gray-900">extract_and_link (Priority: 0.6)</h5>
+                      <p class="text-sm text-gray-600">Extract Ten Pool entities from user text</p>
+                    </div>
+                  </div>
+                  <div class="text-sm space-y-2">
+                    <div><strong>Purpose:</strong> Parse user queries for relevant entities and concepts</div>
+                    <div><strong>Training Focus:</strong> Entity recognition, ambiguity resolution</div>
+                    <div class="bg-gray-50 p-2 rounded text-xs font-mono">
+                      Input: { text, mode?, link_threshold? }
+                    </div>
+                    <div><strong>Usage Patterns:</strong></div>
+                    <ul class="text-xs ml-4 space-y-1">
+                      <li>• Use on complex user queries before searching</li>
+                      <li>• Extract mode for initial entity identification</li>
+                      <li>• Link mode to connect entities to knowledge graph</li>
+                      <li>• Handle ambiguities with clarifying questions</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- Analyze Pools Tool -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                  <div class="flex items-center space-x-2 mb-3">
+                    <div class="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center">
+                      <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h5 class="font-semibold text-gray-900">analyze_pools (Priority: 0.7)</h5>
+                      <p class="text-sm text-gray-600">Analyze text for Ten Pool Canon distribution</p>
+                    </div>
+                  </div>
+                  <div class="text-sm space-y-2">
+                    <div><strong>Purpose:</strong> Understand content distribution across knowledge pools</div>
+                    <div><strong>Training Focus:</strong> Pool interpretation, content categorization</div>
+                    <div class="bg-gray-50 p-2 rounded text-xs font-mono">
+                      Input: { text, include_entities?, pool_focus? }
+                    </div>
+                    <div><strong>Usage Patterns:</strong></div>
+                    <ul class="text-xs ml-4 space-y-1">
+                      <li>• Understand query scope and content distribution</li>
+                      <li>• Identify which pools are most relevant</li>
+                      <li>• Guide search strategy based on pool analysis</li>
+                      <li>• Perfect for meta-questions about knowledge structure</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- Explain Path Tool -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                  <div class="flex items-center space-x-2 mb-3">
+                    <div class="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                      <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h5 class="font-semibold text-gray-900">explain_path (Priority: 0.6)</h5>
+                      <p class="text-sm text-gray-600">Explain reasoning paths through knowledge</p>
+                    </div>
+                  </div>
+                  <div class="text-sm space-y-2">
+                    <div><strong>Purpose:</strong> Make reasoning transparent and traceable</div>
+                    <div><strong>Training Focus:</strong> Path narration, logical flow explanation</div>
+                    <div class="bg-gray-50 p-2 rounded text-xs font-mono">
+                      Input: { ids[] }
+                    </div>
+                    <div><strong>Usage Patterns:</strong></div>
+                    <ul class="text-xs ml-4 space-y-1">
+                      <li>• Use after bridge to explain connection logic</li>
+                      <li>• Show how conclusions were reached</li>
+                      <li>• Build user confidence in AI reasoning</li>
+                      <li>• Essential for complex geopolitical analysis</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- Location Neighbors Tool -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                  <div class="flex items-center space-x-2 mb-3">
+                    <div class="w-8 h-8 bg-cyan-100 rounded-full flex items-center justify-center">
+                      <svg class="w-4 h-4 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h5 class="font-semibold text-gray-900">location_neighbors (Priority: 0.5)</h5>
+                      <p class="text-sm text-gray-600">Spatial and temporal geographic analysis</p>
+                    </div>
+                  </div>
+                  <div class="text-sm space-y-2">
+                    <div><strong>Purpose:</strong> Spatial relationship analysis with temporal patterns</div>
+                    <div><strong>Training Focus:</strong> Geographic context, regional patterns</div>
+                    <div class="bg-gray-50 p-2 rounded text-xs font-mono">
+                      Input: { camp_name, year?, radius }
+                    </div>
+                    <div><strong>Usage Patterns:</strong></div>
+                    <ul class="text-xs ml-4 space-y-1">
+                      <li>• Analyze regional cooperation patterns</li>
+                      <li>• Understand geographic influences on policy</li>
+                      <li>• Track stability and changes over time</li>
+                      <li>• Less relevant for Arctic docs but available</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Personality Management Tools -->
+            <div>
+              <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <span class="w-3 h-3 bg-gray-600 rounded-full mr-2"></span>
+                Personality Management Tools
+              </h4>
+              <div class="grid md:grid-cols-2 gap-4">
+                
+                <!-- Set Persona Tool -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                  <div class="flex items-center space-x-2 mb-3">
+                    <div class="w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center">
+                      <svg class="w-4 h-4 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h5 class="font-semibold text-gray-900">set_persona (Priority: 0.3)</h5>
+                      <p class="text-sm text-gray-600">Configure personality style capsule</p>
+                    </div>
+                  </div>
+                  <div class="text-sm space-y-2">
+                    <div><strong>Purpose:</strong> Dynamically adjust communication style and focus</div>
+                    <div><strong>Training Focus:</strong> Context-appropriate style switching</div>
+                    <div class="bg-gray-50 p-2 rounded text-xs font-mono">
+                      Input: { archetype, communication_style, domain_focus }
+                    </div>
+                    <div><strong>Usage Patterns:</strong></div>
+                    <ul class="text-xs ml-4 space-y-1">
+                      <li>• Adapt to user expertise level</li>
+                      <li>• Switch between analytical and creative modes</li>
+                      <li>• Maintain consistency within conversations</li>
+                      <li>• Low priority - personality should be stable</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- Clear Persona Tool -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                  <div class="flex items-center space-x-2 mb-3">
+                    <div class="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center">
+                      <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1v3M4 7h16"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h5 class="font-semibold text-gray-900">clear_persona (Priority: 0.2)</h5>
+                      <p class="text-sm text-gray-600">Reset to default personality state</p>
+                    </div>
+                  </div>
+                  <div class="text-sm space-y-2">
+                    <div><strong>Purpose:</strong> Return to baseline personality configuration</div>
+                    <div><strong>Training Focus:</strong> Recovery from inappropriate persona states</div>
+                    <div class="bg-gray-50 p-2 rounded text-xs font-mono">
+                      Input: { confirm: true }
+                    </div>
+                    <div><strong>Usage Patterns:</strong></div>
+                    <ul class="text-xs ml-4 space-y-1">
+                      <li>• Emergency reset for personality drift</li>
+                      <li>• Return to domain specialist baseline</li>
+                      <li>• Very rarely used in normal operation</li>
+                      <li>• Lowest priority tool</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
+            <h4 class="font-semibold text-gray-900 mb-3">Training Methodology for Tool Usage</h4>
+            <div class="grid md:grid-cols-2 gap-6">
+              <div>
+                <h5 class="font-medium text-gray-900 mb-2">Progressive Skill Development</h5>
+                <ol class="text-sm text-gray-600 space-y-1">
+                  <li><strong>1. Single Tool Mastery:</strong> Learn each tool's parameters and outputs</li>
+                  <li><strong>2. Tool Sequencing:</strong> Optimal chains (search → fetch → explain_path)</li>
+                  <li><strong>3. Context Adaptation:</strong> Choose tools based on query type</li>
+                  <li><strong>4. Error Recovery:</strong> Handle failed calls and ambiguous results</li>
+                </ol>
+              </div>
+              <div>
+                <h5 class="font-medium text-gray-900 mb-2">Evaluation Criteria</h5>
+                <ul class="text-sm text-gray-600 space-y-1">
+                  <li>• <strong>Tool Selection:</strong> Appropriate tool choice for query type</li>
+                  <li>• <strong>Parameter Optimization:</strong> Efficient use of search filters</li>
+                  <li>• <strong>Chain Efficiency:</strong> Minimal tool calls for maximum insight</li>
+                  <li>• <strong>Rights Compliance:</strong> Consistent rights checking</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phase 3: Training Questions -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div class="p-6 border-b border-gray-200">
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white font-bold text-sm">3</div>
+            <h3 class="text-xl font-semibold text-gray-900">Systematic Evaluation Framework</h3>
+          </div>
+        </div>
+        <div class="p-6">
+          <p class="text-gray-600 mb-6">
+            Comprehensive question sets that test different aspects of AI personality and domain knowledge.
+          </p>
+          
+          <% if @stats[:total_questions] > 0 %>
+            <div class="grid md:grid-cols-4 gap-6 mb-8">
+              <div>
+                <h4 class="font-semibold text-gray-900 mb-3">Difficulty Progression</h4>
+                <div class="space-y-2">
+                  <% @stats[:difficulty_levels].each do |level, count| %>
+                    <div class="flex justify-between text-sm">
+                      <span class="text-gray-600"><%= level.humanize %></span>
+                      <span class="font-medium text-gray-900"><%= count %></span>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+              
+              <div>
+                <h4 class="font-semibold text-gray-900 mb-3">Question Types</h4>
+                <div class="space-y-2">
+                  <% @stats[:question_types].each do |type, count| %>
+                    <div class="flex justify-between text-sm">
+                      <span class="text-gray-600"><%= type.humanize.truncate(20) %></span>
+                      <span class="font-medium text-gray-900"><%= count %></span>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+              
+              <div>
+                <h4 class="font-semibold text-gray-900 mb-3">Archetype Focus</h4>
+                <div class="space-y-2">
+                  <% @stats[:archetype_focuses].each do |archetype, count| %>
+                    <div class="flex justify-between text-sm">
+                      <span class="text-gray-600"><%= archetype.humanize.truncate(20) %></span>
+                      <span class="font-medium text-gray-900"><%= count %></span>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+              
+              <div>
+                <h4 class="font-semibold text-gray-900 mb-3">Performance Tracking</h4>
+                <ul class="space-y-1 text-sm text-gray-600">
+                  <li>✓ Response accuracy</li>
+                  <li>✓ Knowledge coverage</li>
+                  <li>✓ Personality consistency</li>
+                  <li>✓ Tool usage patterns</li>
+                </ul>
+              </div>
+            </div>
+          <% end %>
+          
+          <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6">
+            <h4 class="font-semibold text-gray-900 mb-3">Sample Training Question</h4>
+            <div class="bg-white rounded-lg p-4 border border-indigo-200">
+              <div class="text-sm text-indigo-600 font-medium mb-2">[STRATEGIC LEVEL] • Relationship Mapping • Systematic Explorer Focus</div>
+              <p class="text-gray-900 mb-3">
+                "How do Nordic countries balance cooperation with Russia in Arctic governance while maintaining security partnerships with NATO?"
+              </p>
+              <div class="text-sm text-gray-600">
+                <strong>Expected Coverage:</strong> Nordic cooperation, Arctic Council, NATO partnerships, Russia relations, security dilemma
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phase 5: Continuous Improvement -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div class="p-6 border-b border-gray-200">
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-orange-600 rounded-full flex items-center justify-center text-white font-bold text-sm">5</div>
+            <h3 class="text-xl font-semibold text-gray-900">Performance Monitoring & Improvement</h3>
+          </div>
+        </div>
+        <div class="p-6">
+          <p class="text-gray-600 mb-6">
+            Ongoing assessment and refinement of AI personality performance through systematic evaluation.
+          </p>
+          
+          <div class="grid md:grid-cols-2 gap-8">
+            <div>
+              <h4 class="font-semibold text-gray-900 mb-4">Evaluation Metrics</h4>
+              <div class="space-y-3">
+                <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                  <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 8 8">
+                      <circle cx="4" cy="4" r="3"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="font-medium text-gray-900">Accuracy Score</div>
+                    <div class="text-sm text-gray-600">Factual correctness and knowledge coverage</div>
+                  </div>
+                </div>
+                
+                <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                  <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                    <svg class="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 8 8">
+                      <circle cx="4" cy="4" r="3"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="font-medium text-gray-900">Personality Authenticity</div>
+                    <div class="text-sm text-gray-600">Consistency with archetype characteristics</div>
+                  </div>
+                </div>
+                
+                <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                  <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                    <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 8 8">
+                      <circle cx="4" cy="4" r="3"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="font-medium text-gray-900">Completeness Score</div>
+                    <div class="text-sm text-gray-600">Thoroughness and depth of analysis</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h4 class="font-semibold text-gray-900 mb-4">Improvement Process</h4>
+              <ol class="space-y-3">
+                <li class="flex items-start space-x-3">
+                  <div class="w-6 h-6 bg-orange-600 rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">1</div>
+                  <div>
+                    <div class="font-medium text-gray-900">Performance Analysis</div>
+                    <div class="text-sm text-gray-600">Regular evaluation against training questions</div>
+                  </div>
+                </li>
+                <li class="flex items-start space-x-3">
+                  <div class="w-6 h-6 bg-orange-600 rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">2</div>
+                  <div>
+                    <div class="font-medium text-gray-900">Gap Identification</div>
+                    <div class="text-sm text-gray-600">Detect knowledge gaps and personality inconsistencies</div>
+                  </div>
+                </li>
+                <li class="flex items-start space-x-3">
+                  <div class="w-6 h-6 bg-orange-600 rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">3</div>
+                  <div>
+                    <div class="font-medium text-gray-900">Targeted Training</div>
+                    <div class="text-sm text-gray-600">Additional questions and personality refinement</div>
+                  </div>
+                </li>
+                <li class="flex items-start space-x-3">
+                  <div class="w-6 h-6 bg-orange-600 rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">4</div>
+                  <div>
+                    <div class="font-medium text-gray-900">Validation</div>
+                    <div class="text-sm text-gray-600">Confirm improvements through re-evaluation</div>
+                  </div>
+                </li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Call to Action -->
+    <div class="mt-12 text-center">
+      <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-8 text-white">
+        <h3 class="text-2xl font-bold mb-4">Experience the Training Results</h3>
+        <p class="text-xl mb-6 opacity-90">
+          See how systematic training transforms knowledge into intelligent conversation
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <%= link_to chat_index_path(ekn_slug: @ekn.slug), 
+                      class: "bg-white text-indigo-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors" do %>
+            💬 Chat with <%= @ekn.name %>
+          <% end %>
+          <%= link_to ekn_dashboard_path(ekn_slug: @ekn.slug), 
+                      class: "border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-indigo-600 transition-colors" do %>
+            📊 View Knowledge Dashboard
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

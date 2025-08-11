@@ -1,0 +1,2146 @@
+<% content_for :title, "#{@ekn.name} - Analytics Dashboard" %>
+<% content_for :description, "Comprehensive analytics dashboard for #{@ekn.name} showing network topology, relationship patterns, and knowledge distribution across #{@stats[:pool_counts].keys.size} conceptual pools." %>
+<% content_for :head do %>
+  <meta name="turbo-cache-control" content="no-cache">
+<% end %>
+
+<!-- Import D3.js and other visualization libraries -->
+<%= javascript_importmap_tags %>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-chord@3"></script>
+
+<div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-indigo-900 text-white">
+  <!-- Dashboard Header -->
+  <div class="border-b border-white/10 bg-black/20 backdrop-blur-sm sticky top-0 z-10">
+    <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            <%= @ekn.name %> Analytics
+          </h1>
+          <p class="text-gray-300 mt-1">Knowledge Network Dashboard</p>
+        </div>
+        
+        <div class="flex items-center gap-4">
+          <!-- ProvenanceAndRights Filter -->
+          <div class="flex items-center gap-2 px-3 py-2 bg-white/10 rounded-lg">
+            <input type="checkbox" 
+                   id="include-provenance" 
+                   class="rounded border-gray-500 bg-white/10 text-blue-600 focus:ring-blue-500 focus:ring-offset-0" 
+                   <%= "checked" if @include_provenance %>
+                   onchange="toggleProvenanceFilter(this.checked)">
+            <label for="include-provenance" class="text-sm text-gray-300 cursor-pointer select-none">
+              Include ProvenanceAndRights
+              <% unless @include_provenance %>
+                <span class="text-xs text-orange-400 ml-1">(filtered)</span>
+              <% end %>
+            </label>
+          </div>
+          
+          <%= link_to ekn_path(ekn_slug: @ekn.slug), 
+                      class: "px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-white" do %>
+            ← Back to Overview
+          <% end %>
+          
+          <%= link_to imports_path(ekn_slug: @ekn.slug),
+                      class: "px-6 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-white" do %>
+            Detailed Import Stats
+          <% end %>
+
+          <%= link_to chat_index_path(ekn_slug: @ekn.slug), 
+                      class: "px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg transition-colors font-medium" do %>
+            Start Conversation
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Real-time Stats Banner -->
+  <div class="bg-gradient-to-r from-indigo-600/30 to-purple-600/30 border-b border-white/10">
+    <div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+        <div class="text-center">
+          <div class="text-3xl font-bold text-blue-400"><%= number_with_delimiter(@stats[:total_nodes]) %></div>
+          <div class="text-sm text-gray-300">Total Entities</div>
+        </div>
+        
+        <div class="text-center">
+          <div class="text-3xl font-bold text-purple-400"><%= number_with_delimiter(@stats[:total_relationships]) %></div>
+          <div class="text-sm text-gray-300">Relationships</div>
+        </div>
+        
+        <div class="text-center">
+          <div class="text-3xl font-bold text-emerald-400"><%= number_with_delimiter(@stats[:total_documents]) %></div>
+          <div class="text-sm text-gray-300">Documents</div>
+        </div>
+        
+        <div class="text-center">
+          <div class="text-3xl font-bold text-orange-400"><%= number_with_delimiter(@stats[:pipeline_runs]) %></div>
+          <div class="text-sm text-gray-300">Pipeline Runs</div>
+        </div>
+        
+        <div class="text-center">
+          <div class="text-3xl font-bold text-indigo-400"><%= (@stats[:density] * 100).round(2) %>%</div>
+          <div class="text-sm text-gray-300 flex items-center gap-1 justify-center">
+            <span>Network Density</span>
+            <button type="button" aria-label="What is Network Density?" onclick="showDensityInfo(event)" class="text-gray-400 hover:text-gray-200">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 100-2 1 1 0 000 2zm-1 2a1 1 0 012 0v5a1 1 0 11-2 0v-5z" clip-rule="evenodd" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        
+        <div class="text-center">
+          <div class="text-3xl font-bold text-cyan-400"><%= @stats[:avg_connections] %></div>
+          <div class="text-sm text-gray-300">Avg Connections</div>
+        </div>
+        
+        <div class="text-center">
+          <div class="text-3xl font-bold text-pink-400"><%= @stats[:connected_components] %></div>
+          <div class="text-sm text-gray-300">Components</div>
+        </div>
+        
+        <div class="text-center">
+          <div class="text-3xl font-bold text-yellow-400"><%= @stats[:temporal_density] %>%</div>
+          <div class="text-sm text-gray-300">Temporal Coverage</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Meta-Enliterator Analytics Analysis -->
+  <div class="bg-gradient-to-r from-amber-900/20 to-orange-900/20 border-b border-amber-500/20">
+    <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+      <div class="flex items-start gap-4">
+        <div class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+          </svg>
+        </div>
+        
+        <div class="flex-1">
+          <button onclick="toggleAnalysis()" class="flex items-center justify-between w-full text-left focus:outline-none group">
+            <h3 class="text-lg font-bold text-amber-400 group-hover:text-amber-300 transition-colors">
+              🧠 Meta-Enliterator Analytics Analysis
+            </h3>
+            <svg id="analysis-chevron" class="w-5 h-5 text-amber-400 transform transition-transform duration-200" 
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
+          
+          <div id="analysis-content" class="mt-4 space-y-4">
+            <div class="grid md:grid-cols-2 gap-6 text-base">
+              <div>
+                <h4 class="font-semibold text-amber-300 mb-3 text-lg">🔍 Current Pipeline Assessment</h4>
+                <p class="text-gray-300 leading-relaxed mb-4">
+                  <strong>Arctic Research Navigator Status:</strong> 5,605 entities and 1,860 relationships across 6 pools reveal significant progress in Stage 5.5 Relationship Discovery. Network density of 0.0118% shows we're successfully extracting co-occurrence patterns (324), influences (105), and semantic connections (38) beyond structural rights relationships.
+                </p>
+                <p class="text-gray-300 leading-relaxed">
+                  <strong>Key Achievement:</strong> Multi-modal relationship discovery is working - we're capturing INFLUENCES between Ideas→Practical (105 connections), CO_OCCURS_WITH semantic clustering (324), and EMBODIES concept-to-manifestation flows (48), creating the foundation for expert system capabilities.
+                </p>
+              </div>
+              
+              <div>
+                <h4 class="font-semibold text-amber-300 mb-3 text-lg">🚀 Knowledge Architecture Success</h4>
+                <p class="text-gray-300 leading-relaxed mb-4">
+                  <strong>Proven Pipeline:</strong> 30 Arctic Research documents transformed into 5,605 entities with 9 relationship types demonstrates our zero-touch pipeline scales. The 3,056 Lexicon entities and 611 Practical entities show strong domain knowledge extraction from geopolitical research.
+                </p>
+                <p class="text-gray-300 leading-relaxed">
+                  <strong>Next Evolution:</strong> From current 1,860 relationships to enhanced semantic bridging targeting 3,000+ connections. Fine-tuning pipeline at Stage 9 will leverage this rich knowledge graph for domain-expert conversational AI trained on Arctic research patterns.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Main Dashboard Content -->
+  <div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+    
+    <!-- Network Visualization Row -->
+    <div class="grid lg:grid-cols-2 gap-8 mb-8">
+      <!-- Interactive Network Graph -->
+      <div class="bg-black/40 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+        <h3 class="text-xl font-bold mb-4 flex items-center justify-between">
+          <div class="w-3 h-3 bg-blue-400 rounded-full mr-3"></div>
+          <span class="flex items-center">Arctic Research Knowledge Map</span>
+          <button type="button" onclick="enterFullscreen('network-graph')" class="text-gray-300 hover:text-white" aria-label="Expand network graph">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4"/>
+            </svg>
+          </button>
+        </h3>
+        <div id="network-graph" class="w-full h-96 bg-black/20 rounded-lg flex items-center justify-center">
+          <div class="text-gray-400">Loading interactive network...</div>
+        </div>
+        <div class="mt-4 space-y-3">
+          <div class="text-sm text-gray-400">
+            <% if @include_provenance %>
+              Adaptive network showing ~75 highly connected entities across all pools.
+            <% else %>
+              Intelligent network prioritizing inter-pool bridges and conceptual diversity.
+              <span class="text-orange-400">• ProvenanceAndRights filtered</span>
+            <% end %>
+            <br>Hover for details, drag to explore.
+          </div>
+          
+          <!-- Network Insights Panel -->
+          <div class="bg-gradient-to-r from-blue-900/30 to-purple-900/30 rounded-lg p-4 border border-blue-400/20">
+            <div class="flex items-center gap-2 mb-3">
+              <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <h5 class="text-sm font-semibold text-blue-300">Arctic Research Knowledge Map</h5>
+            </div>
+            <div id="network-insights" class="text-xs text-gray-300 space-y-1">
+              <div class="text-blue-200">Loading Arctic research insights...</div>
+            </div>
+          </div>
+          
+          <!-- Color Key Legend -->
+          <div class="bg-black/30 rounded-lg p-3 border border-white/10">
+            <h5 class="text-xs font-semibold text-gray-300 mb-2">Node Types</h5>
+            <div class="grid grid-cols-3 gap-x-3 gap-y-1 text-xs mb-3">
+              <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full" style="background-color: #60A5FA"></div>
+                <span class="text-gray-300">Idea</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full" style="background-color: #34D399"></div>
+                <span class="text-gray-300">Practical</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full" style="background-color: #FBBF24"></div>
+                <span class="text-gray-300">Experience</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full" style="background-color: #F87171"></div>
+                <span class="text-gray-300">Manifest</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full" style="background-color: #A78BFA"></div>
+                <span class="text-gray-300">Character</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full" style="background-color: #6B7280"></div>
+                <span class="text-gray-300">Lexicon</span>
+              </div>
+            </div>
+            <div class="space-y-1 text-xs text-gray-400 border-t border-gray-600 pt-2">
+              <div class="flex items-center gap-2">
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 8 8">
+                  <circle cx="4" cy="4" r="3" stroke="#FFD700" stroke-width="1" fill="transparent"/>
+                </svg>
+                <span>Bridge nodes (cross-pool connections)</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <svg class="w-3 h-3 text-red-400" fill="currentColor" viewBox="0 0 8 8">
+                  <circle cx="4" cy="4" r="3"/>
+                </svg>
+                <span>Arctic domain concepts</span>
+              </div>
+              <div>Size = connection count | Hover for details</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Chord Diagram -->
+      <div class="bg-black/40 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+        <h3 class="text-xl font-bold mb-4 flex items-center justify-between">
+          <div class="w-3 h-3 bg-purple-400 rounded-full mr-3"></div>
+          <span class="flex items-center">Inter-Pool Relationship Flows</span>
+          <button type="button" onclick="enterFullscreen('chord-diagram')" class="text-gray-300 hover:text-white" aria-label="Expand chord diagram">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4"/>
+            </svg>
+          </button>
+        </h3>
+        <div id="chord-diagram" class="w-full h-96 bg-black/20 rounded-lg flex items-center justify-center">
+          <div class="text-gray-400">Loading chord diagram...</div>
+        </div>
+        <div class="mt-4 space-y-3">
+          <div class="text-sm text-gray-400">
+            Relationship flows between different knowledge pools (Ten Pool Canon).
+          </div>
+          
+          <!-- Chord Diagram Insights Panel -->
+          <div class="bg-gradient-to-r from-purple-900/30 to-indigo-900/30 rounded-lg p-4 border border-purple-400/20">
+            <div class="flex items-center gap-2 mb-3">
+              <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 01.553-.894L9 2l6 3 6-3v15l-6 3-6-3z"/>
+              </svg>
+              <h5 class="text-sm font-semibold text-purple-300">Knowledge Flow Architecture</h5>
+            </div>
+            <div id="chord-insights" class="text-xs text-gray-300 space-y-2">
+              <div class="text-purple-200">
+                <strong>What This Shows:</strong> Each colored arc represents a knowledge pool (Ideas, Practical solutions, Experiences, etc.). 
+                The curved ribbons show how concepts flow between pools—revealing the conceptual pathways in your Arctic research.
+              </div>
+              <div class="text-gray-300">
+                <strong>Reading the Pattern:</strong> Thick ribbons = strong conceptual bridges. Isolated arcs = knowledge silos. 
+                Balanced flows suggest mature interdisciplinary thinking, while one-way flows reveal knowledge transformation patterns.
+              </div>
+              <div class="grid grid-cols-2 gap-4 mt-3 pt-2 border-t border-purple-500/20 text-xs">
+                <div>
+                  <span class="text-purple-300 font-medium">🔄 Generator Pools:</span>
+                  <span class="text-gray-300">Ideas → outflow to applications</span>
+                </div>
+                <div>
+                  <span class="text-purple-300 font-medium">🎯 Integrator Pools:</span>
+                  <span class="text-gray-300">Experience ← inflow from concepts</span>
+                </div>
+                <div>
+                  <span class="text-purple-300 font-medium">⚖️ Balanced Pools:</span>
+                  <span class="text-gray-300">Practical ↔ bidirectional flow</span>
+                </div>
+                <div>
+                  <span class="text-purple-300 font-medium">🏝️ Island Pools:</span>
+                  <span class="text-gray-300">Isolated knowledge domains</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Flow Pattern Legend -->
+          <div class="bg-black/30 rounded-lg p-3 border border-white/10">
+            <h5 class="text-xs font-semibold text-gray-300 mb-2">Understanding Flow Patterns</h5>
+            <div class="space-y-1 text-xs text-gray-400">
+              <div class="flex items-center gap-2">
+                <div class="w-3 h-1 bg-gradient-to-r from-red-400 to-blue-400 rounded"></div>
+                <span>Ribbon thickness = relationship strength</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-3 h-3 border-2 border-purple-400 rounded-full"></div>
+                <span>Arc size = pool entity count</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <svg class="w-3 h-3 text-yellow-400" fill="currentColor" viewBox="0 0 8 8">
+                  <path d="M4,0 L6,3 L4,6 L2,3 Z"/>
+                </svg>
+                <span>Hover arcs/ribbons for detailed flow data</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Pool Distribution & Centrality -->
+    <div class="grid lg:grid-cols-3 gap-8 mb-8">
+      <!-- Pool Distribution Sunburst -->
+      <div class="bg-black/40 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+        <h3 class="text-xl font-bold mb-4 flex items-center justify-between">
+          <div class="w-3 h-3 bg-indigo-400 rounded-full mr-3"></div>
+          <span class="flex items-center">Knowledge Distribution</span>
+          <button type="button" onclick="enterFullscreen('sunburst-chart')" class="text-gray-300 hover:text-white" aria-label="Expand distribution chart">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4"/>
+            </svg>
+          </button>
+        </h3>
+        <div id="sunburst-chart" class="w-full h-80 bg-black/20 rounded-lg flex items-center justify-center">
+          <div class="text-gray-400">Loading distribution...</div>
+        </div>
+      </div>
+      
+      <!-- Most Connected Entities -->
+      <div class="bg-black/40 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+        <h3 class="text-xl font-bold mb-4 flex items-center">
+          <div class="w-3 h-3 bg-yellow-400 rounded-full mr-3"></div>
+          Central Entities
+        </h3>
+        <div class="space-y-3 max-h-80 overflow-y-auto">
+          <% @top_entities.first(10).each_with_index do |entity, index| %>
+            <div class="flex items-center justify-between p-3 bg-white/5 rounded-lg hover:bg-white/10 cursor-pointer transition-colors"
+                 onclick="showEntityDetails(<%= entity['id'] %>)">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center text-black font-bold text-sm">
+                  <%= index + 1 %>
+                </div>
+                <div>
+                  <div class="font-medium truncate max-w-48"><%= entity['name'] %></div>
+                  <div class="text-xs text-gray-400"><%= entity['pool']&.titleize || 'Unknown' %></div>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="font-bold text-yellow-400"><%= entity['connections'] %></div>
+                <div class="text-xs text-gray-400">connections</div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+      
+      <!-- Relationship Types -->
+      <div class="bg-black/40 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+        <h3 class="text-xl font-bold mb-4 flex items-center">
+          <div class="w-3 h-3 bg-green-400 rounded-full mr-3"></div>
+          Relationship Patterns
+        </h3>
+        <div class="space-y-3 max-h-80 overflow-y-auto">
+          <% @stats[:relationship_types].each do |rel_type, count| %>
+            <div class="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+              <div class="font-medium text-gray-300"><%= rel_type.humanize %></div>
+              <div class="text-right">
+                <div class="font-bold text-green-400"><%= number_with_delimiter(count) %></div>
+                <div class="text-xs text-gray-400">
+                  <%= ((count.to_f / @stats[:total_relationships]) * 100).round(1) %>%
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Temporal Analysis -->
+    <div class="grid lg:grid-cols-2 gap-8 mb-8">
+      <!-- Timeline Visualization -->
+      <div class="bg-black/40 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+        <h3 class="text-xl font-bold mb-4 flex items-center justify-between">
+          <div class="w-3 h-3 bg-cyan-400 rounded-full mr-3"></div>
+          <span class="flex items-center">Temporal Distribution</span>
+          <button type="button" onclick="enterFullscreen('timeline-chart')" class="text-gray-300 hover:text-white" aria-label="Expand timeline chart">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4"/>
+            </svg>
+          </button>
+        </h3>
+        <div id="timeline-chart" class="w-full h-64 bg-black/20 rounded-lg flex items-center justify-center">
+          <div class="text-gray-400">Loading timeline...</div>
+        </div>
+        <div class="mt-4 grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <span class="text-gray-400">Coverage Span:</span>
+            <span class="font-medium text-cyan-400 ml-2"><%= @stats[:temporal_coverage][:coverage_span] %></span>
+          </div>
+          <div>
+            <span class="text-gray-400">Temporal Nodes:</span>
+            <span class="font-medium text-cyan-400 ml-2"><%= @stats[:temporal_coverage][:temporal_nodes] %></span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Advanced Metrics -->
+      <div class="bg-black/40 backdrop-blur-sm rounded-xl p-6 border border-white/10">
+        <h3 class="text-xl font-bold mb-4 flex items-center">
+          <div class="w-3 h-3 bg-pink-400 rounded-full mr-3"></div>
+          Network Topology Metrics
+        </h3>
+        <div class="grid grid-cols-2 gap-6">
+          <div class="text-center p-4 bg-white/5 rounded-lg">
+            <div class="text-2xl font-bold text-pink-400"><%= @stats[:clustering_coefficient] %></div>
+            <div class="text-sm text-gray-400 mt-1">Clustering Coefficient</div>
+          </div>
+          
+          <div class="text-center p-4 bg-white/5 rounded-lg">
+            <div class="text-2xl font-bold text-indigo-400"><%= @stats[:path_lengths][:diameter] %></div>
+            <div class="text-sm text-gray-400 mt-1">Network Diameter</div>
+          </div>
+          
+          <div class="text-center p-4 bg-white/5 rounded-lg">
+            <div class="text-2xl font-bold text-blue-400"><%= @stats[:path_lengths][:avg_path_length] %></div>
+            <div class="text-sm text-gray-400 mt-1">Avg Path Length</div>
+          </div>
+          
+          <div class="text-center p-4 bg-white/5 rounded-lg">
+            <div class="text-2xl font-bold text-purple-400"><%= @stats[:bidirectional_ratio] %>%</div>
+            <div class="text-sm text-gray-400 mt-1">Bidirectional</div>
+          </div>
+        </div>
+        
+        <!-- Central Nodes by Degree -->
+        <div class="mt-6">
+          <h4 class="font-semibold text-gray-300 mb-3">High-Centrality Entities</h4>
+          <div class="space-y-2">
+            <% @stats[:centrality_measures].first(5).each do |node| %>
+              <div class="flex justify-between items-center p-2 bg-white/5 rounded">
+                <div class="truncate">
+                  <span class="text-sm font-medium"><%= node['name'] %></span>
+                  <span class="text-xs text-gray-400 ml-2">(<%= node['pool']&.titleize || 'Unknown' %>)</span>
+                </div>
+                <span class="text-pink-400 font-bold"><%= node['degree'] %></span>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Relationship Matrix Heatmap -->
+    <div class="bg-black/40 backdrop-blur-sm rounded-xl p-6 border border-white/10 mb-8">
+      <h3 class="text-xl font-bold mb-4 flex items-center justify-between">
+        <div class="w-3 h-3 bg-red-400 rounded-full mr-3"></div>
+        <span class="flex items-center">Relationship Matrix & Patterns</span>
+        <button type="button" onclick="enterFullscreen('relationship-heatmap')" class="text-gray-300 hover:text-white" aria-label="Expand relationship heatmap">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4"/>
+          </svg>
+        </button>
+      </h3>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div id="relationship-heatmap" class="h-[32rem] bg-black/20 rounded-lg flex items-center justify-center">
+          <div class="text-gray-400">Loading relationship heatmap...</div>
+        </div>
+        
+        <div class="space-y-3 max-h-[32rem] overflow-y-auto">
+          <h4 class="font-semibold text-gray-300">Top Relationship Patterns</h4>
+          <% @relationship_matrix.first(10).each do |rel| %>
+            <div class="p-3 bg-white/5 rounded-lg">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-medium text-sm">
+                  <%= rel[:source]&.titleize || 'Unknown' %> → <%= rel[:target]&.titleize || 'Unknown' %>
+                </span>
+                <span class="text-red-400 font-bold"><%= rel[:frequency] %></span>
+              </div>
+              <div class="text-xs text-gray-400">
+                via <span class="text-gray-300 font-medium"><%= rel[:type]&.humanize || 'Unknown' %></span>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Footer with Real-time Updates -->
+  <div class="border-t border-white/10 bg-black/20 backdrop-blur-sm">
+    <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+      <div class="text-center">
+        <p class="text-gray-400">
+          Dashboard auto-refreshed • Last update: <%= Time.current.strftime("%I:%M:%S %p") %> •
+          Powered by Enliterator Knowledge Graph Engine
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Entity Details Modal -->
+<div id="entity-modal" class="fixed inset-0 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4" style="background:#000;">
+  <div class="bg-gray-900 border border-gray-700 rounded-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+    <div id="entity-modal-content" class="p-6">
+      <!-- Content loaded dynamically -->
+    </div>
+  </div>
+</div>
+
+<!-- Visualization Scripts -->
+<script>
+// Network data from backend
+const networkData = <%= raw @network_data.to_json %>;
+const chordData = <%= raw @chord_data.to_json %>;
+const poolDistribution = <%= raw @pool_distribution.to_json %>;
+const timelineData = <%= raw @timeline_data.to_json %>;
+const relationshipMatrix = <%= raw @relationship_matrix.to_json %>;
+const relationshipHeatmapData = <%= raw @relationship_heatmap_data.to_json %>;
+
+// Display network insights
+function displayNetworkInsights(insights) {
+  const insightsContainer = document.getElementById('network-insights');
+  if (!insights || Object.keys(insights).length === 0) {
+    insightsContainer.innerHTML = '<div class="text-gray-400">No insights available</div>';
+    return;
+  }
+  
+  insightsContainer.innerHTML = `
+    <div class="text-blue-200 font-medium mb-2">${insights.primary_insight || 'Knowledge network analysis'}</div>
+    <div class="text-gray-300">${insights.interpretation || 'Network structure analysis'}</div>
+    <div class="flex justify-between mt-2 pt-2 border-t border-blue-500/20">
+      <span class="text-blue-300">${insights.total_entities || 0} entities</span>
+      <span class="text-blue-300">${insights.total_connections || 0} connections</span>
+      <span class="text-blue-300">${insights.arctic_concepts || 0} Arctic concepts</span>
+    </div>
+  `;
+}
+
+// Entity popup functionality
+function showEntityDetails(entityId) {
+  fetch(`/ekn/<%= @ekn.slug %>/entities/${entityId}`)
+    .then(response => response.json())
+    .then(data => {
+      const modal = document.getElementById('entity-modal');
+      const content = document.getElementById('entity-modal-content');
+      
+      content.innerHTML = `
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-bold text-white">${data.name}</h3>
+          <button onclick="closeEntityModal()" class="text-gray-400 hover:text-white">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        
+        <div class="mb-4">
+          <span class="inline-block px-3 py-1 bg-indigo-600 text-white rounded-full text-sm font-medium">
+            ${data.pool.charAt(0).toUpperCase() + data.pool.slice(1)}
+          </span>
+        </div>
+        
+        <p class="text-gray-300 mb-6">${data.description}</p>
+        
+        <div class="grid grid-cols-3 gap-4 mb-6">
+          <div class="text-center p-3 bg-gray-800 rounded-lg">
+            <div class="text-xl font-bold text-blue-400">${data.stats.total_connections}</div>
+            <div class="text-sm text-gray-400">Total</div>
+          </div>
+          <div class="text-center p-3 bg-gray-800 rounded-lg">
+            <div class="text-xl font-bold text-green-400">${data.stats.incoming_count}</div>
+            <div class="text-sm text-gray-400">Incoming</div>
+          </div>
+          <div class="text-center p-3 bg-gray-800 rounded-lg">
+            <div class="text-xl font-bold text-purple-400">${data.stats.outgoing_count}</div>
+            <div class="text-sm text-gray-400">Outgoing</div>
+          </div>
+        </div>
+        
+        <h4 class="font-semibold text-gray-300 mb-3">Connected Entities</h4>
+        <div class="space-y-2 max-h-48 overflow-y-auto">
+          ${data.connections.slice(0, 10).map(conn => `
+            <div class="flex items-center justify-between p-2 bg-gray-800 rounded">
+              <div>
+                <span class="text-white text-sm">${conn.name}</span>
+                <span class="text-gray-400 text-xs ml-2">(${conn.pool})</span>
+              </div>
+              <span class="text-xs px-2 py-1 bg-gray-700 rounded text-gray-300">
+                ${conn.relationship}
+              </span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      
+      modal.classList.remove('hidden');
+    })
+    .catch(error => {
+      console.error('Error loading entity details:', error);
+    });
+}
+
+// ===== Fullscreen support for charts =====
+const __fsRestore = {};
+
+function reinitializeChart(id) {
+  switch (id) {
+    case 'network-graph':
+      initializeNetworkGraph();
+      break;
+    case 'chord-diagram':
+      initializeChordDiagram();
+      break;
+    case 'sunburst-chart':
+      initializeSunburstChart();
+      break;
+    case 'timeline-chart':
+      initializeTimelineChart();
+      break;
+    case 'relationship-heatmap':
+      initializeRelationshipHeatmap();
+      break;
+  }
+}
+
+function ensureFullscreenOverlay() {
+  let overlay = document.getElementById('fullscreen-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'fullscreen-overlay';
+    overlay.className = 'fixed inset-0 z-50 hidden';
+    overlay.style.background = '#000';
+    overlay.innerHTML = `
+      <div class="absolute top-3 right-3 flex items-center gap-2">
+        <button onclick="exitFullscreen()" class="text-gray-300 hover:text-white p-2" aria-label="Close fullscreen">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div id="fullscreen-title" class="absolute top-3 left-3 text-white text-lg font-semibold px-3 py-2 bg-black/0"></div>
+      <div id="fullscreen-container" class="w-full h-full p-4">
+        <div id="fullscreen-slot" class="w-full h-full rounded-lg" style="background:#000;"></div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    // ESC to close
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') exitFullscreen();
+    });
+  }
+  return overlay;
+}
+
+function chartTitleById(id) {
+  switch (id) {
+    case 'network-graph':
+      return 'Knowledge Network Topology';
+    case 'chord-diagram':
+      return 'Inter-Pool Relationship Flows';
+    case 'sunburst-chart':
+      return 'Knowledge Distribution';
+    case 'timeline-chart':
+      return 'Temporal Distribution';
+    case 'relationship-heatmap':
+      return 'Relationship Matrix & Patterns';
+    default:
+      return 'Visualization';
+  }
+}
+
+function enterFullscreen(targetId) {
+  const el = document.getElementById(targetId);
+  if (!el) return;
+
+  const overlay = ensureFullscreenOverlay();
+  const slot = overlay.querySelector('#fullscreen-slot');
+
+  // Save restore info only once
+  if (!__fsRestore[targetId]) {
+    __fsRestore[targetId] = { parent: el.parentNode, next: el.nextSibling };
+  }
+
+  // Resize target to fit and force opaque background
+  el.style.width = '100%';
+  el.style.height = 'calc(100vh - 64px)';
+  el.style.background = '#000';
+
+  // Save and override classes to remove any translucent backgrounds/heights
+  if (!el.dataset.originalClass)
+    el.dataset.originalClass = el.className;
+  // Remove any Tailwind bg-* class and h-64/80/96 classes
+  const cleaned = el.className
+    .replace(/bg-[^\s]+/g, '')
+    .replace(/h-(64|80|96)/g, '')
+    .replace(/\s+/g, ' ') // collapse
+    .trim();
+  el.className = `${cleaned} bg-black h-full w-full rounded-lg flex items-center justify-center`;
+
+  // Move node into overlay slot
+  slot.innerHTML = '';
+  slot.appendChild(el);
+
+  // Show overlay
+  overlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  // Set title
+  const titleEl = document.getElementById('fullscreen-title');
+  if (titleEl) titleEl.textContent = chartTitleById(targetId);
+
+  // Re-render chart for new size
+  reinitializeChart(targetId);
+}
+
+function exitFullscreen() {
+  const overlay = document.getElementById('fullscreen-overlay');
+  if (!overlay || overlay.classList.contains('hidden')) return;
+  const slot = overlay.querySelector('#fullscreen-slot');
+  const child = slot.firstElementChild;
+  if (child && __fsRestore[child.id]) {
+    const { parent, next } = __fsRestore[child.id];
+    // Restore chart container to original position
+    if (next && next.parentNode === parent) {
+      parent.insertBefore(child, next);
+    } else {
+      parent.appendChild(child);
+    }
+    // Reset inline styles
+    child.style.width = '';
+    child.style.height = '';
+    // Restore original classes and background
+    if (child.dataset.originalClass) {
+      child.className = child.dataset.originalClass;
+      delete child.dataset.originalClass;
+    }
+    child.style.background = '';
+    // Re-render back in original size
+    reinitializeChart(child.id);
+  }
+  overlay.classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+function closeEntityModal() {
+  document.getElementById('entity-modal').classList.add('hidden');
+}
+
+// ProvenanceAndRights filter toggle
+function toggleProvenanceFilter(includeProvenance) {
+  console.log('Toggling provenance filter:', includeProvenance);
+  
+  // Show loading indicator
+  const banner = document.querySelector('.bg-gradient-to-r.from-indigo-600\\/30');
+  if (banner) {
+    const loadingDiv = document.createElement('div');
+    loadingDiv.id = 'filter-loading';
+    loadingDiv.className = 'text-center py-2';
+    loadingDiv.innerHTML = '<div class="text-sm text-gray-300">🔄 Updating dashboard with new filter settings...</div>';
+    banner.appendChild(loadingDiv);
+  }
+  
+  // Reload dashboard with new filter parameter
+  const currentUrl = new URL(window.location);
+  if (includeProvenance) {
+    currentUrl.searchParams.set('include_provenance', 'true');
+  } else {
+    currentUrl.searchParams.delete('include_provenance');
+  }
+  
+  // Reload the page with the new parameter
+  window.location.href = currentUrl.toString();
+}
+
+// Analytics Analysis toggle with localStorage persistence
+function toggleAnalysis() {
+  const content = document.getElementById('analysis-content');
+  const chevron = document.getElementById('analysis-chevron');
+  
+  if (content.style.display === 'none') {
+    content.style.display = 'block';
+    chevron.style.transform = 'rotate(0deg)';
+    localStorage.setItem('analysis-expanded', 'true');
+  } else {
+    content.style.display = 'none'; 
+    chevron.style.transform = 'rotate(-90deg)';
+    localStorage.setItem('analysis-expanded', 'false');
+  }
+}
+
+// Initialize Analytics Analysis collapse state from localStorage
+function initializeAnalysisState() {
+  const content = document.getElementById('analysis-content');
+  const chevron = document.getElementById('analysis-chevron');
+  const isExpanded = localStorage.getItem('analysis-expanded');
+  
+  // Default to expanded if no preference stored
+  if (isExpanded === null || isExpanded === 'true') {
+    content.style.display = 'block';
+    chevron.style.transform = 'rotate(0deg)';
+  } else {
+    content.style.display = 'none';
+    chevron.style.transform = 'rotate(-90deg)';
+  }
+}
+
+// Initialize visualizations on Turbo navigation and classic loads
+function runDashboardInit() {
+  try {
+    initializeAnalysisState();
+    initializeNetworkGraph();
+    initializeChordDiagram();
+    initializeSunburstChart();
+    initializeTimelineChart();
+    initializeRelationshipHeatmap();
+  } catch (e) {
+    console.error('Dashboard init failed:', e);
+  }
+}
+
+document.addEventListener('turbo:load', runDashboardInit);
+document.addEventListener('turbo:render', runDashboardInit);
+document.addEventListener('DOMContentLoaded', runDashboardInit);
+
+// Clear heavy DOM before Turbo caches the page so we always paint fresh graphs
+function cleanupDashboard() {
+  ['network-graph','chord-diagram','sunburst-chart','timeline-chart','relationship-heatmap'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '';
+  });
+}
+document.addEventListener('turbo:before-cache', cleanupDashboard);
+
+// Network Graph Implementation
+function initializeNetworkGraph() {
+  console.log('Initializing Arctic Research knowledge map with', networkData.nodes?.length, 'nodes');
+  
+  if (!networkData.nodes || networkData.nodes.length === 0) {
+    document.getElementById('network-graph').innerHTML = '<div class="text-gray-400">No Arctic research network data available</div>';
+    return;
+  }
+  
+  // Display insights about the network
+  if (networkData.insights) {
+    displayNetworkInsights(networkData.insights);
+  }
+  
+  // Analyze network composition for Arctic Research insights
+  const poolCounts = networkData.nodes.reduce((acc, node) => {
+    acc[node.pool] = (acc[node.pool] || 0) + 1;
+    return acc;
+  }, {});
+  
+  const arcticConcepts = networkData.nodes.filter(n => n.node_type === 'domain_concept').length;
+  const bridgeNodes = networkData.nodes.filter(n => n.inter_pool_connections > 0).length;
+  
+  console.log('Arctic Research Network:', {
+    pools: poolCounts,
+    arctic_concepts: arcticConcepts,
+    bridge_nodes: bridgeNodes,
+    links: networkData.links.length
+  });
+  
+  const container = document.getElementById('network-graph');
+  const width = container.clientWidth;
+  const height = container.clientHeight;
+  
+  // Clear existing content
+  container.innerHTML = '';
+  
+  const svg = d3.select('#network-graph')
+    .append('svg')
+    .attr('width', width)
+    .attr('height', height);
+  
+  // Create force simulation with boundary constraints
+  const margin = 30;
+  const simulation = d3.forceSimulation(networkData.nodes)
+    .force('link', d3.forceLink(networkData.links).id(d => d.id).distance(40).strength(0.3))
+    .force('charge', d3.forceManyBody().strength(-80))
+    .force('center', d3.forceCenter(width / 2, height / 2))
+    .force('collision', d3.forceCollide().radius(d => Math.sqrt(d.connections || 1) * 2 + 5))
+    // Add boundary forces to keep nodes in view
+    .force('x', d3.forceX(width / 2).strength(0.1))
+    .force('y', d3.forceY(height / 2).strength(0.1));
+  
+  // Create links
+  const link = svg.append('g')
+    .selectAll('line')
+    .data(networkData.links)
+    .enter().append('line')
+    .attr('stroke', '#999')
+    .attr('stroke-opacity', 0.4)
+    .attr('stroke-width', 1);
+  
+  // Create nodes with pool-based colors and adaptive sizing
+  const poolColors = {
+    'Idea': '#60A5FA',
+    'Practical': '#34D399', 
+    'Experience': '#FBBF24',
+    'Manifest': '#F87171',
+    'Character': '#A78BFA',
+    'Time': '#FB7185',
+    'Space': '#38BDF8',
+    'Lifecycle': '#4ADE80',
+    'Symbolic': '#C084FC',
+    'Relator': '#F59E0B',
+    'Lexicon': '#6B7280',
+    'ProvenanceAndRights': '#9CA3AF'
+  };
+  
+  // Adaptive node sizing based on connection count and filter state
+  const maxConnections = Math.max(...networkData.nodes.map(n => n.connections || 1));
+  const includeProvenance = <%= @include_provenance ? 'true' : 'false' %>;
+  
+  function getNodeRadius(connections) {
+    if (includeProvenance) {
+      // With provenance: wider range for high-connection system nodes
+      return Math.min(Math.max(4, Math.sqrt(connections) * 1.5), 15);
+    } else {
+      // Without provenance: more uniform sizing for conceptual nodes
+      return Math.min(Math.max(5, connections * 1.2 + 4), 12);
+    }
+  }
+  
+  // Create node groups for circles and labels
+  const nodeGroups = svg.append('g')
+    .selectAll('g')
+    .data(networkData.nodes)
+    .enter().append('g')
+    .attr('class', 'node-group')
+    .style('cursor', 'pointer')
+    .call(drag(simulation))
+    .on('click', function(event, d) {
+      showEntityDetails(d.id);
+    });
+  
+  // Add circles to node groups
+  const node = nodeGroups.append('circle')
+    .attr('r', d => getNodeRadius(d.connections || 1))
+    .attr('fill', d => {
+      // Special coloring for Arctic domain concepts
+      if (d.node_type === 'domain_concept') {
+        return '#EF4444';  // Red for Arctic concepts
+      }
+      return poolColors[d.pool] || '#6B7280';
+    })
+    .attr('stroke', d => {
+      // Special styling for inter-pool bridge nodes (high value)
+      const hasInterPool = d.inter_pool_connections > 0;
+      const isArcticConcept = d.node_type === 'domain_concept';
+      if (isArcticConcept) return '#FFD700';  // Gold for Arctic concepts
+      return hasInterPool ? '#FFD700' : '#fff';
+    })
+    .attr('stroke-width', d => {
+      const hasInterPool = d.inter_pool_connections > 0;
+      const isArcticConcept = d.node_type === 'domain_concept';
+      if (isArcticConcept) return 3;  // Thicker border for Arctic concepts
+      return hasInterPool ? 2.5 : 1.5;
+    })
+    .on('mouseover', function(event, d) {
+      const baseRadius = getNodeRadius(d.connections || 1);
+      d3.select(this).transition().duration(200).attr('r', baseRadius * 1.3);
+      
+      // Show enhanced tooltip for Arctic concepts
+      showNetworkTooltip(event, d);
+    })
+    .on('mouseout', function(event, d) {
+      d3.select(this).transition().duration(200).attr('r', getNodeRadius(d.connections || 1));
+      hideNetworkTooltip();
+    });
+    
+  // Add labels for important nodes (Arctic concepts and high-connection nodes)
+  const nodeLabels = nodeGroups.filter(d => {
+    return d.node_type === 'domain_concept' || d.connections >= 5;
+  }).append('text')
+    .attr('dx', 0)
+    .attr('dy', d => getNodeRadius(d.connections || 1) + 14)
+    .attr('text-anchor', 'middle')
+    .attr('font-size', '9px')
+    .attr('font-weight', 'bold')
+    .attr('fill', '#E5E7EB')
+    .attr('stroke', '#1F2937')
+    .attr('stroke-width', '0.5px')
+    .style('pointer-events', 'none')
+    .text(d => {
+      const label = d.label || 'Unknown';
+      // Truncate long labels
+      return label.length > 12 ? label.substring(0, 12) + '...' : label;
+    });
+  
+  // Update positions on simulation tick with boundary constraints
+  simulation.on('tick', () => {
+    // Constrain node positions within bounds and update both circles and labels
+    nodeGroups.attr('transform', d => {
+      const radius = getNodeRadius(d.connections || 1);
+      d.x = Math.max(margin + radius, Math.min(width - margin - radius, d.x));
+      d.y = Math.max(margin + radius, Math.min(height - margin - radius, d.y));
+      return `translate(${d.x},${d.y})`;
+    });
+    
+    // Update link positions
+    link
+      .attr('x1', d => d.source.x)
+      .attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x)
+      .attr('y2', d => d.target.y);
+  });
+  
+  // Add zoom/pan functionality
+  const zoom = d3.zoom()
+    .scaleExtent([0.5, 3])
+    .on('zoom', function(event) {
+      const { transform } = event;
+      svg.selectAll('g').attr('transform', transform);
+    });
+    
+  svg.call(zoom);
+}
+
+// Drag behavior for network nodes
+function drag(simulation) {
+  function dragstarted(event) {
+    if (!event.active) simulation.alphaTarget(0.3).restart();
+    event.subject.fx = event.subject.x;
+    event.subject.fy = event.subject.y;
+  }
+  
+  function dragged(event) {
+    event.subject.fx = event.x;
+    event.subject.fy = event.y;
+  }
+  
+  function dragended(event) {
+    if (!event.active) simulation.alphaTarget(0);
+    event.subject.fx = null;
+    event.subject.fy = null;
+  }
+  
+  return d3.drag()
+    .on("start", dragstarted)
+    .on("drag", dragged)
+    .on("end", dragended);
+}
+
+// Pool Distribution Donut Chart
+function initializeSunburstChart() {
+  console.log('Initializing sunburst chart with', poolDistribution.length, 'pools');
+  
+  if (!poolDistribution || poolDistribution.length === 0) {
+    document.getElementById('sunburst-chart').innerHTML = '<div class="text-gray-400">No pool data available</div>';
+    return;
+  }
+  
+  const container = document.getElementById('sunburst-chart');
+  const width = container.clientWidth;
+  const height = container.clientHeight;
+  const radius = Math.min(width, height) / 2 - 20;
+  
+  container.innerHTML = '';
+  
+  const svg = d3.select('#sunburst-chart')
+    .append('svg')
+    .attr('width', width)
+    .attr('height', height)
+    .append('g')
+    .attr('transform', `translate(${width/2},${height/2})`);
+  
+  // Color scale
+  const color = d3.scaleOrdinal()
+    .domain(poolDistribution.map(d => d.pool))
+    .range(['#60A5FA', '#34D399', '#FBBF24', '#F87171', '#A78BFA', '#FB7185', '#38BDF8', '#4ADE80', '#C084FC', '#F59E0B']);
+  
+  // Pie generator
+  const pie = d3.pie()
+    .value(d => d.count)
+    .sort(null);
+  
+  // Arc generator
+  const arc = d3.arc()
+    .innerRadius(radius * 0.4)
+    .outerRadius(radius);
+  
+  // Create arcs
+  const arcs = svg.selectAll('.arc')
+    .data(pie(poolDistribution))
+    .enter().append('g')
+    .attr('class', 'arc');
+  
+  arcs.append('path')
+    .attr('d', arc)
+    .attr('fill', d => color(d.data.pool))
+    .attr('stroke', '#1f2937')
+    .attr('stroke-width', 2)
+    .style('cursor', 'pointer')
+    .on('mouseover', function(event, d) {
+      d3.select(this).transition()
+        .duration(200)
+        .attr('transform', 'scale(1.05)');
+    })
+    .on('mouseout', function(event, d) {
+      d3.select(this).transition()
+        .duration(200)
+        .attr('transform', 'scale(1)');
+    });
+  
+  // Add labels
+  arcs.append('text')
+    .attr('transform', d => `translate(${arc.centroid(d)})`)
+    .attr('text-anchor', 'middle')
+    .attr('font-size', '12px')
+    .attr('fill', 'white')
+    .attr('font-weight', 'bold')
+    .text(d => d.data.count > 100 ? d.data.pool : '');
+}
+
+// Proper D3.js Chord Diagram Implementation
+function initializeChordDiagram() {
+  console.log('Initializing chord diagram with data:', chordData);
+  console.log('D3 chord available:', typeof d3.chord);
+  console.log('D3 ribbon available:', typeof d3.ribbon);
+  
+  // Check if d3.chord is available
+  if (typeof d3.chord === 'undefined') {
+    console.error('d3.chord is not available. Loading fallback visualization.');
+    document.getElementById('chord-diagram').innerHTML = '<div class="text-center text-gray-400 mt-20">Knowledge Flow Analysis<br><span class="text-sm">D3.js chord module loading... Please refresh if this persists</span></div>';
+    return;
+  }
+  
+  if (!chordData.pools || chordData.pools.length === 0) {
+    document.getElementById('chord-diagram').innerHTML = '<div class="text-center text-gray-400 mt-20">Knowledge Isolation Pattern<br><span class="text-sm">No inter-pool connections detected</span></div>';
+    return;
+  }
+  
+  const container = document.getElementById('chord-diagram');
+  const width = container.clientWidth;
+  const height = container.clientHeight;
+  const outerRadius = Math.min(width, height) * 0.4;
+  const innerRadius = outerRadius - 15;
+  
+  // Clear existing content
+  container.innerHTML = '';
+  
+  const svg = d3.select('#chord-diagram')
+    .append('svg')
+    .attr('width', width)
+    .attr('height', height)
+    .append('g')
+    .attr('transform', `translate(${width/2},${height/2})`);
+  
+  // Arctic-themed color palette for pools
+  const poolColors = {
+    'Idea': '#FF6B6B',        // Warm red - generative energy
+    'Practical': '#4ECDC4',   // Cool teal - practical application  
+    'Experience': '#45B7D1',  // Blue - deep knowledge
+    'Manifest': '#FEA47F',    // Orange - tangible results
+    'Character': '#A78BFA',   // Purple - human elements
+    'Time': '#FF9FF3',        // Pink - temporal context
+    'Space': '#54A0FF',       // Blue - spatial context
+    'Lifecycle': '#5F27CD',   // Deep purple - processes
+    'Symbolic': '#96CEB4',    // Mint - abstract concepts
+    'Relator': '#00D2D3',     // Cyan - connections
+    'Lexicon': '#FECA57'      // Golden yellow - knowledge base
+  };
+  
+  // Color scale for pools
+  const color = d3.scaleOrdinal()
+    .domain(chordData.pools)
+    .range(chordData.pools.map(pool => poolColors[pool] || '#6B7280'));
+  
+  // D3 chord layout - this is the proper way!
+  const chord = d3.chord()
+    .padAngle(0.02)  // Small padding between arcs
+    .sortSubgroups(d3.descending)
+    .sortChords(d3.descending);
+  
+  // Arc generator for outer rings
+  const arc = d3.arc()
+    .innerRadius(innerRadius)
+    .outerRadius(outerRadius);
+    
+  // Ribbon generator for inner connections  
+  const ribbon = d3.ribbon()
+    .radius(innerRadius - 2);
+  
+  // Generate chords from matrix
+  const chords = chord(chordData.matrix);
+  console.log('Generated chords:', chords);
+  
+  // Draw the arcs (outer pools)
+  const groups = svg.append('g')
+    .selectAll('g')
+    .data(chords.groups)
+    .enter().append('g');
+  
+  // Pool arcs
+  groups.append('path')
+    .attr('d', arc)
+    .attr('fill', d => color(chordData.pools[d.index]))
+    .attr('stroke', '#1f2937')
+    .attr('stroke-width', 2)
+    .style('cursor', 'pointer')
+    .on('mouseover', function(event, d) {
+      const poolName = chordData.pools[d.index];
+      const poolStats = chordData.metadata?.pool_stats?.[poolName];
+      
+      // Highlight ribbons connected to this pool
+      svg.selectAll('.chord-ribbon')
+        .style('opacity', chord => (chord.source.index === d.index || chord.target.index === d.index) ? 0.8 : 0.1);
+        
+      // Show tooltip
+      showChordTooltip(event, poolName, poolStats, d);
+      
+      // Slightly expand arc
+      d3.select(this).transition().duration(200)
+        .attr('d', d3.arc().innerRadius(innerRadius - 3).outerRadius(outerRadius + 3));
+    })
+    .on('mouseout', function(event, d) {
+      // Reset ribbon opacity
+      svg.selectAll('.chord-ribbon').style('opacity', 0.6);
+      hideChordTooltip();
+      
+      // Reset arc size
+      d3.select(this).transition().duration(200).attr('d', arc);
+    });
+  
+  // Pool labels with smart positioning
+  groups.append('text')
+    .each(d => { d.angle = (d.startAngle + d.endAngle) / 2; })
+    .attr('dy', '.35em')
+    .attr('transform', d => `
+      rotate(${(d.angle * 180 / Math.PI - 90)})
+      translate(${outerRadius + 15})
+      ${d.angle > Math.PI ? 'rotate(180)' : ''}
+    `)
+    .style('text-anchor', d => d.angle > Math.PI ? 'end' : 'start')
+    .attr('font-size', '12px')
+    .attr('font-weight', 'bold')
+    .attr('fill', 'white')
+    .text(d => chordData.pools[d.index]);
+  
+  // Draw ribbons (connections between pools)
+  if (chords.length > 0) {
+    svg.append('g')
+      .attr('fill-opacity', 0.6)
+      .selectAll('path')
+      .data(chords)
+      .enter().append('path')
+      .attr('class', 'chord-ribbon')
+      .attr('d', ribbon)
+      .attr('fill', d => color(chordData.pools[d.source.index]))
+      .attr('stroke', d => d3.rgb(color(chordData.pools[d.source.index])).darker(0.5))
+      .attr('stroke-width', '0.5px')
+      .style('cursor', 'pointer')
+      .on('mouseover', function(event, d) {
+        const sourcePool = chordData.pools[d.source.index];
+        const targetPool = chordData.pools[d.target.index];
+        const flowKey = `${sourcePool}→${targetPool}`;
+        const flowData = chordData.flows?.[flowKey];
+        
+        // Highlight this ribbon
+        d3.select(this).style('fill-opacity', 0.9);
+        
+        // Show flow tooltip
+        showFlowTooltip(event, sourcePool, targetPool, flowData, d);
+      })
+      .on('mouseout', function(event, d) {
+        d3.select(this).style('fill-opacity', 0.6);
+        hideChordTooltip();
+      });
+  }
+  
+  // Add central insight message
+  const totalFlows = chords.length;
+  const centerGroup = svg.append('g')
+    .attr('text-anchor', 'middle')
+    .attr('font-family', 'system-ui, sans-serif');
+  
+  if (totalFlows <= 1) {
+    centerGroup.append('text')
+      .attr('font-size', '14px')
+      .attr('font-weight', 'bold')
+      .attr('fill', '#9CA3AF')
+      .attr('y', -20)
+      .text('Knowledge Islands');
+      
+    centerGroup.append('text') 
+      .attr('font-size', '12px')
+      .attr('fill', '#6B7280')
+      .attr('y', 0)
+      .text('Architecture');
+      
+    centerGroup.append('text')
+      .attr('font-size', '10px')
+      .attr('fill', '#6B7280')
+      .attr('y', 15)
+      .text(`${chordData.pools.length} pools`);
+      
+    centerGroup.append('text')
+      .attr('font-size', '10px')
+      .attr('fill', '#6B7280')
+      .attr('y', 28)
+      .text(`${totalFlows} bridge${totalFlows !== 1 ? 's' : ''}`);
+  } else {
+    centerGroup.append('text')
+      .attr('font-size', '12px')
+      .attr('font-weight', 'bold')
+      .attr('fill', '#9CA3AF')
+      .attr('y', -10)
+      .text('Knowledge Flows');
+      
+    centerGroup.append('text')
+      .attr('font-size', '10px')
+      .attr('fill', '#6B7280')
+      .attr('y', 10)
+      .text(`${totalFlows} active connections`);
+  }
+}
+
+// Enhanced tooltip functions for chord diagram
+function showChordTooltip(event, poolName, poolStats, groupData) {
+  const tooltip = document.createElement('div');
+  tooltip.id = 'chord-tooltip';
+  tooltip.style.cssText = `
+    position: fixed;
+    background: rgba(0,0,0,0.9);
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 1000;
+    max-width: 300px;
+    border: 1px solid rgba(255,255,255,0.2);
+  `;
+  
+  const archetype = poolStats?.archetype || 'unknown';
+  const archetypeEmoji = archetype === 'generator' ? '🌱' : (archetype === 'integrator' ? '🧩' : '⚖️');
+  
+  tooltip.innerHTML = `
+    <div class="font-bold text-white">${archetypeEmoji} ${poolName}</div>
+    <div class="text-gray-300 mt-1">
+      Archetype: <span class="text-${archetype === 'generator' ? 'green' : (archetype === 'integrator' ? 'blue' : 'gray')}-400">${archetype}</span>
+    </div>
+    ${poolStats ? `
+      <div class="text-gray-300 text-xs mt-2">
+        Outgoing: ${poolStats.outgoing} | Incoming: ${poolStats.incoming}<br>
+        Balance: ${poolStats.balance > 0 ? '+' : ''}${poolStats.balance}
+      </div>
+    ` : ''}
+  `;
+  
+  tooltip.style.left = (event.pageX + 10) + 'px';
+  tooltip.style.top = (event.pageY - 10) + 'px';
+  document.body.appendChild(tooltip);
+}
+
+function showFlowTooltip(event, sourcePool, targetPool, flowData, chordData) {
+  const tooltip = document.createElement('div');
+  tooltip.id = 'chord-tooltip';
+  tooltip.style.cssText = `
+    position: fixed;
+    background: rgba(0,0,0,0.9);
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 1000;
+    max-width: 300px;
+    border: 1px solid rgba(255,255,255,0.2);
+  `;
+  
+  tooltip.innerHTML = `
+    <div class="font-bold text-white">🔄 Knowledge Flow</div>
+    <div class="text-blue-400 mt-1">${sourcePool} → ${targetPool}</div>
+    ${flowData ? `
+      <div class="text-gray-300 text-xs mt-2">
+        Strength: ${flowData.strength} connections<br>
+        Via: ${flowData.relationship_types.join(', ')}
+      </div>
+    ` : ''}
+  `;
+  
+  tooltip.style.left = (event.pageX + 10) + 'px';
+  tooltip.style.top = (event.pageY - 10) + 'px';
+  document.body.appendChild(tooltip);
+}
+
+function hideChordTooltip() {
+  const tooltip = document.getElementById('chord-tooltip');
+  if (tooltip) tooltip.remove();
+}
+
+// Generic info tooltip
+function showInfoTooltip(event, html, id = 'info-tooltip') {
+  const existing = document.getElementById(id);
+  if (existing) existing.remove();
+  const tooltip = document.createElement('div');
+  tooltip.id = id;
+  tooltip.style.cssText = `
+    position: fixed;
+    background: rgba(0,0,0,0.92);
+    color: white;
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1.35;
+    pointer-events: auto;
+    z-index: 1000;
+    max-width: 360px;
+    border: 1px solid rgba(255,255,255,0.15);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+  `;
+  tooltip.innerHTML = html;
+  const x = Math.min(event.pageX + 12, window.innerWidth - 380);
+  const y = Math.min(event.pageY + 12, window.innerHeight - 200);
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+  document.body.appendChild(tooltip);
+
+  function onDocClick(e) {
+    if (!tooltip.contains(e.target)) {
+      tooltip.remove();
+      document.removeEventListener('click', onDocClick);
+    }
+  }
+  // Dismiss on outside click
+  setTimeout(() => document.addEventListener('click', onDocClick), 0);
+}
+
+function showDensityInfo(event) {
+  const html = `
+    <div class="font-semibold text-indigo-300 mb-1">Network Density</div>
+    <div class="text-gray-200">Ratio of actual edges to the maximum possible edges in an undirected graph.</div>
+    <div class="text-gray-300 mt-2"><span class="text-gray-400">Formula:</span> density = E / [N(N−1)/2], shown as a percentage.</div>
+    <div class="text-gray-200 mt-2"><span class="text-gray-400">Interpretation:</span> 0.01% ≈ 1 in 10,000 node pairs are connected — a sparse graph.</div>
+    <div class="text-gray-200 mt-2"><span class="text-gray-400">Why low:</span> Knowledge graphs are naturally sparse; early stages emphasize rights edges. Stage 5.5 discovery and backfills increase density.</div>
+    <div class="text-gray-200 mt-2"><span class="text-gray-400">Typical range:</span> 0.1–1.0% for well-connected domains. Complement with average degree, giant component size, and clustering.</div>
+  `;
+  showInfoTooltip(event, html, 'density-tooltip');
+}
+
+// Knowledge Architecture Assembly Timeline
+function initializeTimelineChart() {
+  console.log('Initializing timeline with', timelineData.length, 'temporal events');
+  
+  if (!timelineData || timelineData.length === 0) {
+    document.getElementById('timeline-chart').innerHTML = '<div class="text-center text-gray-400 mt-16">No temporal data available<br><span class="text-sm">Knowledge processing timeline</span></div>';
+    return;
+  }
+  
+  const container = document.getElementById('timeline-chart');
+  const margin = { top: 20, right: 30, bottom: 60, left: 60 };
+  const width = container.clientWidth - margin.left - margin.right;
+  const height = container.clientHeight - margin.top - margin.bottom;
+  
+  // Clear existing content
+  container.innerHTML = '';
+  
+  const svg = d3.select('#timeline-chart')
+    .append('svg')
+    .attr('width', container.clientWidth)
+    .attr('height', container.clientHeight);
+    
+  const g = svg.append('g')
+    .attr('transform', `translate(${margin.left},${margin.top})`);
+  
+  // Parse timestamps and prepare data
+  const parseTime = d3.timeParse('%Y-%m-%d %H:%M:%S');
+  const processedData = timelineData.map(d => ({
+    timestamp: parseTime(d.timestamp.replace(' UTC', '')),
+    total_count: d.total_count,
+    pools: d.pools || {},
+    formattedTime: d.timestamp
+  })).filter(d => d.timestamp); // Filter out failed parses
+  
+  if (processedData.length === 0) {
+    container.innerHTML = '<div class="text-center text-gray-400 mt-16">Timeline parsing failed<br><span class="text-sm">Invalid timestamp format</span></div>';
+    return;
+  }
+  
+  // Arctic-themed colors for pools
+  const poolColors = {
+    'Idea': '#FF6B6B',
+    'Practical': '#4ECDC4', 
+    'Experience': '#45B7D1',
+    'Lexicon': '#FECA57'
+  };
+  
+  // Create scales
+  const xScale = d3.scaleTime()
+    .domain(d3.extent(processedData, d => d.timestamp))
+    .range([0, width]);
+    
+  const yScale = d3.scaleLinear()
+    .domain([0, d3.max(processedData, d => d.total_count)])
+    .range([height, 0]);
+  
+  // Create area generator for stacked areas
+  const pools = ['Lexicon', 'Idea', 'Practical', 'Experience'];
+  
+  // Prepare stacked data
+  const stackedData = processedData.map(d => {
+    let cumulative = 0;
+    const item = { timestamp: d.timestamp, total_count: d.total_count };
+    
+    pools.forEach(pool => {
+      const count = d.pools[pool] || 0;
+      item[pool + '_start'] = cumulative;
+      item[pool + '_end'] = cumulative + count;
+      cumulative += count;
+    });
+    
+    return item;
+  });
+  
+  // Create area generators for each pool
+  pools.forEach((pool, index) => {
+    const area = d3.area()
+      .x(d => xScale(d.timestamp))
+      .y0(d => yScale(d[pool + '_start']))
+      .y1(d => yScale(d[pool + '_end']))
+      .curve(d3.curveMonotoneX);
+    
+    g.append('path')
+      .datum(stackedData)
+      .attr('class', `area-${pool.toLowerCase()}`)
+      .attr('d', area)
+      .attr('fill', poolColors[pool] || '#6B7280')
+      .attr('fill-opacity', 0.7)
+      .attr('stroke', poolColors[pool] || '#6B7280')
+      .attr('stroke-width', 1)
+      .on('mouseover', function(event, d) {
+        showTimelineTooltip(event, pool);
+        d3.select(this).attr('fill-opacity', 0.9);
+      })
+      .on('mouseout', function(event, d) {
+        hideTimelineTooltip();
+        d3.select(this).attr('fill-opacity', 0.7);
+      });
+  });
+  
+  // Add processing rate line
+  const line = d3.line()
+    .x(d => xScale(d.timestamp))
+    .y(d => yScale(d.total_count))
+    .curve(d3.curveMonotoneX);
+  
+  g.append('path')
+    .datum(processedData)
+    .attr('class', 'processing-line')
+    .attr('d', line)
+    .attr('fill', 'none')
+    .attr('stroke', '#FFFFFF')
+    .attr('stroke-width', 2)
+    .attr('stroke-dasharray', '3,3')
+    .attr('opacity', 0.8);
+  
+  // Add processing burst indicators (peaks)
+  const peaks = processedData.filter(d => d.total_count > 200);
+  
+  g.selectAll('.peak-indicator')
+    .data(peaks)
+    .enter().append('circle')
+    .attr('class', 'peak-indicator')
+    .attr('cx', d => xScale(d.timestamp))
+    .attr('cy', d => yScale(d.total_count))
+    .attr('r', 4)
+    .attr('fill', '#FFFFFF')
+    .attr('stroke', '#FF6B6B')
+    .attr('stroke-width', 2)
+    .style('cursor', 'pointer')
+    .on('mouseover', function(event, d) {
+      showProcessingBurstTooltip(event, d);
+      d3.select(this).attr('r', 6);
+    })
+    .on('mouseout', function(event, d) {
+      hideTimelineTooltip();
+      d3.select(this).attr('r', 4);
+    });
+  
+  // Add axes
+  const xAxis = d3.axisBottom(xScale)
+    .tickFormat(d3.timeFormat('%m/%d %H:%M'))
+    .ticks(Math.min(6, processedData.length));
+  
+  const yAxis = d3.axisLeft(yScale)
+    .ticks(6)
+    .tickFormat(d => d + ' entities');
+  
+  g.append('g')
+    .attr('class', 'x-axis')
+    .attr('transform', `translate(0,${height})`)
+    .call(xAxis)
+    .selectAll('text')
+    .attr('fill', '#9CA3AF')
+    .attr('font-size', '11px')
+    .style('text-anchor', 'end')
+    .attr('dx', '-.8em')
+    .attr('dy', '.15em')
+    .attr('transform', 'rotate(-45)');
+  
+  g.append('g')
+    .attr('class', 'y-axis')
+    .call(yAxis)
+    .selectAll('text')
+    .attr('fill', '#9CA3AF')
+    .attr('font-size', '11px');
+  
+  // Style axes
+  g.selectAll('.x-axis path, .y-axis path, .x-axis line, .y-axis line')
+    .attr('stroke', '#4B5563')
+    .attr('stroke-width', 1);
+  
+  // Add legend
+  const legend = g.append('g')
+    .attr('class', 'legend')
+    .attr('transform', `translate(${width - 120}, 20)`);
+  
+  pools.forEach((pool, index) => {
+    const legendItem = legend.append('g')
+      .attr('transform', `translate(0, ${index * 20})`);
+      
+    legendItem.append('rect')
+      .attr('width', 12)
+      .attr('height', 12)
+      .attr('fill', poolColors[pool])
+      .attr('fill-opacity', 0.7);
+      
+    legendItem.append('text')
+      .attr('x', 16)
+      .attr('y', 9)
+      .attr('font-size', '11px')
+      .attr('fill', '#E5E7EB')
+      .text(pool);
+  });
+  
+  // Add title annotation
+  g.append('text')
+    .attr('x', width / 2)
+    .attr('y', -5)
+    .attr('text-anchor', 'middle')
+    .attr('font-size', '12px')
+    .attr('font-weight', 'bold')
+    .attr('fill', '#9CA3AF')
+    .text('Knowledge Architecture Assembly • 4,058 entities processed over 4 days');
+}
+
+// Timeline tooltip functions
+function showTimelineTooltip(event, poolName) {
+  const tooltip = document.createElement('div');
+  tooltip.id = 'timeline-tooltip';
+  tooltip.style.cssText = `
+    position: fixed;
+    background: rgba(0,0,0,0.9);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 1000;
+    border: 1px solid rgba(255,255,255,0.2);
+  `;
+  
+  tooltip.innerHTML = `<div class="font-bold">${poolName} Pool Processing</div>`;
+  
+  tooltip.style.left = (event.pageX + 10) + 'px';
+  tooltip.style.top = (event.pageY - 10) + 'px';
+  document.body.appendChild(tooltip);
+}
+
+function showProcessingBurstTooltip(event, data) {
+  const tooltip = document.createElement('div');
+  tooltip.id = 'timeline-tooltip';
+  tooltip.style.cssText = `
+    position: fixed;
+    background: rgba(0,0,0,0.9);
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 1000;
+    max-width: 250px;
+    border: 1px solid rgba(255,255,255,0.2);
+  `;
+  
+  const poolBreakdown = Object.entries(data.pools || {})
+    .map(([pool, count]) => `${pool}: ${count}`)
+    .join('<br>');
+  
+  tooltip.innerHTML = `
+    <div class="font-bold text-yellow-400">⚡ Processing Burst</div>
+    <div class="text-gray-300 mt-1">${data.formattedTime}</div>
+    <div class="text-white mt-2">${data.total_count} entities processed</div>
+    <div class="text-sm text-gray-400 mt-1">${poolBreakdown}</div>
+  `;
+  
+  tooltip.style.left = (event.pageX + 10) + 'px';
+  tooltip.style.top = (event.pageY - 10) + 'px';
+  document.body.appendChild(tooltip);
+}
+
+function hideTimelineTooltip() {
+  const tooltip = document.getElementById('timeline-tooltip');
+  if (tooltip) tooltip.remove();
+}
+
+// Network-specific tooltip functions
+function showNetworkTooltip(event, data) {
+  const tooltip = document.createElement('div');
+  tooltip.id = 'network-tooltip';
+  tooltip.style.cssText = `
+    position: fixed;
+    background: rgba(0,0,0,0.95);
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 1000;
+    max-width: 300px;
+    border: 1px solid rgba(255,255,255,0.2);
+  `;
+  
+  const nodeTypeLabel = data.node_type === 'domain_concept' ? '🎯 Arctic Domain Concept' : 
+                       data.node_type === 'high_impact' ? '⭐ High Impact Entity' :
+                       data.node_type === 'pool_representative' ? '📊 Pool Representative' :
+                       '🌉 Bridge Node';
+  
+  tooltip.innerHTML = `
+    <div class="font-bold text-white mb-1">${data.label || 'Unknown Entity'}</div>
+    <div class="text-sm text-blue-300 mb-2">${nodeTypeLabel}</div>
+    <div class="text-gray-300 text-sm mb-2">
+      <strong>Pool:</strong> ${data.pool || 'Unknown'}<br>
+      <strong>Connections:</strong> ${data.connections || 0}
+      ${data.inter_pool_connections > 0 ? `<br><strong>Cross-pool bridges:</strong> ${data.inter_pool_connections}` : ''}
+    </div>
+    <div class="text-xs text-gray-400">Click for detailed analysis</div>
+  `;
+  
+  tooltip.style.left = (event.pageX + 10) + 'px';
+  tooltip.style.top = (event.pageY - 10) + 'px';
+  document.body.appendChild(tooltip);
+}
+
+function hideNetworkTooltip() {
+  const tooltip = document.getElementById('network-tooltip');
+  if (tooltip) tooltip.remove();
+}
+
+// Comprehensive Relationship Matrix Heatmap
+function initializeRelationshipHeatmap() {
+  console.log('Initializing relationship matrix heatmap:', relationshipHeatmapData);
+  
+  if (!relationshipHeatmapData.pools || relationshipHeatmapData.pools.length === 0) {
+    document.getElementById('relationship-heatmap').innerHTML = '<div class="text-center text-gray-400 mt-20">No Relationship Patterns<br><span class="text-sm">Knowledge pools are currently isolated</span></div>';
+    return;
+  }
+  
+  const container = document.getElementById('relationship-heatmap');
+  const margin = { top: 60, right: 40, bottom: 60, left: 80 };
+  const width = container.clientWidth - margin.left - margin.right;
+  const height = container.clientHeight - margin.top - margin.bottom;
+  
+  // Clear existing content
+  container.innerHTML = '';
+  
+  const svg = d3.select('#relationship-heatmap')
+    .append('svg')
+    .attr('width', container.clientWidth)
+    .attr('height', container.clientHeight);
+    
+  const g = svg.append('g')
+    .attr('transform', `translate(${margin.left},${margin.top})`);
+  
+  const pools = relationshipHeatmapData.pools;
+  const matrixData = relationshipHeatmapData.matrix;
+  const metadata = relationshipHeatmapData.metadata;
+  const includeProvenance = <%= @include_provenance ? 'true' : 'false' %>;
+  
+  console.log('Matrix data:', { pools: pools.length, cells: matrixData.length, maxFreq: metadata.max_frequency });
+  
+  // Calculate cell dimensions
+  const cellSize = Math.min(width / pools.length, height / pools.length) * 0.8;
+  const cellPadding = cellSize * 0.1;
+  
+  // Arctic-themed color scale for frequency
+  const colorScale = d3.scaleSequential(d3.interpolateBlues)
+    .domain([0, metadata.max_frequency || 1]);
+  
+  // Special colors for relationship types
+  const typeColors = {
+    'INFLUENCES': '#FF6B6B',
+    'CONNECTS_TO': '#4ECDC4', 
+    'HAS_RIGHTS': '#9CA3AF',
+    'CONTAINS': '#FECA57',
+    'RELATES_TO': '#A78BFA'
+  };
+  
+  // Create scales for positioning
+  const xScale = d3.scaleBand()
+    .domain(pools)
+    .range([0, Math.min(width, pools.length * (cellSize + cellPadding))])
+    .padding(0.1);
+    
+  const yScale = d3.scaleBand()
+    .domain(pools)
+    .range([0, Math.min(height, pools.length * (cellSize + cellPadding))])
+    .padding(0.1);
+  
+  // Create matrix cells
+  const cells = g.selectAll('.matrix-cell')
+    .data(matrixData)
+    .enter().append('g')
+    .attr('class', 'matrix-cell')
+    .attr('transform', d => `translate(${xScale(d.target_pool)}, ${yScale(d.source_pool)})`);
+  
+  // Draw cell rectangles with adaptive coloring
+  cells.append('rect')
+    .attr('width', xScale.bandwidth())
+    .attr('height', yScale.bandwidth())
+    .attr('rx', 4)
+    .attr('fill', d => {
+      // Use relationship type color for system relationships, frequency color for conceptual
+      if (d.dominant_type === 'HAS_RIGHTS') {
+        return typeColors['HAS_RIGHTS'];
+      } else if (d.dominant_type in typeColors) {
+        return typeColors[d.dominant_type];
+      } else {
+        return colorScale(d.frequency);
+      }
+    })
+    .attr('stroke', d => d.is_bidirectional ? '#FFD700' : '#1f2937')
+    .attr('stroke-width', d => d.is_bidirectional ? 3 : 1)
+    .attr('opacity', 0.8)
+    .style('cursor', 'pointer')
+    .on('mouseover', function(event, d) {
+      showMatrixTooltip(event, d);
+      d3.select(this)
+        .transition().duration(200)
+        .attr('opacity', 1)
+        .attr('stroke-width', d => d.is_bidirectional ? 4 : 2);
+    })
+    .on('mouseout', function(event, d) {
+      hideMatrixTooltip();
+      d3.select(this)
+        .transition().duration(200)
+        .attr('opacity', 0.8)
+        .attr('stroke-width', d => d.is_bidirectional ? 3 : 1);
+    });
+  
+  // Add frequency text in cells (for significant relationships)
+  cells.append('text')
+    .attr('x', xScale.bandwidth() / 2)
+    .attr('y', yScale.bandwidth() / 2)
+    .attr('text-anchor', 'middle')
+    .attr('dominant-baseline', 'middle')
+    .attr('font-size', Math.max(10, xScale.bandwidth() * 0.2))
+    .attr('font-weight', 'bold')
+    .attr('fill', d => {
+      // White text for dark cells, dark text for light cells
+      const bgColor = d3.color(d.dominant_type === 'HAS_RIGHTS' ? typeColors['HAS_RIGHTS'] : colorScale(d.frequency));
+      return d3.hsl(bgColor).l > 0.5 ? '#000' : '#fff';
+    })
+    .text(d => d.frequency > (metadata.max_frequency * 0.1) ? d.frequency : '')
+    .style('pointer-events', 'none');
+  
+  // Add bidirectional indicators
+  cells.filter(d => d.is_bidirectional)
+    .append('circle')
+    .attr('cx', xScale.bandwidth() - 8)
+    .attr('cy', 8)
+    .attr('r', 4)
+    .attr('fill', '#FFD700')
+    .attr('stroke', '#000')
+    .attr('stroke-width', 1)
+    .style('pointer-events', 'none');
+  
+  // X-axis labels (target pools)
+  g.append('g')
+    .attr('class', 'x-axis')
+    .selectAll('text')
+    .data(pools)
+    .enter().append('text')
+    .attr('x', d => xScale(d) + xScale.bandwidth() / 2)
+    .attr('y', -10)
+    .attr('text-anchor', 'middle')
+    .attr('font-size', '12px')
+    .attr('font-weight', 'bold')
+    .attr('fill', '#E5E7EB')
+    .text(d => d);
+  
+  // Y-axis labels (source pools)
+  g.append('g')
+    .attr('class', 'y-axis')
+    .selectAll('text')
+    .data(pools)
+    .enter().append('text')
+    .attr('x', -10)
+    .attr('y', d => yScale(d) + yScale.bandwidth() / 2)
+    .attr('text-anchor', 'end')
+    .attr('dominant-baseline', 'middle')
+    .attr('font-size', '12px')
+    .attr('font-weight', 'bold')
+    .attr('fill', '#E5E7EB')
+    .text(d => d);
+  
+  // Add axis labels
+  g.append('text')
+    .attr('x', Math.min(width, pools.length * (cellSize + cellPadding)) / 2)
+    .attr('y', -35)
+    .attr('text-anchor', 'middle')
+    .attr('font-size', '14px')
+    .attr('font-weight', 'bold')
+    .attr('fill', '#9CA3AF')
+    .text('Target Pool');
+  
+  g.append('text')
+    .attr('x', -40)
+    .attr('y', Math.min(height, pools.length * (cellSize + cellPadding)) / 2)
+    .attr('text-anchor', 'middle')
+    .attr('dominant-baseline', 'middle')
+    .attr('font-size', '14px')
+    .attr('font-weight', 'bold')
+    .attr('fill', '#9CA3AF')
+    .attr('transform', `rotate(-90, -40, ${Math.min(height, pools.length * (cellSize + cellPadding)) / 2})`)
+    .text('Source Pool');
+  
+  // Add legend
+  const legend = g.append('g')
+    .attr('class', 'legend')
+    .attr('transform', `translate(${Math.min(width, pools.length * (cellSize + cellPadding)) + 20}, 20)`);
+  
+  // Frequency legend
+  legend.append('text')
+    .attr('x', 0)
+    .attr('y', 0)
+    .attr('font-size', '12px')
+    .attr('font-weight', 'bold')
+    .attr('fill', '#9CA3AF')
+    .text('Relationship Strength');
+  
+  const legendScale = d3.scaleLinear()
+    .domain([0, metadata.max_frequency || 1])
+    .range([0, 100]);
+    
+  const legendAxis = d3.axisRight(legendScale)
+    .ticks(4)
+    .tickFormat(d3.format('d'));
+  
+  const legendGradient = legend.append('defs')
+    .append('linearGradient')
+    .attr('id', 'legend-gradient')
+    .attr('x1', '0%').attr('y1', '0%')
+    .attr('x2', '0%').attr('y2', '100%');
+    
+  legendGradient.selectAll('stop')
+    .data(colorScale.range())
+    .enter().append('stop')
+    .attr('offset', (d, i) => `${i * 100 / (colorScale.range().length - 1)}%`)
+    .attr('stop-color', d => d);
+  
+  legend.append('rect')
+    .attr('x', 0)
+    .attr('y', 10)
+    .attr('width', 20)
+    .attr('height', 100)
+    .style('fill', 'url(#legend-gradient)');
+    
+  legend.append('g')
+    .attr('transform', 'translate(20, 10)')
+    .call(legendAxis)
+    .selectAll('text')
+    .attr('fill', '#9CA3AF')
+    .attr('font-size', '10px');
+  
+  // Special indicators legend
+  if (metadata.bidirectional_count > 0) {
+    legend.append('circle')
+      .attr('cx', 10)
+      .attr('cy', 140)
+      .attr('r', 4)
+      .attr('fill', '#FFD700')
+      .attr('stroke', '#000')
+      .attr('stroke-width', 1);
+      
+    legend.append('text')
+      .attr('x', 20)
+      .attr('y', 145)
+      .attr('font-size', '10px')
+      .attr('fill', '#9CA3AF')
+      .text('Bidirectional');
+  }
+  
+  // Add metadata summary
+  const summaryY = includeProvenance ? 170 : 160;
+  const densityPercent = (metadata.density * 100).toFixed(1);
+  
+  legend.append('text')
+    .attr('x', 0)
+    .attr('y', summaryY)
+    .attr('font-size', '10px')
+    .attr('font-weight', 'bold')
+    .attr('fill', '#6B7280')
+    .text('Matrix Statistics');
+    
+  legend.append('text')
+    .attr('x', 0)
+    .attr('y', summaryY + 15)
+    .attr('font-size', '9px')
+    .attr('fill', '#9CA3AF')
+    .text(`Density: ${densityPercent}%`);
+    
+  legend.append('text')
+    .attr('x', 0)
+    .attr('y', summaryY + 28)
+    .attr('font-size', '9px')
+    .attr('fill', '#9CA3AF')
+    .text(`Patterns: ${matrixData.length}`);
+    
+  if (!includeProvenance) {
+    legend.append('text')
+      .attr('x', 0)
+      .attr('y', summaryY + 41)
+      .attr('font-size', '8px')
+      .attr('fill', '#F59E0B')
+      .text('P&R filtered');
+  }
+}
+
+// Matrix tooltip functions
+function showMatrixTooltip(event, data) {
+  const tooltip = document.createElement('div');
+  tooltip.id = 'matrix-tooltip';
+  tooltip.style.cssText = `
+    position: fixed;
+    background: rgba(0,0,0,0.95);
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 1000;
+    max-width: 300px;
+    border: 1px solid rgba(255,255,255,0.2);
+  `;
+  
+  const directionIcon = data.is_bidirectional ? '↔️' : '→';
+  const relationshipsList = data.relationship_types.join('<br>• ');
+  
+  tooltip.innerHTML = `
+    <div class="font-bold text-white mb-2">
+      ${directionIcon} ${data.source_pool} → ${data.target_pool}
+    </div>
+    <div class="text-gray-300 text-sm mb-2">
+      <strong>Frequency:</strong> ${data.frequency} relationships
+    </div>
+    <div class="text-gray-300 text-xs">
+      <strong>Types:</strong><br>• ${relationshipsList}
+    </div>
+    ${data.is_bidirectional ? '<div class="text-yellow-400 text-xs mt-2">⭐ Bidirectional Flow</div>' : ''}
+  `;
+  
+  tooltip.style.left = (event.pageX + 10) + 'px';
+  tooltip.style.top = (event.pageY - 10) + 'px';
+  document.body.appendChild(tooltip);
+}
+
+function hideMatrixTooltip() {
+  const tooltip = document.getElementById('matrix-tooltip');
+  if (tooltip) tooltip.remove();
+}
+
+// Auto-refresh functionality (every 5 minutes)
+setInterval(() => {
+  console.log('Dashboard auto-refresh triggered');
+  // window.location.reload();
+}, 300000);
+</script>
+
+<style>
+/* Custom dashboard styles */
+.dashboard-metric {
+  background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.visualization-container {
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* Smooth animations */
+* {
+  transition: all 0.2s ease;
+}
+
+/* Network graph styles */
+#network-graph svg {
+  width: 100%;
+  height: 100%;
+}
+
+.node-circle {
+  cursor: pointer;
+  transition: r 0.2s ease;
+}
+
+.node-circle:hover {
+  r: 8;
+}
+
+.link-line {
+  stroke: rgba(255,255,255,0.2);
+  stroke-width: 1;
+}
+</style>
