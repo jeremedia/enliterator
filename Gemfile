@@ -41,7 +41,7 @@ gem "thruster", require: false
 # gem "image_processing", "~> 1.2"
 
 # OpenAI integration - official OpenAI Ruby gem
-gem "openai", "~> 0.16.0"
+gem "openai", "~> 0.17.1"
 
 # Neo4j for knowledge graph
 gem "neo4j-ruby-driver"

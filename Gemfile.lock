@@ -322,7 +322,7 @@ GEM
     oj (3.16.11)
       bigdecimal (>= 3.0)
       ostruct (>= 0.2)
-    openai (0.16.0)
+    openai (0.17.1)
       connection_pool
     orm_adapter (0.5.0)
     ostruct (0.6.3)
@@ -596,7 +596,7 @@ DEPENDENCIES
   neighbor
   neo4j-ruby-driver
   oj
-  openai (~> 0.16.0)
+  openai (~> 0.17.1)
   pdf-reader
   pg (~> 1.1)
   pg_search
