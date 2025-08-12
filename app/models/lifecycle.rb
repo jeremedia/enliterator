@@ -12,6 +12,10 @@ class Lifecycle < ApplicationRecord
   validates :repr_text, presence: true
   validates :valid_time_start, presence: true
   
+  # Callbacks for Neo4j synchronization (maps to Evolutionary pool)
+  after_commit :sync_to_graph, on: [:create, :update]
+  after_commit :remove_from_graph, on: :destroy
+  
   # Enums for stage types
   enum :stage_type, {
     phase: 'phase',              # Sequential phases (Phase 1, Phase 2)
@@ -42,5 +46,21 @@ class Lifecycle < ApplicationRecord
   
   def stage_summary
     "#{label} (#{stage_type}#{sequence_order ? " ##{sequence_order}" : ""})"
+  end
+  
+  private
+  
+  def sync_to_graph
+    return unless defined?(Graph::LifecycleWriter)
+    Graph::LifecycleWriter.new(self).sync
+  rescue StandardError => e
+    Rails.logger.error "Failed to sync Lifecycle #{id} to graph: #{e.message}"
+  end
+  
+  def remove_from_graph
+    return unless defined?(Graph::LifecycleRemover)
+    Graph::LifecycleRemover.new(self).remove
+  rescue StandardError => e
+    Rails.logger.error "Failed to remove Lifecycle #{id} from graph: #{e.message}"
   end
 end

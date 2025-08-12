@@ -35,14 +35,14 @@ module Mcp
       
       if search_result[:items]&.any?
         search_result[:items].each do |item|
-          # Build URL for this entity
-          entity_url = build_entity_url(ekn, item[:entity_id])
+          # Build URL for this entity (different for PostgreSQL vs Neo4j)
+          entity_url = build_entity_url(ekn, item[:entity_id], item[:source])
           
           # Create text snippet
           text_snippet = build_text_snippet(item)
           
           results << {
-            id: item[:entity_id].to_s,
+            id: "#{item[:source]}_#{item[:entity_id]}",  # Prefix with source for uniqueness
             title: item[:entity_name] || "Entity #{item[:entity_id]}",
             text: text_snippet,
             url: entity_url
@@ -67,10 +67,16 @@ module Mcp
     private
     
     # Build a URL for the entity
-    def self.build_entity_url(ekn, entity_id)
+    def self.build_entity_url(ekn, entity_id, source = 'neo4j')
       # In production, use your actual domain
       base_url = ENV['APP_BASE_URL'] || 'https://e.dev.domt.app'
-      "#{base_url}/ekns/#{ekn.slug}/entities/#{entity_id}"
+      
+      case source
+      when 'postgresql'
+        "#{base_url}/ekns/#{ekn.slug}/characters/#{entity_id}"
+      else
+        "#{base_url}/ekns/#{ekn.slug}/entities/#{entity_id}"
+      end
     end
     
     # Build text snippet from item data
@@ -79,7 +85,9 @@ module Mcp
       
       # Add entity type if available
       if item[:entity_type]
-        parts << "Type: #{item[:entity_type]}"
+        type_display = item[:entity_type]
+        type_display += " (#{item[:character_role_type]})" if item[:character_role_type]
+        parts << "Type: #{type_display}"
       end
       
       # Add content or repr_text
@@ -96,7 +104,7 @@ module Mcp
       end
       
       # Add connection count if available
-      if item[:connections]
+      if item[:connections] && item[:connections] > 0
         parts << "#{item[:connections]} connections"
       end
       

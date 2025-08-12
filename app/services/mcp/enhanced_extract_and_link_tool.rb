@@ -10,8 +10,13 @@
 #
 module Mcp
   class EnhancedExtractAndLinkTool
-    # Ten Pool Canon categories
-    POOLS = %w[Idea Practical Experience Manifest Character Time Space Lifecycle Symbolic Relator].freeze
+    # Ten Pool Canon categories (ALL 15 pools: 10 core + 5 optional domain pools)
+    # Using correct canonical names from specification
+    POOLS = %w[
+      Idea Manifest Experience Relational Evolutionary Practical Emanation
+      ProvenanceAndRights LexiconAndOntology IntentAndTask
+      ActorAndRole Spatial EvidenceAndObservation RiskAndGovernance MethodAndModel
+    ].freeze
     
     # Expected pool distribution for validation (rough guidelines)
     EXPECTED_POOL_USAGE = {
@@ -232,42 +237,74 @@ module Mcp
         - Look for: Physical objects, documents, artifacts, concrete implementations
         - NOT institutions acting as agents (see Character)
 
-        ### 5. CHARACTER 👤
-        **People, roles, agents, personas - entities that ACT**
-        - Examples: "Dr. Sarah Johnson", "Arctic Researchers", "Community Elders", "Policy Makers"  
-        - Look for: Individual names, human roles, groups acting as agents, personas
-        - CRITICAL: Institutions acting as agents ("NASA decided", "University concluded")
-        - NOT just mentioned institutions (see Manifest)
+        ### 5. RELATIONAL 🔗
+        **Connections, lineages, and networks**
+        - Examples: "Climate-Community Relationship", "Research Partnership", "Academic Collaboration"
+        - Look for: Explicit relationships, dependencies, correlations, partnerships, citations, membership edges
+        - Focus on the connection itself, not the connected entities
 
-        ### 6. TIME ⏰
-        **Temporal entities, periods, chronologies, schedules**
-        - Examples: "Arctic Summer Season", "Pre-Industrial Period", "2015-2020", "Daily Monitoring Schedule"
-        - Look for: Time periods, dates, seasons, temporal patterns, schedules
-        - Include both specific times and temporal concepts
-
-        ### 7. SPACE 🗺️
-        **Locations, places, geographic entities, spatial relationships**
-        - Examples: "Beaufort Sea", "North Slope Borough", "Arctic Research Station Location"
-        - Look for: Geographic locations, spatial relationships, areas, regions
-        - Include both physical and conceptual spaces
-
-        ### 8. LIFECYCLE 🔄
-        **Stages, phases, processes, transitions, developmental sequences**
-        - Examples: "Ice Formation Cycle", "Research Project Phases", "Community Development Stages"
-        - Look for: Process stages, developmental phases, cyclical patterns
+        ### 6. EVOLUTIONARY 🔄
+        **Change over time, versions, status changes**
+        - Examples: "Ice Formation Cycle Evolution", "Research Project Phases", "Policy Development Timeline"
+        - Look for: Process stages, developmental phases, cyclical patterns, version changes
         - Focused on progression and change over time
 
-        ### 9. SYMBOLIC 🔮
-        **Symbols, meanings, metaphors, cultural significance, representations**
-        - Examples: "Polar Bear as Climate Symbol", "Ice as Cultural Memory", "Sacred Hunting Grounds"
-        - Look for: Metaphorical meanings, cultural symbols, abstract representations
-        - Things that represent deeper meanings beyond literal interpretation
+        ### 7. EMANATION 🌊
+        **Ripple effects and downstream influence**
+        - Examples: "Climate Policy Adoption", "Research Method Dissemination", "Cultural Practice Spread"
+        - Look for: Downstream effects, influence propagation, adoptions, remixes, movements
+        - Things that represent influence extending beyond the original context
 
-        ### 10. RELATOR 🔗
-        **Relationships, connections, dependencies, associations between entities**
-        - Examples: "Climate-Community Relationship", "Research Partnership", "Cause-Effect Connection"
-        - Look for: Explicit relationships, dependencies, correlations, partnerships
-        - Focus on the connection itself, not the connected entities
+        ### 8. PROVENANCE_AND_RIGHTS 📋
+        **Source, attribution, consent, license, lineage**
+        - Examples: "Data Collection Protocol", "Research Ethics Approval", "Copyright Statement"
+        - Look for: Citations, collection methods, rights statements, data-use agreements, licenses
+        - Attribution and legal/ethical framework information
+
+        ### 9. LEXICON_AND_ONTOLOGY 📚
+        **Definitions, synonyms, types, and schema versions**
+        - Examples: "Arctic Sea Ice Definition", "Temperature Scale System", "Classification Schema"
+        - Look for: Term definitions, controlled vocabularies, unit systems, type hierarchies
+        - Conceptual frameworks and terminology systems
+
+        ### 10. INTENT_AND_TASK 🎯
+        **What users ask and how tasks are fulfilled**
+        - Examples: "Research Question", "Policy Objective", "Analysis Goal"
+        - Look for: Questions, prompts, goals, preferred presentations, success criteria
+        - User intentions and task specifications
+
+        ## OPTIONAL DOMAIN POOLS (11-15)
+        Add these when the content domain contains these entity types:
+
+        ### 11. ACTOR_AND_ROLE 👤
+        **People and organizations with roles and permissions**
+        - Examples: "Dr. Sarah Johnson", "Arctic Research Consortium", "Community Elder"
+        - Look for: Individual names, human roles, organizations acting as agents, authorship
+        - CRITICAL: Institutions acting as agents ("NASA decided", "University concluded")
+
+        ### 12. SPATIAL 🗺️
+        **Places, regions, geometries, spatial hierarchies**
+        - Examples: "Beaufort Sea", "North Slope Borough", "Arctic Research Station Coordinates"
+        - Look for: Geographic locations, spatial relationships, areas, regions, coordinates
+        - Include both physical locations and spatial concepts
+
+        ### 13. EVIDENCE_AND_OBSERVATION 🔬
+        **Primary data such as measurements, logs, transcripts**
+        - Examples: "Temperature Reading 2019-07-15", "Interview Transcript", "Sensor Data Log"
+        - Look for: Raw data, measurements, sensor readings, primary observations, transcripts
+        - Distinct from Experience (which is subjective/lived)
+
+        ### 14. RISK_AND_GOVERNANCE ⚖️
+        **Hazards, mitigations, approvals, compliance states**
+        - Examples: "Environmental Impact Assessment", "Safety Protocol", "Regulatory Compliance"
+        - Look for: Safety requirements, policy constraints, risk assessments, governance rules
+        - Legal and safety framework elements
+
+        ### 15. METHOD_AND_MODEL 🔬
+        **Methods, methodologies, evaluation patterns**
+        - Examples: "Statistical Analysis Method", "Climate Model", "Data Collection Technique"
+        - Look for: Research methods, analytical approaches, modeling techniques, evaluation frameworks
+        - Systematic approaches to investigation or analysis
 
         ## CRITICAL CLASSIFICATION RULES:
 
@@ -306,26 +343,27 @@ module Mcp
 
         ## COMMON MISCLASSIFICATION FIXES:
 
-        ### 1. Institutions as Characters vs Manifests:
-        - CHARACTER: When institution acts as agent ("University decided", "Agency implemented")  
+        ### 1. Institutions as ActorAndRole vs Manifests:
+        - ACTOR_AND_ROLE: When institution acts as agent ("University decided", "Agency implemented")  
         - MANIFEST: When referring to physical/documentary aspects ("University building", "Agency report")
 
         ### 2. Missing Human Elements:
         - Look harder for individual people, roles, research teams
-        - "Principal Investigator", "Research Team", "Community Members" are Characters
+        - "Principal Investigator", "Research Team", "Community Members" are ActorAndRole
         - Authors, researchers, policy makers often mentioned but missed
 
-        ### 3. Temporal and Spatial Entities:
-        - TIME: "during winter", "2019 season", "over the past decade"
-        - SPACE: "northern Alaska", "research site", "coastal regions"
+        ### 3. Spatial and Method Entities:
+        - SPATIAL: "northern Alaska", "research site", "coastal regions", coordinates, geographic references
+        - METHOD_AND_MODEL: "statistical analysis", "modeling approach", "data collection method"
 
-        ### 4. Relationship Extraction:
-        - RELATOR: "correlation between", "impact of", "relationship with"
-        - Often appear as connecting phrases between entities
+        ### 4. Evidence vs Experience Distinction:
+        - EVIDENCE_AND_OBSERVATION: Raw data, measurements, objective observations
+        - EXPERIENCE: Subjective accounts, lived experiences, personal narratives
 
-        ### 5. Symbolic and Lifecycle Missing:
-        - SYMBOLIC: Cultural meanings, metaphorical uses, symbolic representations
-        - LIFECYCLE: Stages, phases, developmental processes
+        ### 5. Missing Systematic Pools:
+        - PROVENANCE_AND_RIGHTS: Attribution, licensing, data sources, permissions
+        - LEXICON_AND_ONTOLOGY: Definitions, terminology, classification systems
+        - INTENT_AND_TASK: Research questions, goals, objectives
 
         Review each entity and refine classification based on sentence context and grammatical role.
       PROMPT
@@ -357,8 +395,8 @@ module Mcp
     
     # Determine if an entity needs review
     def self.needs_review?(entity, distribution)
-      # Review Manifests that might be Characters
-      return true if entity[:pool] == 'Manifest' && might_be_character?(entity[:name])
+      # Review Manifests that might be ActorAndRole
+      return true if entity[:pool] == 'Manifest' && might_be_actor?(entity[:name])
       
       # Review high-confidence entities in over-represented pools  
       over_represented = distribution.select { |_, count| count > distribution.values.sum * 0.4 }.keys
@@ -367,10 +405,10 @@ module Mcp
       false
     end
     
-    # Check if a manifest might actually be a character
-    def self.might_be_character?(name)
-      character_indicators = %w[university college institute organization committee department team group researchers authors scientists community members staff personnel]
-      character_indicators.any? { |indicator| name.downcase.include?(indicator) }
+    # Check if a manifest might actually be an actor/role
+    def self.might_be_actor?(name)
+      actor_indicators = %w[university college institute organization committee department team group researchers authors scientists community members staff personnel]
+      actor_indicators.any? { |indicator| name.downcase.include?(indicator) }
     end
     
     # Extract entities for missing pools with targeted prompts
@@ -415,18 +453,28 @@ module Mcp
     def self.build_targeted_extraction_prompt(text, missing_pools)
       pool_instructions = missing_pools.map do |pool|
         case pool
-        when 'Character'
-          "- CHARACTER: Look for individual names, research teams, organizations ACTING as agents, roles like 'researchers', 'community members'"
-        when 'Time'  
-          "- TIME: Look for temporal references like seasons, years, periods, 'during', 'since', 'over time'"
-        when 'Space'
-          "- SPACE: Look for geographic locations, regions, sites, 'in Alaska', 'northern regions', research locations"
-        when 'Lifecycle'
-          "- LIFECYCLE: Look for stages, phases, development processes, cycles, transitions"
-        when 'Symbolic'
-          "- SYMBOLIC: Look for metaphorical meanings, cultural symbols, representations"
-        when 'Relator'
-          "- RELATOR: Look for relationships, correlations, connections, 'relationship between', 'impact of'"
+        when 'ActorAndRole'
+          "- ACTOR_AND_ROLE: Look for individual names, research teams, organizations ACTING as agents, roles like 'researchers', 'community members'"
+        when 'Spatial'  
+          "- SPATIAL: Look for geographic locations, regions, sites, 'in Alaska', 'northern regions', research locations, coordinates"
+        when 'Evolutionary'
+          "- EVOLUTIONARY: Look for stages, phases, development processes, cycles, transitions, version changes"
+        when 'Emanation'
+          "- EMANATION: Look for downstream effects, influence, adoptions, policy impacts, cultural spread"
+        when 'Relational'
+          "- RELATIONAL: Look for relationships, correlations, connections, 'relationship between', 'impact of'"
+        when 'ProvenanceAndRights'
+          "- PROVENANCE_AND_RIGHTS: Look for data sources, attributions, licenses, permissions, collection methods"
+        when 'LexiconAndOntology'
+          "- LEXICON_AND_ONTOLOGY: Look for definitions, terminology, classification systems, vocabularies"
+        when 'IntentAndTask'
+          "- INTENT_AND_TASK: Look for research questions, goals, objectives, user requirements"
+        when 'EvidenceAndObservation'
+          "- EVIDENCE_AND_OBSERVATION: Look for raw data, measurements, sensor readings, objective observations"
+        when 'RiskAndGovernance'
+          "- RISK_AND_GOVERNANCE: Look for safety requirements, regulations, compliance, risk assessments"
+        when 'MethodAndModel'
+          "- METHOD_AND_MODEL: Look for research methods, analytical techniques, modeling approaches, evaluation frameworks"
         else
           "- #{pool}: Extract entities for this pool type"
         end
@@ -517,11 +565,16 @@ module Mcp
     def self.assess_quality_issues(entities, pool_counts)
       issues = []
       
-      issues << "Only #{pool_counts.keys.count}/10 pools used" if pool_counts.keys.count < 6
-      issues << "No Characters found - check for people/agents" if pool_counts['Character'].to_i == 0
-      issues << "No Time entities found" if pool_counts['Time'].to_i == 0  
-      issues << "No Space entities found" if pool_counts['Space'].to_i == 0
-      issues << "Manifest pool over-represented (#{pool_counts['Manifest']} entities)" if pool_counts['Manifest'].to_i > entities.count * 0.6
+      issues << "Only #{pool_counts.keys.count}/15 pools used" if pool_counts.keys.count < 6
+      issues << "No ActorAndRole found - check for people/agents" if pool_counts['ActorAndRole'].to_i == 0
+      issues << "No Spatial entities found" if pool_counts['Spatial'].to_i == 0
+      issues << "No MethodAndModel entities found" if pool_counts['MethodAndModel'].to_i == 0  
+      issues << "Manifest pool over-represented (#{pool_counts['Manifest']} entities)" if pool_counts['Manifest'].to_i > entities.count * 0.5
+      
+      # Check for missing core pools
+      core_pools = %w[Idea Manifest Experience Relational Evolutionary Practical Emanation ProvenanceAndRights LexiconAndOntology IntentAndTask]
+      missing_core = core_pools - pool_counts.keys
+      issues << "Missing core pools: #{missing_core.join(', ')}" if missing_core.any?
       
       avg_confidence = entities.map { |e| e[:confidence] }.sum / entities.count.to_f
       issues << "Low average confidence (#{avg_confidence.round(2)})" if avg_confidence < 0.6
@@ -533,8 +586,8 @@ module Mcp
     def self.calculate_quality_score(entities, pool_counts)
       return 0.0 if entities.empty?
       
-      # Pool diversity score (0-0.4)
-      pool_diversity = (pool_counts.keys.count / 10.0) * 0.4
+      # Pool diversity score (0-0.4) - now out of 15 total pools
+      pool_diversity = (pool_counts.keys.count / 15.0) * 0.4
       
       # Confidence score (0-0.3)
       avg_confidence = entities.map { |e| e[:confidence] }.sum / entities.count.to_f

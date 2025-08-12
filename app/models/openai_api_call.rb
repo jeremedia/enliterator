@@ -294,16 +294,16 @@ class OpenaiApiCall < ApiCall
           self.reasoning_tokens = usage.reasoning_tokens
         end
       elsif usage.is_a?(Hash)
-        # Hash-like access (old structure)
-        self.prompt_tokens = usage['prompt_tokens']
-        self.completion_tokens = usage['completion_tokens']
+        # Hash-like access (handle both old and new field names)
+        self.prompt_tokens = usage['prompt_tokens'] || usage['input_tokens']
+        self.completion_tokens = usage['completion_tokens'] || usage['output_tokens']  
         self.total_tokens = usage['total_tokens']
         self.reasoning_tokens = usage['reasoning_tokens']
       end
     elsif result.is_a?(Hash) && result['usage']
       usage = result['usage']
-      self.prompt_tokens = usage['prompt_tokens']
-      self.completion_tokens = usage['completion_tokens']
+      self.prompt_tokens = usage['prompt_tokens'] || usage['input_tokens']
+      self.completion_tokens = usage['completion_tokens'] || usage['output_tokens']
       self.total_tokens = usage['total_tokens']
       self.reasoning_tokens = usage['reasoning_tokens']
     end

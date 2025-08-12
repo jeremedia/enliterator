@@ -12,6 +12,10 @@ class Character < ApplicationRecord
   validates :repr_text, presence: true
   validates :valid_time_start, presence: true
   
+  # Callbacks for Neo4j synchronization
+  after_commit :sync_to_graph, on: [:create, :update]
+  after_commit :remove_from_graph, on: :destroy
+  
   # Enums for role types
   enum :role_type, {
     individual: 'individual',           # Individual person (Dr. Sarah Johnson)
@@ -38,5 +42,21 @@ class Character < ApplicationRecord
   # Class methods
   def self.search_by_name(query)
     where('label ILIKE ? OR title ILIKE ?', "%#{query}%", "%#{query}%")
+  end
+  
+  private
+  
+  def sync_to_graph
+    return unless defined?(Graph::ActorWriter)
+    Graph::ActorWriter.new(self).sync
+  rescue StandardError => e
+    Rails.logger.error "Failed to sync Character #{id} to graph: #{e.message}"
+  end
+  
+  def remove_from_graph
+    return unless defined?(Graph::ActorRemover)
+    Graph::ActorRemover.new(self).remove
+  rescue StandardError => e
+    Rails.logger.error "Failed to remove Character #{id} from graph: #{e.message}"
   end
 end

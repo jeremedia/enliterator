@@ -964,6 +964,223 @@ namespace :enliterator do
       
       puts "✅ Arctic training questions added successfully"
     end
+    desc "Backup development database (PostgreSQL + Neo4j)"
+    task backup: :environment do
+      puts "🔒 BACKING UP ENLITERATOR DATABASE"
+      puts "=" * 60
+      
+      timestamp = Time.current.strftime("%Y%m%d_%H%M%S")
+      backup_dir = Rails.root.join("backups")
+      FileUtils.mkdir_p(backup_dir)
+      
+      # PostgreSQL backup
+      postgres_backup_file = backup_dir.join("enliterator_dev_#{timestamp}.sql")
+      puts "📊 Backing up PostgreSQL database..."
+      
+      # Use pg_dump with connection parameters from database.yml
+      db_config = Rails.configuration.database_configuration[Rails.env]["primary"] || Rails.configuration.database_configuration[Rails.env]
+      pg_dump_cmd = [
+        "pg_dump",
+        "-h", db_config["host"] || "localhost", 
+        "-U", db_config["username"] || ENV["USER"],
+        "-d", db_config["database"],
+        "-f", postgres_backup_file.to_s,
+        "--no-password",
+        "--verbose"
+      ]
+      
+      success = system(*pg_dump_cmd)
+      if success
+        file_size_mb = (File.size(postgres_backup_file) / 1024.0 / 1024.0).round(2)
+        puts "✅ PostgreSQL backup completed: #{postgres_backup_file} (#{file_size_mb} MB)"
+      else
+        puts "❌ PostgreSQL backup failed"
+        exit 1
+      end
+      
+      # Neo4j backup - export cypher dump
+      neo4j_backup_file = backup_dir.join("neo4j_dev_#{timestamp}.cypher")
+      puts "🕸️  Backing up Neo4j knowledge graph..."
+      
+      begin
+        # Connect to Neo4j and export all nodes and relationships
+        driver = Graph::Connection.instance.driver
+        session = driver.session
+        
+        File.open(neo4j_backup_file, 'w') do |file|
+          file.puts "// Neo4j Backup - #{Time.current}"
+          file.puts "// Arctic Research Navigator Knowledge Graph"
+          file.puts ""
+          
+          # Export all nodes with labels and properties
+          result = session.run("MATCH (n) RETURN labels(n) as labels, properties(n) as props, id(n) as id")
+          node_count = 0
+          result.each do |record|
+            labels = record["labels"].join(":")
+            props = record["props"].map { |k, v| "#{k}: #{v.inspect}" }.join(", ")
+            file.puts "CREATE (n#{record['id']}:#{labels} {#{props}});"
+            node_count += 1
+          end
+          
+          file.puts ""
+          file.puts "// Relationships"
+          
+          # Export all relationships with properties
+          result = session.run("MATCH (a)-[r]->(b) RETURN id(a) as start_id, type(r) as rel_type, properties(r) as props, id(b) as end_id")
+          rel_count = 0
+          result.each do |record|
+            props = record["props"].empty? ? "" : " {#{record['props'].map { |k, v| "#{k}: #{v.inspect}" }.join(", ")}}"
+            file.puts "MATCH (a), (b) WHERE id(a) = #{record['start_id']} AND id(b) = #{record['end_id']} CREATE (a)-[r:#{record['rel_type']}#{props}]->(b);"
+            rel_count += 1
+          end
+          
+          file.puts ""
+          file.puts "// Backup completed: #{node_count} nodes, #{rel_count} relationships"
+        end
+        
+        session.close
+        file_size_kb = (File.size(neo4j_backup_file) / 1024.0).round(2)
+        puts "✅ Neo4j backup completed: #{neo4j_backup_file} (#{file_size_kb} KB)"
+        
+      rescue => e
+        puts "⚠️  Neo4j backup failed (non-critical): #{e.message}"
+        # Don't exit - Neo4j backup is supplementary
+      end
+      
+      # Create backup summary
+      summary_file = backup_dir.join("backup_#{timestamp}_README.txt")
+      File.open(summary_file, 'w') do |file|
+        file.puts "ENLITERATOR DATABASE BACKUP - #{Time.current}"
+        file.puts "=" * 60
+        file.puts ""
+        file.puts "This backup contains:"
+        file.puts "1. PostgreSQL database dump: #{File.basename(postgres_backup_file)}"
+        file.puts "2. Neo4j knowledge graph: #{File.basename(neo4j_backup_file)}"
+        file.puts ""
+        file.puts "RESTORE INSTRUCTIONS:"
+        file.puts "1. PostgreSQL: dropdb enliterator_development && createdb enliterator_development && psql -d enliterator_development -f #{File.basename(postgres_backup_file)}"
+        file.puts "2. Neo4j: Open Neo4j Browser, select 'ekn-1' database, run the .cypher file"
+        file.puts ""
+        file.puts "Pipeline Status at backup:"
+        
+        if EknPipelineRun.exists?
+          latest_run = EknPipelineRun.last
+          file.puts "- Latest Pipeline Run: ##{latest_run.id} (#{latest_run.status})"
+          file.puts "- Current Stage: #{latest_run.current_stage} (#{latest_run.current_stage_number}/9)"
+          file.puts "- EKN: #{latest_run.ekn.name}"
+          file.puts "- Items Processed: #{latest_run.total_items_processed}"
+        else
+          file.puts "- No pipeline runs found"
+        end
+        
+        file.puts ""
+        file.puts "Database Statistics:"
+        file.puts "- EKNs: #{Ekn.count}"
+        file.puts "- Ingest Batches: #{IngestBatch.count}" 
+        file.puts "- Ingest Items: #{IngestItem.count}"
+        file.puts "- API Calls: #{ApiCall.count}"
+        file.puts "- Lexicon Entries: #{defined?(Lexicon::CanonicalTerm) ? Lexicon::CanonicalTerm.count : 0}"
+        file.puts ""
+        file.puts "CRITICAL: This backup contains processed data from #{IngestItem.count} files"
+        file.puts "representing significant OpenAI processing costs. Handle with care!"
+      end
+      
+      puts ""
+      puts "🎯 BACKUP COMPLETE!"
+      puts "=" * 60
+      puts "📁 Backup location: #{backup_dir}"
+      puts "📊 PostgreSQL: #{File.basename(postgres_backup_file)}"
+      puts "🕸️  Neo4j: #{File.basename(neo4j_backup_file)}"  
+      puts "📋 Summary: #{File.basename(summary_file)}"
+      puts ""
+      puts "💡 To restore: rails enliterator:restore[#{timestamp}]"
+    end
+    
+    desc "Restore database from backup [timestamp]"
+    task :restore, [:timestamp] => :environment do |t, args|
+      unless args[:timestamp]
+        puts "Usage: rails enliterator:restore[TIMESTAMP]"
+        puts "Available backups:"
+        backup_dir = Rails.root.join("backups")
+        if backup_dir.exist?
+          Dir.glob(backup_dir.join("*_README.txt")).sort.reverse.each do |readme|
+            timestamp = File.basename(readme).match(/backup_(\d{8}_\d{6})_README/)[1]
+            puts "  #{timestamp}"
+          end
+        else
+          puts "  No backups found in #{backup_dir}"
+        end
+        exit 1
+      end
+      
+      timestamp = args[:timestamp]
+      backup_dir = Rails.root.join("backups")
+      postgres_file = backup_dir.join("enliterator_dev_#{timestamp}.sql")
+      neo4j_file = backup_dir.join("neo4j_dev_#{timestamp}.cypher")
+      
+      unless postgres_file.exist?
+        puts "❌ Backup not found: #{postgres_file}"
+        exit 1
+      end
+      
+      puts "⚠️  WARNING: This will completely replace your current database!"
+      puts "📊 PostgreSQL backup: #{postgres_file}"
+      puts "🕸️  Neo4j backup: #{neo4j_file}" if neo4j_file.exist?
+      puts ""
+      print "Type 'YES RESTORE DATABASE' to continue: "
+      
+      confirmation = STDIN.gets.chomp
+      unless confirmation == "YES RESTORE DATABASE"
+        puts "❌ Restore cancelled"
+        exit 1
+      end
+      
+      puts ""
+      puts "🔄 RESTORING DATABASE FROM BACKUP"
+      puts "=" * 60
+      
+      # Restore PostgreSQL
+      puts "📊 Restoring PostgreSQL database..."
+      db_config = Rails.configuration.database_configuration[Rails.env]["primary"] || Rails.configuration.database_configuration[Rails.env]
+      
+      # Drop and recreate database
+      ActiveRecord::Base.connection.disconnect!
+      system("dropdb", db_config["database"]) 
+      system("createdb", db_config["database"])
+      
+      # Restore from backup
+      restore_cmd = [
+        "psql",
+        "-h", db_config["host"] || "localhost",
+        "-U", db_config["username"] || ENV["USER"], 
+        "-d", db_config["database"],
+        "-f", postgres_file.to_s,
+        "--quiet"
+      ]
+      
+      success = system(*restore_cmd)
+      if success
+        puts "✅ PostgreSQL database restored successfully"
+      else
+        puts "❌ PostgreSQL restore failed"
+        exit 1
+      end
+      
+      # Restore Neo4j (manual step)
+      if neo4j_file.exist?
+        puts ""
+        puts "🕸️  Neo4j restore (manual step required):"
+        puts "   1. Open Neo4j Browser (http://localhost:7474)"
+        puts "   2. Select database: ekn-1"  
+        puts "   3. Run: MATCH (n) DETACH DELETE n  // Clear existing data"
+        puts "   4. Load file: #{neo4j_file}"
+        puts "   5. Execute all CREATE statements"
+      end
+      
+      puts ""
+      puts "✅ RESTORE COMPLETE!"
+      puts "🎯 Database restored from backup: #{timestamp}"
+    end
   end
   
   desc "Show pipeline status"

@@ -47,7 +47,11 @@ module Rights
     private
     
     def items_to_process
-      @batch.ingest_items.where(triage_status: ['pending', nil])
+      # Select items that have completed intake but don't have rights records yet
+      @batch.ingest_items.where(
+        triage_status: 'completed',
+        provenance_and_rights_id: nil
+      )
     end
 
     def triage_item(item)

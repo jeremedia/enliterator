@@ -1,0 +1,22 @@
+ENLITERATOR DATABASE BACKUP - 2025-08-11 23:24:34 UTC
+============================================================
+
+This backup contains:
+1. PostgreSQL database dump: enliterator_dev_20250811_232433.sql
+2. Neo4j knowledge graph: neo4j_dev_20250811_232433.cypher
+
+RESTORE INSTRUCTIONS:
+1. PostgreSQL: dropdb enliterator_development && createdb enliterator_development && psql -d enliterator_development -f enliterator_dev_20250811_232433.sql
+2. Neo4j: Open Neo4j Browser, select 'ekn-1' database, run the .cypher file
+
+Pipeline Status at backup:
+- Latest Pipeline Run: #7 (initialized)
+- Current Stage:  (0/9)
+- EKN: Arctic Research Navigator
+- Items Processed: 0
+
+Database Statistics:
+- EKNs: 1
+- Ingest Batches: 1
+- Ingest Items: 25
+- API Calls: 50

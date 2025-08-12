@@ -85,10 +85,10 @@ module Ingest
         raise UnsupportedFormatError, "Unsupported format: #{extension}. Supported: #{SUPPORTED_FORMATS.join(', ')}"
       end
       
-      # Check file size (reasonable limit: 100MB)
+      # Check file size (reasonable limit: 200MB for Arctic research PDFs)
       file_size = File.size(file_path)
-      if file_size > 100.megabytes
-        raise ConversionError, "File too large: #{file_size} bytes (max: 100MB)"
+      if file_size > 200.megabytes
+        raise ConversionError, "File too large: #{file_size} bytes (max: 200MB)"
       end
     end
     

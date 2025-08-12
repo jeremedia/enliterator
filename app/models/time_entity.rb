@@ -13,6 +13,10 @@ class TimeEntity < ApplicationRecord
   validates :repr_text, presence: true
   validates :valid_time_start, presence: true
   
+  # Callbacks for Neo4j synchronization (maps to Method pool)
+  after_commit :sync_to_graph, on: [:create, :update]
+  after_commit :remove_from_graph, on: :destroy
+  
   # Enums for temporal types
   enum :temporal_type, {
     period: 'period',           # Time spans (2020-2023, Arctic Summer)
@@ -44,5 +48,21 @@ class TimeEntity < ApplicationRecord
   # Class methods
   def self.search_by_period(query)
     where('label ILIKE ? OR description ILIKE ?', "%#{query}%", "%#{query}%")
+  end
+  
+  private
+  
+  def sync_to_graph
+    return unless defined?(Graph::MethodWriter)
+    Graph::MethodWriter.new(self).sync
+  rescue StandardError => e
+    Rails.logger.error "Failed to sync TimeEntity #{id} to graph: #{e.message}"
+  end
+  
+  def remove_from_graph
+    return unless defined?(Graph::MethodRemover)
+    Graph::MethodRemover.new(self).remove
+  rescue StandardError => e
+    Rails.logger.error "Failed to remove TimeEntity #{id} from graph: #{e.message}"
   end
 end

@@ -1,13 +1,14 @@
 # Enliterator Project Status
 
-**Last Updated**: 2025-08-11
+**Last Updated**: 2025-08-12 (Updated after Graph Writer architecture fix)
 
 ## 📊 Status Summary
 
-- **Technical Pipeline**: 100% COMPLETE (All 9 stages operational)
-  - Stages 0-8: ✅ COMPLETE (Including Stage 5.5 Relationship Discovery)
-  - Stage 9: ✅ ~75% COMPLETE (Core Knowledge Navigator working)
-- **Product Completion**: ~75% (Core functionality working, visualization polish needed)
+- **Technical Pipeline**: ~95% COMPLETE (Issue #67: Graph sync partially resolved)
+  - Stages 0-4: ✅ COMPLETE (Extraction to PostgreSQL working)  
+  - Stage 5: ⚠️ PARTIALLY FIXED (Graph Writers implemented, database routing pending)
+  - Stages 6-9: ✅ COMPLETE (When Stage 5 fully working)
+- **Product Completion**: ~75% (Core functionality working, full entity sync pending)
 - **OpenAI Integration**: Phase 2 COMPLETE ✅
 - **Admin UI**: DEPLOYED ✅
 - **Fine-Tune Model**: CONNECTED AND WORKING ✅
@@ -45,11 +46,14 @@ Enliterator is a Rails 8 application that transforms dropped data collections in
 - Rights pointer tracking
 - NOTE: Relationships moved to Stage 5.5
 
-#### Stage 5: Graph Assembly
-- Neo4j knowledge graph construction
-- Load nodes/edges to graph
-- Schema constraints and indexes
-- Duplicate resolution and orphan removal
+#### Stage 5: Graph Assembly ⚠️ PARTIALLY FIXED (Issue #67)
+- **Problem Identified**: Missing Graph Writers caused silent sync failures
+- **Fix Progress**: 14 Graph Writers created + sync callbacks added to all entity models  
+- **Current Status**: Entities extract to PostgreSQL ✅, partial sync to Neo4j ⚠️
+- **Remaining Work**: Database name determination in 13 writers (pattern established)
+- **Expected Result**: PostgreSQL entity count (1,845) = Neo4j entity count (currently ~907)
+- Schema constraints and indexes ✅
+- Duplicate resolution and orphan removal ✅  
 - NOTE: Basic graph structure only, relationships in Stage 5.5
 
 #### Stage 5.5: Relationship Discovery ✅ COMPLETE

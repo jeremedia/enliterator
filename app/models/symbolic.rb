@@ -12,6 +12,10 @@ class Symbolic < ApplicationRecord
   validates :repr_text, presence: true
   validates :valid_time_start, presence: true
   
+  # Callbacks for Neo4j synchronization (maps to Emanation pool)
+  after_commit :sync_to_graph, on: [:create, :update]
+  after_commit :remove_from_graph, on: :destroy
+  
   # Enums for symbol types
   enum :symbol_type, {
     metaphor: 'metaphor',        # "ice as memory of ancestors"
@@ -40,5 +44,21 @@ class Symbolic < ApplicationRecord
   def self.search_by_meaning(query)
     where('label ILIKE ? OR meaning ILIKE ? OR cultural_context ILIKE ?', 
           "%#{query}%", "%#{query}%", "%#{query}%")
+  end
+  
+  private
+  
+  def sync_to_graph
+    return unless defined?(Graph::SymbolicWriter)
+    Graph::SymbolicWriter.new(self).sync
+  rescue StandardError => e
+    Rails.logger.error "Failed to sync Symbolic #{id} to graph: #{e.message}"
+  end
+  
+  def remove_from_graph
+    return unless defined?(Graph::SymbolicRemover)
+    Graph::SymbolicRemover.new(self).remove
+  rescue StandardError => e
+    Rails.logger.error "Failed to remove Symbolic #{id} from graph: #{e.message}"
   end
 end

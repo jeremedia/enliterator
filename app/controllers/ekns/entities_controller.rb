@@ -130,6 +130,68 @@ class Ekns::EntitiesController < ApplicationController
       end
     end
     
+    # DEMO FIX: Add hidden PostgreSQL entities that aren't synced to Neo4j
+    # Map each hidden table to its correct Ten Pool Canon pool
+    hidden_entities = [
+      { model: Character, pool: 'Actor', prefix: 'char_', 
+        abstract_field: :biography, description: 'Character Data' },
+      { model: Space, pool: 'Spatial', prefix: 'space_', 
+        abstract_field: :description, description: 'Spatial Data' },
+      { model: Symbolic, pool: 'Emanation', prefix: 'sym_', 
+        abstract_field: :meaning, description: 'Symbolic Data' },
+      { model: TimeEntity, pool: 'Method', prefix: 'time_', 
+        abstract_field: :description, description: 'Temporal Data' },
+      { model: Lifecycle, pool: 'Evolutionary', prefix: 'life_', 
+        abstract_field: :description, description: 'Lifecycle Data' },
+      { model: Relator, pool: 'Relational', prefix: 'rel_', 
+        abstract_field: :description, description: 'Relational Data' }
+    ]
+    
+    hidden_entities.each do |config|
+      entities = config[:model].joins(:provenance_and_rights)
+                              .where(batch_id: batch_ids)
+                              .includes(:provenance_and_rights)
+      
+      entities.each do |entity_record|
+        batch_id = entity_record.batch_id
+        source_ids = entity_record.provenance_and_rights.source_ids || [config[:description]]
+        
+        # Create entity hash
+        entity = {
+          'id' => "#{config[:prefix]}#{entity_record.id}",
+          'label' => entity_record.label,
+          'abstract' => entity_record.try(config[:abstract_field]) || '',
+          'repr_text' => entity_record.repr_text,
+          'pool' => config[:pool],
+          'created_at' => entity_record.created_at,
+          'rights_publishable' => entity_record.provenance_and_rights.publishability,
+          'rights_training' => entity_record.provenance_and_rights.training_eligibility
+        }
+        
+        # Get batch name
+        batch_name = begin
+          IngestBatch.find(batch_id).name
+        rescue
+          "Batch #{batch_id}"
+        end
+        
+        source_ids.each do |source_id|
+          key = "#{batch_name} / #{source_id}"
+          grouped_data[key] ||= {
+            batch_id: batch_id,
+            batch_name: batch_name,
+            source_id: source_id,
+            pools: {},
+            total: 0
+          }
+          
+          grouped_data[key][:pools][config[:pool]] ||= []
+          grouped_data[key][:pools][config[:pool]] << entity
+          grouped_data[key][:total] += 1
+        end
+      end
+    end
+    
     # Sort by total entities descending
     Hash[grouped_data.sort_by { |_, data| -data[:total] }]
   end
@@ -178,6 +240,49 @@ class Ekns::EntitiesController < ApplicationController
   end
 
   def get_entity_details(entity_id)
+    # Handle PostgreSQL-based entities (prefixed IDs)
+    postgres_configs = {
+      'char_' => { model: Character, pool: 'Actor', abstract_field: :biography, 
+                   description: 'Character Data' },
+      'space_' => { model: Space, pool: 'Spatial', abstract_field: :description,
+                    description: 'Spatial Data' },
+      'sym_' => { model: Symbolic, pool: 'Emanation', abstract_field: :meaning,
+                  description: 'Symbolic Data' },
+      'time_' => { model: TimeEntity, pool: 'Method', abstract_field: :description,
+                   description: 'Temporal Data' },
+      'life_' => { model: Lifecycle, pool: 'Evolutionary', abstract_field: :description,
+                   description: 'Lifecycle Data' },
+      'rel_' => { model: Relator, pool: 'Relational', abstract_field: :description,
+                  description: 'Relational Data' }
+    }
+    
+    postgres_configs.each do |prefix, config|
+      if entity_id.to_s.start_with?(prefix)
+        record_id = entity_id.to_s.gsub(prefix, '').to_i
+        record = config[:model].joins(:provenance_and_rights)
+                              .includes(:provenance_and_rights)
+                              .find_by(id: record_id)
+        
+        return nil unless record
+        
+        # Return record details in the same format as Neo4j entities
+        return {
+          'id' => entity_id,
+          'label' => record.label,
+          'abstract' => record.try(config[:abstract_field]) || '',
+          'repr_text' => record.repr_text,
+          'pool' => config[:pool],
+          'created_at' => record.created_at,
+          'batch_id' => record.batch_id,
+          'source_ids' => record.provenance_and_rights.source_ids || [config[:description]],
+          'rights_publishable' => record.provenance_and_rights.publishability,
+          'rights_training' => record.provenance_and_rights.training_eligibility,
+          'relationships' => [] # PostgreSQL entities don't have relationships in Neo4j yet
+        }
+      end
+    end
+    
+    # Handle regular Neo4j entities
     service = EknStatsService.new(@ekn, include_provenance: false)
     
     # Get batch IDs for this specific EKN

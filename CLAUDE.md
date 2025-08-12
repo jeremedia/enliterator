@@ -40,7 +40,63 @@ If the user explicitly requests database destruction, you MUST:
 
 **IF UNSURE: ASK THE USER FIRST. NEVER ASSUME DATABASE DESTRUCTION IS OK.**
 
+---
+
+## 🔧 CRITICAL PIPELINE ARCHITECTURE (Updated August 2025)
+
+### **Graph Writer Infrastructure Status**
+**Issue Fixed**: Pipeline Stage 5 (Graph Assembly) was failing to sync entities from PostgreSQL to Neo4j due to missing Graph Writers.
+
+**Current Status** (Issue #67):
+- ✅ **Phase 1-3 Complete**: All 14 missing Graph Writers implemented + sync callbacks added
+- ⚠️ **Phase 4-7 Pending**: Database name determination needs fixing in 13 writers
+
+### **Expected Pipeline Behavior**
+When pipeline runs successfully:
+1. **Stage 1-4**: Entities extracted to PostgreSQL ✅ (Working)
+2. **Stage 5**: All entities sync to Neo4j via Graph Writers ⚠️ (Partially fixed)
+3. **Result**: PostgreSQL count = Neo4j count = UI display count
+
+### **Current Arctic Research EKN State**
+- **PostgreSQL**: 1,845 entities across 10 pools ✅
+- **Neo4j**: ~907 entities (missing extended pools) ⚠️  
+- **Target**: 1,845 entities in both systems
+
+### **Graph Writer Pattern** (Use for any new entity types)
+```ruby
+# app/services/graph/{entity}_writer.rb
+module Graph
+  class EntityWriter
+    def initialize(entity)
+      @entity = entity
+      @database_name = determine_database_name
+    end
+    
+    def sync
+      # Create/update Neo4j node with rights relationship
+    end
+    
+    private
+    
+    def determine_database_name
+      # Find EKN through entity.provenance_and_rights.source_ids
+      # Return ekn.neo4j_database_name
+    end
+  end
+end
+```
+
+### **For Future Pipeline Issues**
+1. **Check PostgreSQL vs Neo4j entity counts first**
+2. **Graph Writers must exist for each entity type**
+3. **All entities need sync callbacks: `after_commit :sync_to_graph`**
+4. **Neo4j should be single source of truth for chat/search**
+
+---
+
 ## Enliterator Build Assistant v2.2 - Building Knowledge Navigators
+
+**📝 NOTE**: This project uses the `friendly_id` gem. Use `Ekn.find("slug")` instead of `Ekn.find_by(slug: "slug")` for cleaner code.
 
 > **Purpose**: Build **Enliterator** as a Rails 8 app with a **conversational interface** (like Apple's 1987 Knowledge Navigator) that helps users transform their data into **Enliterated Knowledge Navigators (EKNs)** - natural language interfaces to their datasets.
 >
@@ -96,6 +152,7 @@ If the user explicitly requests database destruction, you MUST:
 - `/docs/STAGE_9_KNOWLEDGE_NAVIGATOR.md` - Stage 9 detailed specification
 - `/docs/ekn-dynamic-ui-spec.md` - Dynamic UI generation from conversation
 - `/docs/PROJECT_STATUS.md` - Current project status (Technical: 100%, Product: ~75%)
+- `/docs/DATABASE_BACKUP_SYSTEM.md` - **CRITICAL**: Database backup/restore for expensive data
 - GitHub Issues: https://github.com/jeremedia/enliterator/issues
 
 ### Recent Implementation Highlights
@@ -490,6 +547,21 @@ bin/rails enliterator:fine_tune:build
 
 # Run evaluation suite
 bin/rails enliterator:evaluate
+```
+
+### Database Backup & Recovery (CRITICAL)
+```bash
+# Create backup of PostgreSQL + Neo4j (protects expensive OpenAI data)
+rake enliterator:seed:backup
+
+# List available backups
+rake enliterator:seed:restore
+
+# Restore from specific backup
+rake enliterator:seed:restore[20250811_232433]
+
+# Check backup files
+ls -la backups/
 ```
 
 ### Testing Completed Stages (1-5)

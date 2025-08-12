@@ -12,6 +12,10 @@ class Relator < ApplicationRecord
   validates :repr_text, presence: true
   validates :valid_time_start, presence: true
   
+  # Callbacks for Neo4j synchronization (maps to Relational pool)
+  after_commit :sync_to_graph, on: [:create, :update]
+  after_commit :remove_from_graph, on: :destroy
+  
   # Enums for relation types
   enum :relation_type, {
     correlation: 'correlation',        # Statistical correlations
@@ -53,5 +57,21 @@ class Relator < ApplicationRecord
   def self.between_entities(source, target)
     where(source_label: source, target_label: target)
     .or(where(source_label: target, target_label: source, bidirectional: true))
+  end
+  
+  private
+  
+  def sync_to_graph
+    return unless defined?(Graph::RelatorWriter)
+    Graph::RelatorWriter.new(self).sync
+  rescue StandardError => e
+    Rails.logger.error "Failed to sync Relator #{id} to graph: #{e.message}"
+  end
+  
+  def remove_from_graph
+    return unless defined?(Graph::RelatorRemover)
+    Graph::RelatorRemover.new(self).remove
+  rescue StandardError => e
+    Rails.logger.error "Failed to remove Relator #{id} from graph: #{e.message}"
   end
 end

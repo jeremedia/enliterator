@@ -34,13 +34,24 @@ module Pools
   class EntityExtractionService < OpenaiConfig::BaseExtractionService
     
     POOL_DESCRIPTIONS = {
+      # Core Pools (1-10) - REQUIRED by Ten Pool Canon specification
       'idea' => 'Purpose: capture the why (principles, theories, intents, design rationales). Look for principles, doctrines, hypotheses, themes.',
       'manifest' => 'Purpose: capture the what (concrete instances and artifacts). Look for projects, items, laws, artworks, releases.',
       'experience' => 'Purpose: capture lived outcomes and perception. Look for testimonials, observations, stories, reviews.',
       'relational' => 'Purpose: capture connections, lineages, and networks. Look for collaborations, precedents, citations, membership edges.',
       'evolutionary' => 'Purpose: capture change over time. Look for timelines, versions, forks, status changes.',
       'practical' => 'Purpose: capture how-to and tacit knowledge. Look for guides, SOPs, checklists, recipes, playbooks.',
-      'emanation' => 'Purpose: capture ripple effects and downstream influence. Look for adoptions, remixes, movements, policies.'
+      'emanation' => 'Purpose: capture ripple effects and downstream influence. Look for adoptions, remixes, movements, policies.',
+      'provenance_and_rights' => 'Purpose: capture source, attribution, consent, license, lineage. Look for citations, collection methods, rights statements, data-use agreements.',
+      'lexicon_and_ontology' => 'Purpose: capture definitions, synonyms, types, and schema versions. Look for term entries, controlled vocabularies, unit systems, type hierarchies.',
+      'intent_and_task' => 'Purpose: capture what users ask and how tasks are fulfilled. Look for questions, prompts, goals, preferred presentations, success signals.',
+      
+      # Optional Domain Pools (11-15) - ADD WHEN DOMAIN DEMANDS IT
+      'actor_and_role' => 'Purpose: people and organizations with roles and permissions. Look for individual names, roles, organizations acting as agents, authorship, governance.',
+      'spatial' => 'Purpose: places, regions, geometries, spatial hierarchies. Look for geographic locations, spatial relationships, areas, regions, coordinates.',
+      'evidence_and_observation' => 'Purpose: primary data such as measurements, logs, transcripts (distinct from Experience). Look for raw data, measurements, sensor readings, primary observations.',
+      'risk_and_governance' => 'Purpose: hazards, mitigations, approvals, compliance states. Look for safety requirements, policy constraints, risk assessments, governance rules.',
+      'method_and_model' => 'Purpose: methods, methodologies, evaluation patterns. Look for research methods, analytical approaches, modeling techniques, evaluation frameworks.'
     }.freeze
 
     attr_reader :content, :lexicon_context, :source_metadata
@@ -104,18 +115,22 @@ module Pools
     def system_prompt
       <<~PROMPT
         You are an entity extraction specialist for the Enliterator system.
-        Your task is to extract entities that belong to the Ten Pool Canon.
+        Your task is to extract entities that belong to the Ten Pool Canon framework (15 total pools: 10 core + 5 optional domain pools).
+        
+        CRITICAL: Consider ALL pools during extraction. Optional pools are only optional when the content genuinely lacks that entity type, not code-optional.
         
         Pool Descriptions:
-        #{POOL_DESCRIPTIONS.map { |pool, desc| "- #{pool.upcase}: #{desc}" }.join("\n")}
+        #{POOL_DESCRIPTIONS.map { |pool, desc| "- #{pool.upcase.gsub('_', ' ')}: #{desc}" }.join("\n")}
         
         Guidelines:
-        1. Extract clear, distinct entities that fit into one of the pools
+        1. Extract clear, distinct entities that fit into any of the 15 pools above
         2. Prefer canonical terms from the lexicon when available
         3. Include time references when mentioned
         4. Set confidence based on clarity and context
         5. Each entity should have pool-appropriate attributes
         6. Do not duplicate entities - merge similar references
+        7. Consider all pools systematically - don't skip optional pools without checking
+        8. For research/academic content: look especially for Actor (researchers, organizations), Spatial (locations), Evidence (data/measurements), Method (techniques)
         
         Lexicon Context (canonical terms to prefer):
         #{format_lexicon_context}
