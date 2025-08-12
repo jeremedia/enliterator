@@ -327,7 +327,7 @@ module Pools
         # RiskAndGovernance pool - Hazards, mitigations, approvals, compliance (canonical name)
         Risk.create!(
           risk_type: detect_risk_type(attrs[:label], attrs[:context]),
-          severity: 'medium', # Default severity
+          severity: 'moderate', # Default severity (valid enum value)
           description: attrs[:label] || 'Unknown Risk',
           mitigations: [attrs[:context] || attrs[:reasoning]],
           valid_time_start: attrs[:valid_time_start] || Time.current,
