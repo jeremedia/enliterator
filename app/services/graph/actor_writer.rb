@@ -57,14 +57,9 @@ module Graph
         contact_info: @character.contact_info&.to_json,
         repr_text: @character.repr_text,
         valid_time_start: @character.valid_time_start.to_s,
-        valid_time_end: @character.valid_time_end&.to_s,
-        created_at: @character.created_at.to_s,
-        updated_at: @character.updated_at.to_s,
-        batch_id: @character.batch_id,
-        # Map Character fields to Actor pool semantics
-        actor_name: @character.label,
-        actor_role: @character.role_type,
-        actor_bio: @character.biography
+        valid_time_end: @actor.valid_time_end&.to_s,
+        created_at: @actor.created_at.to_s,
+        updated_at: @actor.updated_at.to_s
       }.compact
       
       query = <<~CYPHER
@@ -72,11 +67,11 @@ module Graph
         SET n += $properties
       CYPHER
       
-      tx.run(query, id: @character.id, properties: properties)
+      tx.run(query, id: @actor.id, properties: properties)
     end
     
     def create_rights_relationship(tx)
-      return unless @character.provenance_and_rights_id
+      return unless @actor.provenance_and_rights_id
       
       # Create relationship to ProvenanceAndRights node
       query = <<~CYPHER
@@ -86,9 +81,9 @@ module Graph
         SET r.created_at = timestamp()
       CYPHER
       
-      tx.run(query, actor_id: @character.id, rights_id: @character.provenance_and_rights_id)
+      tx.run(query, actor_id: @actor.id, rights_id: @actor.provenance_and_rights_id)
     rescue Neo4j::Driver::Exceptions::ClientException => e
-      Rails.logger.warn "Could not create rights relationship for Actor #{@character.id}: #{e.message}"
+      Rails.logger.warn "Could not create rights relationship for Actor #{@actor.id}: #{e.message}"
     end
   end
 end

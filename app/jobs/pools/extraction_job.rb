@@ -185,7 +185,11 @@ module Pools
       # Skip if no pool type
       return unless pool_type
       
-      case pool_type.to_s.downcase
+      # Map canonical pool names to database handling
+      # Enhanced tool now returns correct canonical names
+      normalized_pool = normalize_canonical_pool_name(pool_type.to_s)
+      
+      case normalized_pool
       when 'idea'
         Idea.create!(
           label: attrs[:label] || 'Unknown',
@@ -279,93 +283,135 @@ module Pools
           repr_text: attrs[:repr_text] || attrs[:influence_type],
           provenance_and_rights: rights
         )
-      when 'character'
-        # NEW: Character pool - People, agents, roles, personas
-        Character.create!(
-          label: attrs[:label] || 'Unknown Person',
-          role_type: detect_character_role_type(attrs[:label], attrs[:context]),
-          title: extract_title_from_context(attrs[:context]),
-          biography: attrs[:context] || attrs[:reasoning],
-          active: true,
-          has_agency: true,
-          valid_time_start: attrs[:valid_time_start] || Time.current,
-          repr_text: attrs[:repr_text] || attrs[:label],
-          provenance_and_rights: rights,
-          batch_id: @batch.id,
-          entity_id: generate_entity_id('character')
-        )
-      when 'time'
-        # NEW: Time pool - Temporal entities, periods, schedules  
-        TimeEntity.create!(
-          label: attrs[:label] || 'Unknown Time',
-          temporal_type: detect_temporal_type(attrs[:label], attrs[:context]),
-          description: attrs[:context] || attrs[:reasoning],
-          start_time: parse_time_from_label(attrs[:label]),
-          recurring: attrs[:label]&.include?('annual') || attrs[:label]&.include?('seasonal'),
-          valid_time_start: attrs[:valid_time_start] || Time.current,
-          repr_text: attrs[:repr_text] || attrs[:label],
-          provenance_and_rights: rights,
-          batch_id: @batch.id,
-          entity_id: generate_entity_id('time')
-        )
-      when 'space'
-        # NEW: Space pool - Locations, places, geographic entities
-        Space.create!(
-          label: attrs[:label] || 'Unknown Location',
-          spatial_type: detect_spatial_type(attrs[:label], attrs[:context]),
-          region: extract_region_from_context(attrs[:context]),
+      when 'actorandrole'
+        # ActorAndRole pool - People, organizations with roles and permissions (canonical name)
+        Actor.create!(
+          name: attrs[:label] || 'Unknown Actor',
+          role: detect_character_role_type(attrs[:label], attrs[:context]),
           description: attrs[:context] || attrs[:reasoning],
           valid_time_start: attrs[:valid_time_start] || Time.current,
           repr_text: attrs[:repr_text] || attrs[:label],
-          provenance_and_rights: rights,
-          batch_id: @batch.id,
-          entity_id: generate_entity_id('space')
+          provenance_and_rights: rights
         )
-      when 'lifecycle'
-        # NEW: Lifecycle pool - States, transitions, progressions, phases
-        Lifecycle.create!(
-          label: attrs[:label] || 'Unknown Stage',
-          stage_type: detect_stage_type(attrs[:label], attrs[:context]),
-          sequence_order: extract_sequence_order(attrs[:label]),
-          is_active: true,
+      when 'spatial'
+        # Spatial pool - Places, regions, geometries, spatial hierarchies (canonical name)
+        Spatial.create!(
+          location_name: attrs[:label] || 'Unknown Location',
           description: attrs[:context] || attrs[:reasoning],
           valid_time_start: attrs[:valid_time_start] || Time.current,
           repr_text: attrs[:repr_text] || attrs[:label],
-          provenance_and_rights: rights,
-          batch_id: @batch.id,
-          entity_id: generate_entity_id('lifecycle')
+          provenance_and_rights: rights
         )
-      when 'symbolic'
-        # NEW: Symbolic pool - Symbols, meanings, representations, metaphors
-        Symbolic.create!(
-          label: attrs[:label] || 'Unknown Symbol',
-          symbol_type: detect_symbol_type(attrs[:label], attrs[:context]),
-          meaning: attrs[:reasoning] || extract_meaning_from_context(attrs[:context]),
-          cultural_context: extract_cultural_context(attrs[:context]),
-          valid_time_start: attrs[:valid_time_start] || Time.current,
-          repr_text: attrs[:repr_text] || attrs[:label],
-          provenance_and_rights: rights,
-          batch_id: @batch.id,
-          entity_id: generate_entity_id('symbolic')
-        )
-      when 'relator'
-        # NEW: Relator pool - Relationships, connections, dependencies
-        Relator.create!(
-          label: attrs[:label] || 'Unknown Relationship',
-          relation_type: detect_relation_type(attrs[:label], attrs[:context]),
-          source_label: extract_source_from_context(attrs[:context]),
-          target_label: extract_target_from_context(attrs[:context]),
-          strength: attrs[:confidence] || 0.7,
-          bidirectional: detect_bidirectional(attrs[:context]),
+      when 'methodandmodel'
+        # MethodAndModel pool - Methods, methodologies, evaluation patterns (canonical name)
+        MethodPool.create!(
+          method_name: attrs[:label] || 'Unknown Method',
+          category: detect_method_type(attrs[:label], attrs[:context]),
           description: attrs[:context] || attrs[:reasoning],
           valid_time_start: attrs[:valid_time_start] || Time.current,
           repr_text: attrs[:repr_text] || attrs[:label],
-          provenance_and_rights: rights,
-          batch_id: @batch.id,
-          entity_id: generate_entity_id('relator')
+          provenance_and_rights: rights
+        )
+      when 'evidenceandobservation'
+        # EvidenceAndObservation pool - Primary data, measurements, logs, transcripts (canonical name)
+        Evidence.create!(
+          evidence_type: detect_evidence_type(attrs[:label], attrs[:context]),
+          description: attrs[:context] || attrs[:reasoning] || attrs[:label],
+          source_refs: [attrs[:label] || 'Unknown Source'],
+          confidence_score: attrs[:confidence] || 0.8,
+          observed_at: attrs[:valid_time_start] || Time.current,
+          repr_text: attrs[:repr_text] || attrs[:label],
+          provenance_and_rights: rights
+        )
+      when 'riskandgovernance'
+        # RiskAndGovernance pool - Hazards, mitigations, approvals, compliance (canonical name)
+        Risk.create!(
+          risk_type: detect_risk_type(attrs[:label], attrs[:context]),
+          severity: 'medium', # Default severity
+          description: attrs[:label] || 'Unknown Risk',
+          mitigations: [attrs[:context] || attrs[:reasoning]],
+          valid_time_start: attrs[:valid_time_start] || Time.current,
+          repr_text: attrs[:repr_text] || attrs[:label],
+          provenance_and_rights: rights
+        )
+      when 'provenanceandrights'
+        # ProvenanceAndRights pool - Source, attribution, consent, license (canonical name)
+        # Note: This creates a ProvenanceAndRights record that references another ProvenanceAndRights
+        # This is meta-provenance (provenance about provenance)
+        ProvenanceAndRights.create!(
+          source_ids: [attrs[:label] || 'unknown_source'],
+          collection_method: attrs[:context] || 'unknown_method',
+          consent_status: 'unknown',
+          license_type: 'unknown',
+          valid_time_start: attrs[:valid_time_start] || Time.current,
+          publishability: true, # Default
+          training_eligibility: true, # Default
+          custom_terms: {
+            'extracted_label' => attrs[:label],
+            'extraction_context' => attrs[:context],
+            'meta_provenance' => true
+          }
+        )
+      when 'lexiconandontology'
+        # LexiconAndOntology pool - Definitions, synonyms, types, schema versions (canonical name)
+        LexiconAndOntology.create!(
+          term: attrs[:label] || 'Unknown Term',
+          definition: attrs[:context] || attrs[:reasoning] || 'Definition extracted from content',
+          canonical_description: attrs[:context] || attrs[:reasoning],
+          surface_forms: [], # Will be populated later
+          negative_surface_forms: [], # Will be populated later
+          valid_time_start: attrs[:valid_time_start] || Time.current,
+          provenance_and_rights: rights
+        )
+      when 'intentandtask'
+        # IntentAndTask pool - User goals, requirements, task specifications (canonical name)
+        IntentAndTask.create!(
+          user_goal: attrs[:label] || 'Unknown Goal',
+          query_text: attrs[:context] || attrs[:reasoning],
+          presentation_preference: 'text', # Default
+          observed_at: attrs[:valid_time_start] || Time.current,
+          repr_text: attrs[:repr_text] || attrs[:label],
+          deliverable_type: 'general',
+          modality: 'text',
+          provenance_and_rights: rights
         )
       else
-        log_progress "Unknown pool type: #{pool_type}", level: :warn
+        log_progress "Unknown pool type: #{pool_type} (normalized: #{normalized_pool})", level: :warn
+      end
+    end
+    
+    # Map canonical pool names from extraction tool to database handling
+    def normalize_canonical_pool_name(pool_name)
+      case pool_name.to_s.downcase.gsub(/[^a-z]/, '')
+      # Core pools (1-10)
+      when 'idea' then 'idea'
+      when 'manifest' then 'manifest'
+      when 'experience' then 'experience'
+      when 'relational' then 'relational'
+      when 'evolutionary' then 'evolutionary'
+      when 'practical' then 'practical'
+      when 'emanation' then 'emanation'
+      when 'provenanceandrights' then 'provenanceandrights'
+      when 'lexiconandontology' then 'lexiconandontology'
+      when 'intentandtask' then 'intentandtask'
+      
+      # Optional domain pools (11-15) - canonical names
+      when 'actorandrole' then 'actorandrole'
+      when 'spatial' then 'spatial'
+      when 'evidenceandobservation' then 'evidenceandobservation'
+      when 'riskandgovernance' then 'riskandgovernance'
+      when 'methodandmodel' then 'methodandmodel'
+      
+      # Legacy pool names (for backward compatibility)
+      when 'character' then 'actorandrole'  # Map old name to canonical
+      when 'time' then 'methodandmodel'     # Semantic shift: time → method
+      when 'space' then 'spatial'           # Map old name to canonical
+      when 'lifecycle' then 'evolutionary'  # Map old name to canonical
+      when 'symbolic' then 'emanation'      # Map old name to canonical
+      when 'relator' then 'relational'      # Map old name to canonical
+      
+      else
+        pool_name.to_s.downcase
       end
     end
     
@@ -402,7 +448,16 @@ module Pools
       mappings[normalized] || (Relational.relation_types.key?(normalized) ? normalized : 'relates_to')
     end
     
-    # Helper methods for NEW pool types
+    # Helper methods for entity type detection
+    
+    def detect_actor_type(label, context)
+      text = "#{label} #{context}".downcase
+      return 'individual' if text.match?(/dr\.|professor|ph\.d|researcher|person|individual/)
+      return 'organization' if text.match?(/university|agency|institute|department|organization/)
+      return 'team' if text.match?(/team|group|community|collective|consortium/)
+      return 'role' if text.match?(/elder|leader|member|coordinator|role/)
+      'individual'
+    end
     
     def detect_character_role_type(label, context)
       text = "#{label} #{context}".downcase
@@ -411,6 +466,35 @@ module Pools
       return 'team' if text.match?(/team|group|community|collective/)
       return 'role_position' if text.match?(/elder|leader|member|coordinator/)
       'individual'
+    end
+    
+    def detect_method_type(label, context)
+      text = "#{label} #{context}".downcase
+      return 'analytical' if text.match?(/analysis|analytical|statistical|quantitative/)
+      return 'observational' if text.match?(/observation|survey|interview|ethnographic/)
+      return 'experimental' if text.match?(/experiment|test|trial|controlled/)
+      return 'modeling' if text.match?(/model|simulation|algorithm|computational/)
+      return 'evaluation' if text.match?(/evaluation|assessment|review|audit/)
+      'general'
+    end
+    
+    def detect_evidence_type(label, context)
+      text = "#{label} #{context}".downcase
+      return 'measurement' if text.match?(/temperature|measurement|reading|sensor|data/)
+      return 'transcript' if text.match?(/transcript|interview|recording|conversation/)
+      return 'log' if text.match?(/log|record|entry|journal/)
+      return 'observation' if text.match?(/observation|field|note|report/)
+      return 'document' if text.match?(/document|report|paper|study/)
+      'data'
+    end
+    
+    def detect_risk_type(label, context)
+      text = "#{label} #{context}".downcase
+      return 'safety' if text.match?(/safety|hazard|danger|risk/)
+      return 'environmental' if text.match?(/environmental|climate|ecological/)
+      return 'regulatory' if text.match?(/regulatory|compliance|legal|policy/)
+      return 'operational' if text.match?(/operational|process|workflow/)
+      'general'
     end
     
     def extract_title_from_context(context)
