@@ -1,284 +1,525 @@
-<% content_for :title, "About Enliterator - First Knowledge Navigator" %>
+<% content_for :title, "Enliterator: Knowledge Navigator Research Platform" %>
 
 <div class="max-w-6xl mx-auto px-4 py-8">
-  <!-- Hero Section -->
+  <!-- Header Section -->
   <div class="text-center mb-12">
-    <div class="inline-flex items-center space-x-2 mb-4">
-      <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-        Enliterator Platform
-      </h1>
-      <span class="text-2xl">🏆</span>
-    </div>
+    <h1 class="text-4xl font-bold text-gray-900 mb-4">
+      Enliterator Research Platform
+    </h1>
+    <p class="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
+      A Rails 8 platform for creating domain-specific conversational AI systems that demonstrate 
+      systematic realization of Apple's 1987 Knowledge Navigator concept through structured knowledge 
+      representation and fine-tuned language models.
+    </p>
     
-    <div class="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 p-6 rounded-lg mb-8">
+    <div class="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-lg mb-8 mt-8">
       <div class="flex items-center">
         <div class="flex-shrink-0">
-          <svg class="h-8 w-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
         <div class="ml-3">
-          <h2 class="text-2xl font-semibold text-green-800">
-            HISTORIC ACHIEVEMENT: First Knowledge Navigator Completed!
+          <h2 class="text-xl font-semibold text-blue-800">
+            Research Milestone: First Knowledge Navigator Implementation
           </h2>
-          <p class="text-lg text-green-700 mt-2">
-            <strong>Arctic Navigator</strong> achieved 100% certification on <%= @achievement_date %> - 
-            the first systematic realization of Apple's 1987 Knowledge Navigator vision.
+          <p class="text-blue-700 mt-2">
+            <strong>Arctic Navigator</strong> demonstrates complete implementation on <%= @achievement_date %>, 
+            validating the methodology against established Knowledge Navigator criteria through 
+            comprehensive evaluation metrics.
           </p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- What We Built -->
+  <!-- Research Approach -->
   <div class="grid lg:grid-cols-2 gap-12 mb-16">
     <div>
-      <h2 class="text-3xl font-bold text-gray-900 mb-6">Revolutionary Breakthrough</h2>
+      <h2 class="text-3xl font-bold text-gray-900 mb-6">Research Methodology</h2>
       <div class="prose prose-lg text-gray-600">
         <p class="text-xl leading-relaxed mb-6">
-          <strong>Not just chatbots or search interfaces</strong> - Enliterator creates complete 
-          <span class="text-blue-600 font-semibold">Enliterated Knowledge Navigators (EKNs)</span> 
-          that embody true domain expertise.
+          This platform addresses the challenge of creating conversational AI systems that demonstrate 
+          <span class="text-blue-600 font-semibold">domain expertise</span> rather than general-purpose 
+          question-answering capabilities.
         </p>
         
-        <p class="mb-4">Each Knowledge Navigator:</p>
+        <p class="mb-4">Key technical contributions include:</p>
         <ul class="space-y-2">
-          <li>🧠 <strong>Embodies domain expertise</strong> through fine-tuned models</li>
-          <li>📚 <strong>Grounds every response</strong> in structured knowledge graphs</li>
-          <li>🎭 <strong>Maintains specialist personality</strong> with consistent communication</li>
-          <li>📖 <strong>Cites sources</strong> with rights awareness and provenance</li>
-          <li>⚡ <strong>Adapts responses</strong> to user expertise levels</li>
+          <li><strong>Domain specialization</strong> through fine-tuned language models</li>
+          <li><strong>Knowledge grounding</strong> via structured graph representations</li>
+          <li><strong>Consistent communication patterns</strong> through personality calibration</li>
+          <li><strong>Provenance tracking</strong> with comprehensive citation systems</li>
+          <li><strong>Adaptive interaction</strong> based on user context and expertise</li>
         </ul>
       </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-lg p-8">
-      <h3 class="text-2xl font-bold text-gray-900 mb-6">Arctic Navigator Status</h3>
+    <div class="bg-gray-50 rounded-lg p-8">
+      <h3 class="text-2xl font-bold text-gray-900 mb-6">Implementation Validation: Arctic Navigator</h3>
       
       <% if @arctic_navigator %>
         <div class="space-y-4">
-          <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-            <span class="font-medium">Assembly Status</span>
-            <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
-              <%= @arctic_navigator.metadata&.dig("assembly_status") || "COMPLETE" %>
-            </span>
-          </div>
-          
-          <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-            <span class="font-medium">Knowledge Entities</span>
-            <span class="text-blue-600 font-bold"><%= number_with_delimiter(@arctic_navigator.total_nodes) %></span>
-          </div>
-          
-          <div class="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
-            <span class="font-medium">Relationships</span>
-            <span class="text-purple-600 font-bold"><%= number_with_delimiter(@arctic_navigator.total_relationships) %></span>
-          </div>
-          
-          <div class="flex justify-between items-center p-3 bg-yellow-50 rounded-lg">
-            <span class="font-medium">Performance Grade</span>
-            <span class="text-yellow-600 font-bold">
-              <%= @arctic_navigator.metadata&.dig("assembly_results", "performance_metrics", "performance_grade") || "A" %>
-            </span>
-          </div>
-          
-          <div class="flex justify-between items-center p-3 bg-indigo-50 rounded-lg">
-            <span class="font-medium">Certification Rate</span>
-            <span class="text-indigo-600 font-bold">
-              <%= @arctic_navigator.metadata&.dig("assembly_results", "certification_status", "certification_rate") || "100.0" %>%
-            </span>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-white p-4 rounded border">
+              <div class="text-sm text-gray-600">Knowledge Graph Scale</div>
+              <div class="text-xl font-semibold text-gray-900">
+                <%= number_with_delimiter(@arctic_navigator.total_nodes) %> entities
+              </div>
+            </div>
+            
+            <div class="bg-white p-4 rounded border">
+              <div class="text-sm text-gray-600">Relationship Mapping</div>
+              <div class="text-xl font-semibold text-gray-900">
+                <%= number_with_delimiter(@arctic_navigator.total_relationships) %> connections
+              </div>
+            </div>
+            
+            <div class="bg-white p-4 rounded border">
+              <div class="text-sm text-gray-600">Response Performance</div>
+              <div class="text-xl font-semibold text-gray-900">
+                <%= @arctic_navigator.metadata&.dig("assembly_results", "performance_metrics", "performance_grade") || "A" %> Grade
+              </div>
+            </div>
+            
+            <div class="bg-white p-4 rounded border">
+              <div class="text-sm text-gray-600">Validation Metrics</div>
+              <div class="text-xl font-semibold text-gray-900">
+                <%= @arctic_navigator.metadata&.dig("assembly_results", "certification_status", "certification_rate") || "100.0" %>% validation
+              </div>
+            </div>
           </div>
         </div>
         
         <div class="mt-6 text-center">
-          <%= link_to "Experience Arctic Navigator", chat_path(ekn_slug: @arctic_navigator.slug), 
-              class: "inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg" %>
+          <%= link_to "Interact with Arctic Navigator", chat_path(ekn_slug: @arctic_navigator.slug), 
+              class: "inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded hover:bg-blue-700 transition-colors duration-200" %>
         </div>
       <% else %>
-        <p class="text-gray-500 italic">Arctic Navigator data not available</p>
+        <p class="text-gray-500 italic">Arctic Navigator implementation data not available</p>
       <% end %>
     </div>
   </div>
 
-  <!-- 13-Stage Pipeline -->
+  <!-- Implementation Architecture -->
   <div class="mb-16">
-    <h2 class="text-3xl font-bold text-gray-900 mb-8 text-center">13-Stage EKN Creation Pipeline</h2>
+    <h2 class="text-3xl font-bold text-gray-900 mb-8 text-center">Implementation Architecture: 13-Stage Pipeline</h2>
     
     <div class="grid md:grid-cols-3 gap-8">
       <!-- Knowledge Infrastructure -->
-      <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
+      <div class="bg-green-50 rounded-lg p-6 border border-green-200">
         <div class="text-center mb-4">
-          <div class="inline-flex items-center justify-center w-12 h-12 bg-green-500 text-white rounded-full mb-3">
+          <div class="inline-flex items-center justify-center w-12 h-12 bg-green-600 text-white rounded-full mb-3">
             <span class="font-bold">0-8</span>
           </div>
           <h3 class="text-xl font-bold text-green-800">Knowledge Infrastructure</h3>
-          <p class="text-green-600 text-sm">Raw Data → Structured Knowledge</p>
+          <p class="text-green-600 text-sm">Data Processing & Graph Construction</p>
         </div>
         
         <ul class="space-y-2 text-sm text-green-700">
-          <li>• Mission framing & initialization</li>
-          <li>• Data intake & processing</li>
-          <li>• Rights & provenance tracking</li>
-          <li>• Canonical term extraction</li>
-          <li>• Entity pool filling</li>
-          <li>• Knowledge graph assembly</li>
-          <li>• Relationship discovery</li>
-          <li>• Vector embeddings</li>
-          <li>• Quality validation</li>
+          <li>• Domain initialization and configuration</li>
+          <li>• Data ingestion and preprocessing</li>
+          <li>• Rights assignment and provenance tracking</li>
+          <li>• Lexicon extraction and canonicalization</li>
+          <li>• Entity extraction using 15-pool taxonomy</li>
+          <li>• Neo4j knowledge graph assembly</li>
+          <li>• Multi-pass relationship discovery</li>
+          <li>• Vector embedding generation</li>
+          <li>• Knowledge completeness validation</li>
         </ul>
       </div>
 
       <!-- Conversational Intelligence -->
-      <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+      <div class="bg-blue-50 rounded-lg p-6 border border-blue-200">
         <div class="text-center mb-4">
-          <div class="inline-flex items-center justify-center w-12 h-12 bg-blue-500 text-white rounded-full mb-3">
+          <div class="inline-flex items-center justify-center w-12 h-12 bg-blue-600 text-white rounded-full mb-3">
             <span class="font-bold">9-11</span>
           </div>
           <h3 class="text-xl font-bold text-blue-800">Conversational Intelligence</h3>
-          <p class="text-blue-600 text-sm">Knowledge → AI Capabilities</p>
+          <p class="text-blue-600 text-sm">Model Specialization & Calibration</p>
         </div>
         
         <ul class="space-y-2 text-sm text-blue-700">
-          <li>• Fine-tuned domain models</li>
-          <li>• Training question generation</li>
-          <li>• Personality calibration</li>
-          <li>• Communication optimization</li>
-          <li>• Specialist trait validation</li>
+          <li>• Domain-specific model fine-tuning</li>
+          <li>• Conversational dataset generation</li>
+          <li>• Communication pattern calibration</li>
+          <li>• Response consistency optimization</li>
+          <li>• Domain expertise validation</li>
         </ul>
       </div>
 
-      <!-- Navigator Assembly -->
-      <div class="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl p-6 border border-purple-200">
+      <!-- System Integration -->
+      <div class="bg-purple-50 rounded-lg p-6 border border-purple-200">
         <div class="text-center mb-4">
-          <div class="inline-flex items-center justify-center w-12 h-12 bg-purple-500 text-white rounded-full mb-3">
+          <div class="inline-flex items-center justify-center w-12 h-12 bg-purple-600 text-white rounded-full mb-3">
             <span class="font-bold">12</span>
           </div>
-          <h3 class="text-xl font-bold text-purple-800">Navigator Assembly</h3>
-          <p class="text-purple-600 text-sm">AI → Complete Knowledge Navigator</p>
+          <h3 class="text-xl font-bold text-purple-800">System Integration</h3>
+          <p class="text-purple-600 text-sm">Validation & Deployment</p>
         </div>
         
         <ul class="space-y-2 text-sm text-purple-700">
-          <li>• Integration validation</li>
-          <li>• Performance testing</li>
-          <li>• Apple 1987 certification</li>
-          <li>• Production readiness</li>
-          <li>• Complete assembly</li>
+          <li>• Component integration testing</li>
+          <li>• Performance benchmarking</li>
+          <li>• Knowledge Navigator criteria validation</li>
+          <li>• Production deployment assessment</li>
+          <li>• System certification</li>
         </ul>
       </div>
     </div>
   </div>
 
   <!-- Technical Architecture -->
-  <div class="bg-gray-50 rounded-xl p-8 mb-16">
-    <h2 class="text-3xl font-bold text-gray-900 mb-8 text-center">Revolutionary Architecture</h2>
+  <div class="bg-gray-50 rounded-lg p-8 mb-16">
+    <h2 class="text-3xl font-bold text-gray-900 mb-8 text-center">Technical Architecture</h2>
     
     <div class="grid md:grid-cols-2 gap-8">
       <div>
-        <h3 class="text-xl font-bold text-gray-900 mb-4">Core Innovations</h3>
+        <h3 class="text-xl font-bold text-gray-900 mb-4">Core Components</h3>
         <ul class="space-y-3 text-gray-700">
           <li class="flex items-start">
-            <span class="inline-block w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-            <span><strong>QueryOrchestrator:</strong> Intelligent routing through fine-tuned models</span>
+            <span class="inline-block w-2 h-2 bg-blue-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+            <span><strong>QueryOrchestrator:</strong> Intelligent query routing using fine-tuned models for canonical term mapping and tool selection</span>
           </li>
           <li class="flex items-start">
-            <span class="inline-block w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-            <span><strong>Grounded Responses:</strong> Every answer backed by knowledge graph entities</span>
+            <span class="inline-block w-2 h-2 bg-blue-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+            <span><strong>Knowledge Grounding:</strong> Response generation constrained by structured graph entities with comprehensive provenance tracking</span>
           </li>
           <li class="flex items-start">
-            <span class="inline-block w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-            <span><strong>Personality Calibration:</strong> Consistent specialist communication</span>
+            <span class="inline-block w-2 h-2 bg-blue-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+            <span><strong>Communication Calibration:</strong> Statistical analysis of successful interaction patterns for consistent domain-specific communication</span>
           </li>
           <li class="flex items-start">
-            <span class="inline-block w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-            <span><strong>Rights Awareness:</strong> Transparent citation and usage policies</span>
+            <span class="inline-block w-2 h-2 bg-blue-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+            <span><strong>Rights Management:</strong> Query-time filtering based on data permissions and usage constraints</span>
           </li>
         </ul>
       </div>
       
       <div>
-        <h3 class="text-xl font-bold text-gray-900 mb-4">Technology Stack</h3>
+        <h3 class="text-xl font-bold text-gray-900 mb-4">Implementation Stack</h3>
         <ul class="space-y-3 text-gray-700">
           <li class="flex items-start">
-            <span class="inline-block w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-            <span><strong>Rails 8:</strong> Modern web application framework</span>
+            <span class="inline-block w-2 h-2 bg-green-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+            <span><strong>Rails 8:</strong> Web application framework with Solid Queue background processing</span>
           </li>
           <li class="flex items-start">
-            <span class="inline-block w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-            <span><strong>Neo4j + GenAI:</strong> Knowledge graph with embeddings</span>
+            <span class="inline-block w-2 h-2 bg-green-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+            <span><strong>Neo4j + GenAI:</strong> Graph database with integrated vector embeddings for semantic search</span>
           </li>
           <li class="flex items-start">
-            <span class="inline-block w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-            <span><strong>OpenAI GPT-4.1-mini:</strong> Fine-tuned domain models</span>
+            <span class="inline-block w-2 h-2 bg-green-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+            <span><strong>OpenAI GPT-4.1-mini:</strong> Base model with domain-specific fine-tuning for canonical understanding</span>
           </li>
           <li class="flex items-start">
-            <span class="inline-block w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-            <span><strong>MCP Tools:</strong> Multi-tool query processing</span>
+            <span class="inline-block w-2 h-2 bg-green-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+            <span><strong>MCP Protocol:</strong> Model Context Protocol implementation for structured tool interaction</span>
           </li>
         </ul>
       </div>
     </div>
   </div>
 
-  <!-- Historic Significance -->
+  <!-- 10+5 Pool Architecture -->
+  <div class="mb-16">
+    <h2 class="text-3xl font-bold text-gray-900 mb-8 text-center">Universal Knowledge Architecture: The 10+5 Pool System</h2>
+    
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-8">
+        <p class="text-xl text-gray-600 leading-relaxed">
+          A <strong>universal ontological framework</strong> designed to represent domain knowledge 
+          through a standardized 15-entity taxonomy that maintains semantic clarity while enabling 
+          computational reasoning across diverse knowledge domains.
+        </p>
+      </div>
+
+      <!-- Ten Pool Canon -->
+      <div class="mb-12">
+        <div class="text-center mb-8">
+          <h3 class="text-2xl font-bold text-blue-900 mb-4">Ten Pool Canon: Core Entity Types</h3>
+          <p class="text-gray-600 max-w-3xl mx-auto">
+            Foundational entity categories designed to systematically represent knowledge across domains, 
+            spanning conceptual abstractions, physical manifestations, experiential data, and empirical measurements.
+          </p>
+        </div>
+        
+        <div class="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <!-- Ideas -->
+          <div class="bg-gradient-to-br from-purple-50 to-indigo-50 p-4 rounded-lg border border-purple-200 text-center">
+            <div class="w-12 h-12 bg-purple-500 text-white rounded-full flex items-center justify-center mx-auto mb-3">
+              <span class="text-lg font-bold">💡</span>
+            </div>
+            <h4 class="font-bold text-purple-900 mb-2">Ideas</h4>
+            <p class="text-sm text-purple-700">Concepts, principles, theories - the <em>why</em> behind everything</p>
+          </div>
+
+          <!-- Manifests -->
+          <div class="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200 text-center">
+            <div class="w-12 h-12 bg-green-500 text-white rounded-full flex items-center justify-center mx-auto mb-3">
+              <span class="text-lg font-bold">🏗️</span>
+            </div>
+            <h4 class="font-bold text-green-900 mb-2">Manifests</h4>
+            <p class="text-sm text-green-700">Physical objects, structures, locations - the tangible <em>what</em></p>
+          </div>
+
+          <!-- Experiences -->
+          <div class="bg-gradient-to-br from-orange-50 to-red-50 p-4 rounded-lg border border-orange-200 text-center">
+            <div class="w-12 h-12 bg-orange-500 text-white rounded-full flex items-center justify-center mx-auto mb-3">
+              <span class="text-lg font-bold">🎭</span>
+            </div>
+            <h4 class="font-bold text-orange-900 mb-2">Experiences</h4>
+            <p class="text-sm text-orange-700">Events, activities, interactions - lived outcomes and perceptions</p>
+          </div>
+
+          <!-- Actors -->
+          <div class="bg-gradient-to-br from-blue-50 to-cyan-50 p-4 rounded-lg border border-blue-200 text-center">
+            <div class="w-12 h-12 bg-blue-500 text-white rounded-full flex items-center justify-center mx-auto mb-3">
+              <span class="text-lg font-bold">👥</span>
+            </div>
+            <h4 class="font-bold text-blue-900 mb-2">Actors</h4>
+            <p class="text-sm text-blue-700">People, organizations, roles - the <em>who</em> in every story</p>
+          </div>
+
+          <!-- Evidence -->
+          <div class="bg-gradient-to-br from-teal-50 to-green-50 p-4 rounded-lg border border-teal-200 text-center">
+            <div class="w-12 h-12 bg-teal-500 text-white rounded-full flex items-center justify-center mx-auto mb-3">
+              <span class="text-lg font-bold">📊</span>
+            </div>
+            <h4 class="font-bold text-teal-900 mb-2">Evidence</h4>
+            <p class="text-sm text-teal-700">Data, measurements, observations - the proof and validation</p>
+          </div>
+
+          <!-- Spatial -->
+          <div class="bg-gradient-to-br from-indigo-50 to-purple-50 p-4 rounded-lg border border-indigo-200 text-center">
+            <div class="w-12 h-12 bg-indigo-500 text-white rounded-full flex items-center justify-center mx-auto mb-3">
+              <span class="text-lg font-bold">🗺️</span>
+            </div>
+            <h4 class="font-bold text-indigo-900 mb-2">Spatial</h4>
+            <p class="text-sm text-indigo-700">Geographic, coordinate information - the <em>where</em> of knowledge</p>
+          </div>
+
+          <!-- Practical -->
+          <div class="bg-gradient-to-br from-yellow-50 to-orange-50 p-4 rounded-lg border border-yellow-200 text-center">
+            <div class="w-12 h-12 bg-yellow-500 text-white rounded-full flex items-center justify-center mx-auto mb-3">
+              <span class="text-lg font-bold">🛠️</span>
+            </div>
+            <h4 class="font-bold text-yellow-900 mb-2">Practical</h4>
+            <p class="text-sm text-yellow-700">Procedures, methods, workflows - the actionable <em>how</em></p>
+          </div>
+
+          <!-- Evolutionary -->
+          <div class="bg-gradient-to-br from-pink-50 to-red-50 p-4 rounded-lg border border-pink-200 text-center">
+            <div class="w-12 h-12 bg-pink-500 text-white rounded-full flex items-center justify-center mx-auto mb-3">
+              <span class="text-lg font-bold">🔄</span>
+            </div>
+            <h4 class="font-bold text-pink-900 mb-2">Evolutionary</h4>
+            <p class="text-sm text-pink-700">Changes, developments over time - the <em>when</em> and progression</p>
+          </div>
+
+          <!-- Risks -->
+          <div class="bg-gradient-to-br from-red-50 to-pink-50 p-4 rounded-lg border border-red-200 text-center">
+            <div class="w-12 h-12 bg-red-500 text-white rounded-full flex items-center justify-center mx-auto mb-3">
+              <span class="text-lg font-bold">⚠️</span>
+            </div>
+            <h4 class="font-bold text-red-900 mb-2">Risks</h4>
+            <p class="text-sm text-red-700">Hazards, challenges, concerns - anticipating what could go wrong</p>
+          </div>
+
+          <!-- Methods -->
+          <div class="bg-gradient-to-br from-gray-50 to-blue-50 p-4 rounded-lg border border-gray-200 text-center">
+            <div class="w-12 h-12 bg-gray-500 text-white rounded-full flex items-center justify-center mx-auto mb-3">
+              <span class="text-lg font-bold">🔬</span>
+            </div>
+            <h4 class="font-bold text-gray-900 mb-2">Methods</h4>
+            <p class="text-sm text-gray-700">Approaches, techniques, tools - the systematic ways of doing</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Extended Pools -->
+      <div class="mb-12">
+        <div class="text-center mb-8">
+          <h3 class="text-2xl font-bold text-emerald-900 mb-4">Extended Pools: Advanced Capabilities</h3>
+          <p class="text-gray-600 max-w-3xl mx-auto">
+            Five additional specialized pools that enable advanced features like rights management, 
+            relationship discovery, and semantic understanding.
+          </p>
+        </div>
+        
+        <div class="grid md:grid-cols-5 gap-4">
+          <!-- Lexicon and Ontology -->
+          <div class="bg-gradient-to-br from-emerald-50 to-teal-50 p-4 rounded-lg border border-emerald-200 text-center">
+            <div class="w-12 h-12 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto mb-3">
+              <span class="text-lg font-bold">📚</span>
+            </div>
+            <h4 class="font-bold text-emerald-900 mb-2">Lexicon & Ontology</h4>
+            <p class="text-sm text-emerald-700">Terminology, definitions - canonical language understanding</p>
+          </div>
+
+          <!-- Provenance and Rights -->
+          <div class="bg-gradient-to-br from-violet-50 to-purple-50 p-4 rounded-lg border border-violet-200 text-center">
+            <div class="w-12 h-12 bg-violet-500 text-white rounded-full flex items-center justify-center mx-auto mb-3">
+              <span class="text-lg font-bold">🔐</span>
+            </div>
+            <h4 class="font-bold text-violet-900 mb-2">Provenance & Rights</h4>
+            <p class="text-sm text-violet-700">Source tracking, permissions - ethical data usage</p>
+          </div>
+
+          <!-- Relational -->
+          <div class="bg-gradient-to-br from-cyan-50 to-blue-50 p-4 rounded-lg border border-cyan-200 text-center">
+            <div class="w-12 h-12 bg-cyan-500 text-white rounded-full flex items-center justify-center mx-auto mb-3">
+              <span class="text-lg font-bold">🔗</span>
+            </div>
+            <h4 class="font-bold text-cyan-900 mb-2">Relational</h4>
+            <p class="text-sm text-cyan-700">Connections, networks - how everything links together</p>
+          </div>
+
+          <!-- Intent and Task -->
+          <div class="bg-gradient-to-br from-amber-50 to-yellow-50 p-4 rounded-lg border border-amber-200 text-center">
+            <div class="w-12 h-12 bg-amber-500 text-white rounded-full flex items-center justify-center mx-auto mb-3">
+              <span class="text-lg font-bold">🎯</span>
+            </div>
+            <h4 class="font-bold text-amber-900 mb-2">Intent & Task</h4>
+            <p class="text-sm text-amber-700">Goals, objectives, actions - user requests and fulfillment</p>
+          </div>
+
+          <!-- Emanation -->
+          <div class="bg-gradient-to-br from-rose-50 to-pink-50 p-4 rounded-lg border border-rose-200 text-center">
+            <div class="w-12 h-12 bg-rose-500 text-white rounded-full flex items-center justify-center mx-auto mb-3">
+              <span class="text-lg font-bold">✨</span>
+            </div>
+            <h4 class="font-bold text-rose-900 mb-2">Emanation</h4>
+            <p class="text-sm text-rose-700">Outputs, ripple effects - influence and consequences</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- What This Enables -->
+      <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-8 border border-indigo-200">
+        <h3 class="text-2xl font-bold text-indigo-900 mb-6 text-center">Computational Capabilities Enabled by Universal Architecture</h3>
+        
+        <div class="grid md:grid-cols-2 gap-8">
+          <div>
+            <h4 class="text-lg font-bold text-indigo-800 mb-4">Knowledge Representation</h4>
+            <ul class="space-y-2 text-indigo-700">
+              <li class="flex items-start">
+                <span class="inline-block w-2 h-2 bg-indigo-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                <span><strong>Semantic Disambiguation:</strong> Formal entity typing eliminates ambiguity in knowledge graph structure</span>
+              </li>
+              <li class="flex items-start">
+                <span class="inline-block w-2 h-2 bg-indigo-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                <span><strong>Query Precision:</strong> Fine-tuned models leverage pool taxonomy for accurate information retrieval</span>
+              </li>
+              <li class="flex items-start">
+                <span class="inline-block w-2 h-2 bg-indigo-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                <span><strong>Relationship Inference:</strong> Structured entity types enable systematic relationship discovery across knowledge domains</span>
+              </li>
+              <li class="flex items-start">
+                <span class="inline-block w-2 h-2 bg-indigo-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                <span><strong>Temporal Modeling:</strong> Evolutionary pool captures change patterns and temporal dependencies</span>
+              </li>
+            </ul>
+          </div>
+          
+          <div>
+            <h4 class="text-lg font-bold text-indigo-800 mb-4">System Implementation</h4>
+            <ul class="space-y-2 text-indigo-700">
+              <li class="flex items-start">
+                <span class="inline-block w-2 h-2 bg-indigo-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                <span><strong>Verified Attribution:</strong> Comprehensive provenance tracking with entity-level source citation</span>
+              </li>
+              <li class="flex items-start">
+                <span class="inline-block w-2 h-2 bg-indigo-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                <span><strong>Rights Enforcement:</strong> Query-time filtering based on usage permissions and data classification</span>
+              </li>
+              <li class="flex items-start">
+                <span class="inline-block w-2 h-2 bg-indigo-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                <span><strong>Spatial Computing:</strong> Geographic entity relationships enable location-aware reasoning</span>
+              </li>
+              <li class="flex items-start">
+                <span class="inline-block w-2 h-2 bg-indigo-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                <span><strong>Risk Analysis:</strong> Systematic hazard identification through risk pool integration</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="mt-8 text-center">
+          <div class="bg-white rounded-lg p-6 border border-indigo-300">
+            <h4 class="text-xl font-bold text-indigo-900 mb-3">Cross-Domain Applicability</h4>
+            <p class="text-indigo-700 leading-relaxed">
+              The 15-pool taxonomy demonstrates domain-agnostic knowledge representation capabilities. 
+              Validation across Arctic research, with planned extension to medical, legal, and engineering domains, 
+              supports the hypothesis that this framework can systematically represent knowledge across diverse fields.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Research Contribution -->
   <div class="text-center mb-16">
-    <h2 class="text-3xl font-bold text-gray-900 mb-6">Historic Significance</h2>
+    <h2 class="text-3xl font-bold text-gray-900 mb-6">Research Contribution</h2>
     
     <div class="max-w-4xl mx-auto">
-      <div class="bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 p-8 rounded-lg">
+      <div class="bg-amber-50 border-l-4 border-amber-500 p-8 rounded-lg">
         <h3 class="text-2xl font-bold text-amber-800 mb-4">
-          First Time in Computing History
+          Technical Achievements and Validation
         </h3>
         
         <div class="grid md:grid-cols-2 gap-6 text-left">
           <ul class="space-y-3 text-amber-700">
             <li class="flex items-start">
-              <span class="text-amber-500 mr-2">✓</span>
-              <span>Apple's 1987 Knowledge Navigator vision systematically realized</span>
+              <span class="text-amber-500 mr-2">•</span>
+              <span>Systematic implementation of Apple's 1987 Knowledge Navigator concept using modern LLM technology</span>
             </li>
             <li class="flex items-start">
-              <span class="text-amber-500 mr-2">✓</span>
-              <span>Conversational AI embodies true domain expertise</span>
+              <span class="text-amber-500 mr-2">•</span>
+              <span>Domain-specific conversational AI that demonstrates verifiable expertise through structured knowledge grounding</span>
             </li>
           </ul>
           
           <ul class="space-y-3 text-amber-700">
             <li class="flex items-start">
-              <span class="text-amber-500 mr-2">✓</span>
-              <span>Reproducible pipeline for creating AI specialists</span>
+              <span class="text-amber-500 mr-2">•</span>
+              <span>Reproducible methodology for creating domain-specific AI systems across knowledge fields</span>
             </li>
             <li class="flex items-start">
-              <span class="text-amber-500 mr-2">✓</span>
-              <span>Knowledge graph enables grounded conversation</span>
+              <span class="text-amber-500 mr-2">•</span>
+              <span>Integration of knowledge graphs with fine-tuned language models for reliable, citation-backed responses</span>
             </li>
           </ul>
         </div>
         
         <div class="mt-6 text-center">
-          <p class="text-xl text-amber-800 font-semibold">
-            The Arctic Navigator represents a fundamental shift from AI as "helpful assistant" 
-            to AI as "knowledgeable specialist"
+          <p class="text-lg text-amber-800">
+            This work demonstrates a methodology for transitioning from general-purpose conversational AI 
+            to domain-specific knowledge systems that maintain expert-level consistency and verifiability.
           </p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Call to Action -->
+  <!-- Research Access -->
   <div class="text-center">
-    <h2 class="text-3xl font-bold text-gray-900 mb-6">Experience the Future of AI</h2>
+    <h2 class="text-3xl font-bold text-gray-900 mb-6">Research Implementation Access</h2>
     
     <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
       <% if @arctic_navigator %>
-        <%= link_to "Chat with Arctic Navigator", chat_path(ekn_slug: @arctic_navigator.slug), 
-            class: "inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold text-lg rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg transform hover:scale-105" %>
+        <%= link_to "Interact with Arctic Navigator", chat_path(ekn_slug: @arctic_navigator.slug), 
+            class: "inline-flex items-center px-8 py-4 bg-blue-600 text-white font-medium text-lg rounded hover:bg-blue-700 transition-colors duration-200" %>
       <% end %>
       
-      <%= link_to "Explore Documentation", "#", 
-          class: "inline-flex items-center px-8 py-4 bg-gray-100 text-gray-700 font-semibold text-lg rounded-lg hover:bg-gray-200 transition-all duration-200 shadow-md" %>
+      <%= link_to "Technical Documentation", "https://github.com/jeremedia/enliterator", 
+          class: "inline-flex items-center px-8 py-4 bg-gray-600 text-white font-medium text-lg rounded hover:bg-gray-700 transition-colors duration-200" %>
     </div>
     
-    <p class="mt-6 text-gray-600 text-lg max-w-2xl mx-auto">
-      Built with Rails 8, Neo4j, OpenAI GPT-4.1-mini, and the vision that 
-      conversational AI should embody expertise, not just access it.
+    <p class="mt-6 text-gray-600 text-lg max-w-3xl mx-auto">
+      Implementation details available through the GitHub repository. 
+      System architecture combines Rails 8, Neo4j knowledge graphs, and OpenAI GPT-4.1-mini 
+      to demonstrate domain-specific conversational AI capabilities.
     </p>
   </div>
 </div>
