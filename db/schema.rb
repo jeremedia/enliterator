@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_11_185955) do
+ActiveRecord::Schema[8.0].define(version: 2025_08_12_201128) do
   create_schema "ekn_11"
   create_schema "ekn_12"
   create_schema "ekn_13"
@@ -61,6 +61,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_11_185955) do
     t.datetime "valid_time_end"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "permissions"
     t.index ["name"], name: "index_actors_on_name"
     t.index ["provenance_and_rights_id"], name: "index_actors_on_provenance_and_rights_id"
     t.index ["role"], name: "index_actors_on_role"
@@ -300,8 +301,15 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_11_185955) do
     t.float "strength"
     t.jsonb "evidence_refs", default: []
     t.jsonb "temporal_extent", default: {}
+    t.integer "impact_level", default: 0, null: false
+    t.integer "temporal_scope", default: 0, null: false
+    t.integer "evidence_quality", default: 0, null: false
+    t.integer "directness", default: 0, null: false
+    t.index ["evidence_quality"], name: "index_emanations_on_evidence_quality"
+    t.index ["impact_level"], name: "index_emanations_on_impact_level"
     t.index ["influence_type"], name: "index_emanations_on_influence_type"
     t.index ["provenance_and_rights_id"], name: "index_emanations_on_provenance_and_rights_id"
+    t.index ["temporal_scope"], name: "index_emanations_on_temporal_scope"
     t.index ["valid_time_start", "valid_time_end"], name: "index_emanations_on_valid_time_start_and_valid_time_end"
   end
 
@@ -393,11 +401,19 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_11_185955) do
     t.bigint "actor_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "experience_type", default: 0, null: false
+    t.integer "reliability_level", default: 0, null: false
+    t.integer "privacy_level", default: 0, null: false
+    t.integer "emotional_intensity", default: 0, null: false
     t.index ["actor_id"], name: "index_experiences_on_actor_id"
     t.index ["agent_label"], name: "index_experiences_on_agent_label"
+    t.index ["emotional_intensity"], name: "index_experiences_on_emotional_intensity"
+    t.index ["experience_type"], name: "index_experiences_on_experience_type"
     t.index ["narrative_text"], name: "index_experiences_on_narrative_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["observed_at"], name: "index_experiences_on_observed_at"
+    t.index ["privacy_level"], name: "index_experiences_on_privacy_level"
     t.index ["provenance_and_rights_id"], name: "index_experiences_on_provenance_and_rights_id"
+    t.index ["reliability_level"], name: "index_experiences_on_reliability_level"
     t.index ["sentiment"], name: "index_experiences_on_sentiment"
   end
 
@@ -485,12 +501,18 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_11_185955) do
     t.datetime "valid_time_end"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "idea_type", default: 0, null: false
+    t.integer "maturity_level", default: 0, null: false
+    t.integer "scope", default: 0, null: false
     t.index ["abstract"], name: "index_ideas_on_abstract_trgm", opclass: :gin_trgm_ops, using: :gin
+    t.index ["idea_type"], name: "index_ideas_on_idea_type"
     t.index ["is_canonical"], name: "index_ideas_on_is_canonical"
     t.index ["label"], name: "index_ideas_on_label"
     t.index ["label"], name: "index_ideas_on_label_trgm", opclass: :gin_trgm_ops, using: :gin
+    t.index ["maturity_level"], name: "index_ideas_on_maturity_level"
     t.index ["principle_tags"], name: "index_ideas_on_principle_tags", using: :gin
     t.index ["provenance_and_rights_id"], name: "index_ideas_on_provenance_and_rights_id"
+    t.index ["scope"], name: "index_ideas_on_scope"
     t.index ["valid_time_start", "valid_time_end"], name: "index_ideas_on_valid_time_start_and_valid_time_end"
   end
 
@@ -634,10 +656,14 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_11_185955) do
     t.string "pool_association", null: false
     t.boolean "is_canonical", default: false, null: false
     t.jsonb "relations", default: {}
+    t.integer "term_type", default: 0, null: false
+    t.string "pool_association_type"
     t.index ["negative_surface_forms"], name: "index_lexicon_and_ontologies_on_negative_surface_forms", using: :gin
+    t.index ["pool_association_type"], name: "index_lexicon_and_ontologies_on_pool_association_type"
     t.index ["provenance_and_rights_id"], name: "index_lexicon_and_ontologies_on_provenance_and_rights_id"
     t.index ["surface_forms"], name: "index_lexicon_and_ontologies_on_surface_forms", using: :gin
     t.index ["term"], name: "index_lexicon_and_ontologies_on_term", unique: true
+    t.index ["term_type"], name: "index_lexicon_and_ontologies_on_term_type"
     t.index ["valid_time_start", "valid_time_end"], name: "idx_on_valid_time_start_valid_time_end_5b95b14d20"
   end
 
@@ -718,7 +744,15 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_11_185955) do
     t.datetime "valid_time_end"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "artifact_category", default: 0, null: false
+    t.integer "completion_status", default: 0, null: false
+    t.integer "accessibility_level", default: 0, null: false
+    t.integer "format_type", default: 0, null: false
+    t.index ["accessibility_level"], name: "index_manifests_on_accessibility_level"
+    t.index ["artifact_category"], name: "index_manifests_on_artifact_category"
+    t.index ["completion_status"], name: "index_manifests_on_completion_status"
     t.index ["components"], name: "index_manifests_on_components", using: :gin
+    t.index ["format_type"], name: "index_manifests_on_format_type"
     t.index ["label"], name: "index_manifests_on_label"
     t.index ["label"], name: "index_manifests_on_label_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["manifest_type"], name: "index_manifests_on_manifest_type"
@@ -904,7 +938,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_11_185955) do
     t.datetime "valid_time_end"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "complexity_level", default: 0, null: false
     t.index ["category"], name: "index_method_pools_on_category"
+    t.index ["complexity_level"], name: "index_method_pools_on_complexity_level"
     t.index ["method_name"], name: "index_method_pools_on_method_name"
     t.index ["provenance_and_rights_id"], name: "index_method_pools_on_provenance_and_rights_id"
     t.index ["valid_time_start", "valid_time_end"], name: "index_method_pools_on_valid_time_start_and_valid_time_end"
@@ -1014,10 +1050,19 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_11_185955) do
     t.datetime "valid_time_end"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "skill_level", default: 0, null: false
+    t.integer "domain", default: 0, null: false
+    t.integer "instruction_type", default: 0, null: false
+    t.integer "validation_method", default: 0, null: false
+    t.integer "complexity_level", default: 0, null: false
+    t.index ["domain"], name: "index_practicals_on_domain"
     t.index ["goal"], name: "index_practicals_on_goal"
+    t.index ["instruction_type"], name: "index_practicals_on_instruction_type"
     t.index ["provenance_and_rights_id"], name: "index_practicals_on_provenance_and_rights_id"
+    t.index ["skill_level"], name: "index_practicals_on_skill_level"
     t.index ["steps"], name: "index_practicals_on_steps", using: :gin
     t.index ["valid_time_start", "valid_time_end"], name: "index_practicals_on_valid_time_start_and_valid_time_end"
+    t.index ["validation_method"], name: "index_practicals_on_validation_method"
   end
 
   create_table "prompt_templates", force: :cascade do |t|
@@ -1079,7 +1124,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_11_185955) do
     t.datetime "valid_time_end"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "ingest_batch_id", null: false
     t.index ["embargo_until"], name: "index_provenance_and_rights_on_embargo_until"
+    t.index ["ingest_batch_id"], name: "index_provenance_and_rights_on_ingest_batch_id"
     t.index ["publishability", "training_eligibility"], name: "index_p_and_r_on_publish_and_train"
     t.index ["publishability"], name: "index_provenance_and_rights_on_publishability"
     t.index ["quarantined"], name: "index_provenance_and_rights_on_quarantined"
@@ -1461,6 +1508,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_11_185955) do
   add_foreign_key "practical_ideas", "practicals"
   add_foreign_key "practicals", "provenance_and_rights", column: "provenance_and_rights_id"
   add_foreign_key "prompt_versions", "prompts"
+  add_foreign_key "provenance_and_rights", "ingest_batches"
   add_foreign_key "relationals", "provenance_and_rights", column: "provenance_and_rights_id"
   add_foreign_key "relators", "provenance_and_rights", column: "provenance_and_rights_id"
   add_foreign_key "risk_practicals", "practicals"

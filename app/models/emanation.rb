@@ -26,10 +26,9 @@
 #  index_emanations_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
 #
 class Emanation < ApplicationRecord
-  include HasRights
-  include TimeTrackable
+  include EknPoolEntity
 
-  # Enums
+  # Enums for influence classification
   enum :influence_type, {
     cultural: "cultural",
     emotional: "emotional",
@@ -42,6 +41,95 @@ class Emanation < ApplicationRecord
     aesthetic: "aesthetic",
     technological: "technological"
   }, prefix: true
+
+  enum :impact_level, {
+    negligible: 0,       # Minimal measurable effect
+    minor: 1,           # Small but noticeable impact
+    moderate: 2,        # Significant but contained effect
+    significant: 3,     # Major impact across domains
+    transformative: 4   # Fundamental change or revolution
+  }, prefix: true
+
+  enum :temporal_scope, {
+    immediate: 0,       # Effects within days/weeks
+    short_term: 1,      # Effects within months
+    medium_term: 2,     # Effects within years
+    long_term: 3,       # Effects within decades
+    permanent: 4        # Lasting/irreversible effects
+  }, prefix: true
+
+  enum :evidence_quality, {
+    anecdotal: 0,       # Stories, unverified reports
+    observational: 1,   # Witnessed but undocumented
+    documented: 2,      # Written records, evidence exists
+    validated: 3,       # Cross-verified, multiple sources
+    peer_reviewed: 4    # Scientific validation, published
+  }, prefix: true
+
+  enum :directness, {
+    direct: 0,          # Immediate cause-effect relationship
+    indirect: 1,        # Mediated through one intermediate
+    cascading: 2,       # Chain reaction, multiple steps
+    emergent: 3         # Unpredictable, system-level effect
+  }, prefix: true
+
+  # Model-driven extraction configuration
+  extraction_config do
+    canonical_name "Emanation"
+    description "Ripple effects, influence patterns, secondary outcomes - systemic impact and diffusion tracking"
+    
+    field :influence_type, type: :enum,
+      values: -> { influence_types.keys },  # Live from model enum - 10 values!
+      default: 'cultural',
+      hints: "cultural: traditions/beliefs; emotional: feelings/psychology; practical: tools/methods; systemic: structures/processes; environmental: ecosystem/climate; social: relationships/communities; economic: finance/markets; spiritual: meaning/purpose; aesthetic: beauty/design; technological: innovation/tools"
+      
+    field :impact_level, type: :enum,
+      values: -> { impact_levels.keys },  # Live from model enum - 5 values!
+      default: 'moderate',
+      hints: "negligible: minimal effect; minor: small impact; moderate: significant but contained; significant: major cross-domain; transformative: fundamental change"
+      
+    field :temporal_scope, type: :enum,
+      values: -> { temporal_scopes.keys },  # Live from model enum - 5 values!
+      default: 'medium_term',
+      hints: "immediate: days/weeks; short_term: months; medium_term: years; long_term: decades; permanent: irreversible"
+      
+    field :evidence_quality, type: :enum,
+      values: -> { evidence_qualities.keys },  # Live from model enum - 5 values!
+      default: 'documented',
+      hints: "anecdotal: unverified stories; observational: witnessed; documented: written records; validated: cross-verified; peer_reviewed: scientific validation"
+      
+    field :directness, type: :enum,
+      values: -> { directnesses.keys },  # Live from model enum - 4 values!
+      default: 'direct',
+      hints: "direct: immediate cause-effect; indirect: one intermediate step; cascading: chain reaction; emergent: unpredictable system effect"
+      
+    field :pathway, type: :text, required: true,
+      examples: [
+        "Climate research findings → Policy changes → Community adaptation strategies",
+        "Burning Man principles → Regional community practices → Local governance models", 
+        "Arctic data collection → International cooperation → Conservation agreements"
+      ],
+      hints: "Description of how the influence spreads or manifests - the causal pathway"
+      
+    field :target_context, type: :text, required: false,
+      examples: [
+        "Rural Alaskan communities adapting to climate change",
+        "Urban planning incorporating participatory principles",
+        "Scientific collaboration networks in polar research"
+      ],
+      hints: "The domain, community, or context where this influence is observed"
+      
+    field :strength, type: :float, required: false,
+      examples: [0.85, 0.67, 0.42, 0.23],
+      hints: "Quantitative measure of influence strength between 0.0 (weak) and 1.0 (maximum impact)"
+      
+    field :evidence_refs, type: :json, required: false,
+      examples: [
+        ["Study: Arctic Community Resilience 2023", "Report: Policy Impact Assessment"],
+        ["Interview: Community Leader Johnson", "Document: Local Adaptation Plan"]
+      ],
+      hints: "Array of evidence sources, references, or documentation supporting this influence claim"
+  end
 
   # Associations through join tables
   has_many :idea_emanations, dependent: :destroy

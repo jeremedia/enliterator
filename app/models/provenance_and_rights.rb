@@ -33,14 +33,20 @@
 #  index_provenance_and_rights_on_training_eligibility  (training_eligibility)
 #
 class ProvenanceAndRights < ApplicationRecord
-  include TimeTrackable
+  include EknPoolEntity
   
-  # Associations
+  # Associations (EknPoolEntity is itself belonged_to by other entities)
   has_many :ideas
   has_many :manifests
   has_many :experiences
   has_many :practicals
   has_many :emanations
+  has_many :actors
+  has_many :spatials  
+  has_many :method_pools
+  has_many :evidences
+  has_many :risks
+  has_many :relationals
   
   # Enums
   enum :consent_status, {
@@ -66,7 +72,52 @@ class ProvenanceAndRights < ApplicationRecord
     custom: 11
   }, prefix: true
   
-  # Validations
+  # Model-driven extraction configuration
+  extraction_config do
+    canonical_name "ProvenanceAndRights"
+    description "Source, attribution, consent, license, lineage - data provenance and rights management"
+    
+    field :source_ids, type: :json, required: true,
+      examples: [
+        ["2e94ea4c07ae6377db3365a8fe5f11455a3ad63196effa566d27bfa6604b4589"],
+        ["abc123def456", "789ghi012jkl"]
+      ],
+      hints: "Array of source identifiers, file hashes, URLs, or document IDs for tracking data lineage"
+      
+    field :source_owner, type: :string, required: false,
+      examples: ["Dr. Sarah Johnson", "Arctic Research Institute", "NOAA Climate Data", "Anonymous"],
+      hints: "Name of the data owner, author, or originating organization"
+      
+    field :collection_method, type: :string, required: true,
+      examples: ["automated_ingestion", "manual_upload", "survey_response", "interview_transcription", "sensor_data"],
+      hints: "How this data was collected or obtained"
+      
+    field :consent_status, type: :enum,
+      values: -> { consent_statuses.keys },  # Live from model enum!
+      default: 'unknown',
+      hints: "explicit_consent: clear permission given; implicit_consent: reasonable to assume; no_consent: permission denied; withdrawn: consent revoked; unknown: status unclear"
+      
+    field :license_type, type: :enum,
+      values: -> { license_types.keys },  # Live from model enum!
+      default: 'unspecified',
+      hints: "cc0: public domain; cc_by: attribution required; cc_by_sa: share-alike; cc_by_nc: non-commercial; proprietary: restricted use; custom: see custom_terms"
+      
+    field :custom_terms, type: :json, required: false,
+      examples: [
+        {"attribution": "Source: Arctic Research Project 2023", "allow_public_display": true},
+        {"restrictions": "Internal use only", "contact": "data-owner@example.org"}
+      ],
+      hints: "Custom license terms, attribution requirements, or usage restrictions"
+      
+    field :collectors, type: :json, required: false,
+      examples: [
+        ["Dr. Johnson", "Research Assistant Adams"],
+        ["Automated sensor system", "Field team Alpha"]
+      ],
+      hints: "Array of people, systems, or organizations involved in data collection"
+  end
+  
+  # Validations (EknPoolEntity provides common ones)
   validates :source_ids, presence: true
   validates :collection_method, presence: true
   validates :consent_status, presence: true

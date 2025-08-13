@@ -26,17 +26,80 @@
 #  index_method_pools_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
 #
 class MethodPool < ApplicationRecord
-  belongs_to :provenance_and_rights
+  include EknPoolEntity
   
-  # Relationships
+  # Category enum for method classification
+  enum :category, {
+    analytical: 0,      # Statistical analysis, data analysis methods
+    experimental: 1,    # Laboratory experiments, field experiments
+    observational: 2,   # Field observations, monitoring protocols  
+    computational: 3,   # Modeling, simulation methods
+    theoretical: 4      # Conceptual frameworks, theoretical approaches
+  }
+  
+  # Complexity enum based on steps and prerequisites
+  enum :complexity_level, {
+    simple: 0,          # 0-2 total elements
+    moderate: 1,        # 3-5 total elements
+    complex: 2,         # 6-10 total elements  
+    very_complex: 3     # 10+ total elements
+  }
+  
+  # Relationships (EknPoolEntity provides provenance_and_rights)
   has_many :method_pool_practicals, dependent: :destroy
   has_many :practicals, through: :method_pool_practicals
   
-  # Validations
-  validates :method_name, presence: true
-  validates :description, presence: true
-  validates :repr_text, presence: true
-  validates :valid_time_start, presence: true
+  # Additional validations (EknPoolEntity provides common ones)
+  validates :method_name, presence: true, length: { maximum: 255 }
+  validates :description, presence: true, length: { maximum: 2000 }
+  
+  # Model-driven extraction configuration
+  extraction_config do
+    canonical_name "MethodAndModel"
+    description "Research methods, methodologies, evaluation patterns - systematic approaches to investigation"
+    
+    field :method_name, type: :string, required: true,
+      examples: [
+        "Statistical analysis methodology",
+        "Arctic field sampling protocol",
+        "Climate data modeling approach",
+        "Environmental impact assessment",
+        "Remote sensing technique"
+      ],
+      hints: "Look for specific research methods, analytical techniques, systematic approaches, protocols, or methodologies"
+      
+    field :category, type: :enum,
+      values: -> { categories.keys },  # Live from model enum!
+      default: 'analytical',
+      hints: "analytical: statistics/data analysis; experimental: lab/field experiments; observational: monitoring/field studies; computational: modeling/simulation; theoretical: frameworks/concepts"
+      
+    field :complexity_level, type: :enum,
+      values: -> { complexity_levels.keys },  # Live from model enum!
+      default: 'simple',
+      hints: "simple: basic methods; moderate: multi-step processes; complex: elaborate protocols; very_complex: highly sophisticated approaches"
+      
+    field :description, type: :text, required: true,
+      examples: [
+        "Comprehensive statistical analysis approach for Arctic climate data",
+        "Standardized protocol for collecting ice core samples",
+        "Machine learning model for predicting sea ice coverage"
+      ],
+      hints: "Detailed description of what the method does, its purpose, and application context"
+      
+    field :steps, type: :json, required: false,
+      examples: [
+        ["Collect samples", "Analyze composition", "Generate report"],
+        ["Data preparation", "Model training", "Validation", "Results interpretation"]
+      ],
+      hints: "Array of step descriptions for executing this method"
+      
+    field :prerequisites, type: :json, required: false,
+      examples: [
+        ["Basic statistical knowledge", "Access to R software"],
+        ["Laboratory equipment", "Safety training", "Sample collection permits"]
+      ],
+      hints: "Array of requirements needed before applying this method"
+  end
   
   # Scopes
   scope :by_category, ->(category) { where(category: category) }

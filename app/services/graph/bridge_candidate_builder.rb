@@ -85,8 +85,9 @@ module Graph
 
     # Find up to 3 sentences that co-mention s and t labels (case-insensitive)
     def evidence_for_pair(sentences, s, t)
-      sl = Regexp.escape(s[:label].to_s.strip)[0, 80]
-      tl = Regexp.escape(t[:label].to_s.strip)[0, 80]
+      # Safely truncate labels before escaping to avoid breaking escape sequences
+      sl = Regexp.escape(s[:label].to_s.strip[0, 40])  # Truncate raw string first
+      tl = Regexp.escape(t[:label].to_s.strip[0, 40])  # Then escape the result
       return [] if sl.blank? || tl.blank?
       pattern = /(#{sl}).{0,160}(#{tl})|(#{tl}).{0,160}(#{sl})/i
       hits = []

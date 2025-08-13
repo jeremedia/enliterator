@@ -30,16 +30,65 @@
 #  index_spatials_on_year                                 (year)
 #
 class Spatial < ApplicationRecord
-  belongs_to :provenance_and_rights
+  include EknPoolEntity
   
-  # Relationships
+  # Placement type enum for spatial classification
+  enum :placement_type, {
+    point: 0,        # Specific locations, landmarks, stations
+    region: 1,       # Large areas like "Arctic Ocean", "Beaufort Sea"  
+    area: 2,         # Defined zones, camps, research areas
+    route: 3,        # Paths, transects, shipping routes
+    boundary: 4      # Borders, limits, boundaries
+  }
+  
+  # Relationships (EknPoolEntity provides provenance_and_rights)
   has_many :manifest_spatials, dependent: :destroy
   has_many :manifests, through: :manifest_spatials
   
-  # Validations
-  validates :location_name, presence: true
-  validates :repr_text, presence: true
-  validates :valid_time_start, presence: true
+  # Additional validations (EknPoolEntity provides common ones)
+  validates :location_name, presence: true, length: { maximum: 255 }
+  validates :description, length: { maximum: 1000 }
+  
+  # Model-driven extraction configuration
+  extraction_config do
+    canonical_name "Spatial"
+    description "Places, regions, geometries, spatial hierarchies - geographic entities"
+    
+    field :location_name, type: :string, required: true,
+      examples: [
+        "Beaufort Sea region",
+        "Anchorage, Alaska", 
+        "Arctic Research Station",
+        "Bering Strait",
+        "Point Barrow"
+      ],
+      hints: "Look for specific place names, geographic regions, landmarks, research stations, bodies of water"
+      
+    field :placement_type, type: :enum,
+      values: -> { placement_types.keys },  # Live from model enum!
+      default: 'region',
+      hints: "point: specific coordinates/landmarks; region: large areas like seas/states; area: defined zones; route: paths/transects; boundary: borders/limits"
+      
+    field :sector, type: :string, required: false,
+      examples: ["North", "Northeast", "Central", "Outer"],
+      hints: "Sector designation for Arctic research areas, compass directions"
+      
+    field :portal, type: :string, required: false,
+      examples: ["3:30", "6:00", "9:00", "12:00"],
+      hints: "Portal designation using clock positions (e.g., 3:30, 6:00)"
+      
+    field :year, type: :integer, required: false,
+      examples: [2019, 2020, 2021, 2022, 2023],
+      hints: "Year when this spatial entity was relevant or observed"
+      
+    field :description, type: :text, required: false,
+      examples: [
+        "Major Arctic sea region with seasonal ice coverage",
+        "Primary research station for climate monitoring", 
+        "Strategic shipping route through Arctic waters"
+      ],
+      hints: "Additional context about the location, its significance, or characteristics"
+  end
   
   # Scopes
   scope :by_sector, ->(sector) { where(sector: sector) }

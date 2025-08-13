@@ -26,9 +26,109 @@
 #  index_experiences_on_sentiment                 (sentiment)
 #
 class Experience < ApplicationRecord
-  include HasRights
-  include TimeTrackable
+  include EknPoolEntity
   include PgSearch::Model
+  
+  # Enums for experience classification (privacy-aware)
+  enum :experience_type, {
+    observation: 0,     # Witnessed events, phenomena
+    participation: 1,   # Active involvement in activities
+    reflection: 2,      # Personal thoughts, insights
+    interview: 3,       # Structured conversation record
+    testimony: 4,       # Formal account, evidence
+    narrative: 5,       # Story-form personal account
+    incident: 6,        # Specific event occurrence
+    achievement: 7      # Accomplishments, milestones
+  }, prefix: true
+
+  enum :sentiment, {
+    very_positive: 0,   # Highly favorable, joyful
+    positive: 1,        # Generally favorable, pleasant
+    neutral: 2,         # Balanced, factual, objective
+    negative: 3,        # Generally unfavorable, difficult
+    very_negative: 4,   # Highly unfavorable, distressing
+    mixed: 5,           # Both positive and negative elements
+    complex: 6          # Nuanced, hard to categorize
+  }, prefix: true
+
+  enum :reliability_level, {
+    high: 0,           # Multiple sources, verified details
+    medium: 1,         # Single source, plausible account
+    low: 2,            # Uncertain details, gaps in account
+    unverified: 3,     # Cannot confirm accuracy
+    disputed: 4        # Conflicting accounts exist
+  }, prefix: true
+
+  enum :privacy_level, {
+    public: 0,         # Openly shareable, no restrictions
+    restricted: 1,     # Limited sharing, some sensitivity
+    sensitive: 2,      # Personal but not confidential
+    confidential: 3,   # Highly personal, consent required
+    anonymous_only: 4  # Only with complete anonymization
+  }, prefix: true
+
+  enum :emotional_intensity, {
+    minimal: 0,        # Factual, little emotional content
+    low: 1,            # Some emotional elements
+    moderate: 2,       # Clear emotional component
+    high: 3,           # Strong emotional content
+    intense: 4         # Overwhelming emotional content
+  }, prefix: true
+
+  # Model-driven extraction configuration (PRIVACY-FIRST)
+  extraction_config do
+    canonical_name "Experience"
+    description "Lived outcomes, perceptions, subjective accounts - human experience and perspective capture (PRIVACY-AWARE)"
+    
+    field :experience_type, type: :enum,
+      values: -> { experience_types.keys },  # Live from model enum - 8 values!
+      default: 'observation',
+      hints: "observation: witnessed events; participation: active involvement; reflection: personal insights; interview: structured record; testimony: formal account; narrative: story account; incident: specific event; achievement: accomplishments"
+      
+    field :sentiment, type: :enum,
+      values: -> { sentiments.keys },  # Live from model enum - 7 values!
+      default: 'neutral',
+      hints: "very_positive: highly favorable; positive: generally favorable; neutral: balanced/objective; negative: generally unfavorable; very_negative: highly unfavorable; mixed: both positive/negative; complex: nuanced/hard to categorize"
+      
+    field :reliability_level, type: :enum,
+      values: -> { reliability_levels.keys },  # Live from model enum - 5 values!
+      default: 'medium',
+      hints: "high: verified multiple sources; medium: single source, plausible; low: uncertain details; unverified: cannot confirm; disputed: conflicting accounts"
+      
+    field :privacy_level, type: :enum,
+      values: -> { privacy_levels.keys },  # Live from model enum - 5 values!
+      default: 'sensitive',
+      hints: "public: openly shareable; restricted: limited sharing; sensitive: personal but not confidential; confidential: highly personal, consent required; anonymous_only: complete anonymization required"
+      
+    field :emotional_intensity, type: :enum,
+      values: -> { emotional_intensities.keys },  # Live from model enum - 5 values!
+      default: 'moderate',
+      hints: "minimal: factual, little emotion; low: some emotional elements; moderate: clear emotional component; high: strong emotional content; intense: overwhelming emotional content"
+      
+    field :agent_label, type: :string, required: false,
+      examples: ["Research Participant A", "Community Member", "Dr. Johnson", "Anonymous", "Field Team Leader"],
+      hints: "Who experienced this (name, role, or identifier) - USE ANONYMOUS/ROLE WHEN PRIVACY REQUIRED"
+      
+    field :context, type: :text, required: false,
+      examples: [
+        "During Arctic research expedition in Svalbard, summer 2023",
+        "Community planning meeting for climate adaptation",
+        "Post-storm assessment of research infrastructure"
+      ],
+      hints: "Setting, circumstances, or background context where this experience occurred"
+      
+    field :narrative_text, type: :text, required: true,
+      examples: [
+        "Observed significant changes in sea ice patterns during the monitoring period",
+        "Community members expressed concerns about traditional knowledge integration", 
+        "Equipment performed well under extreme cold conditions, with minor adjustments needed"
+      ],
+      hints: "The actual experience content - REDACT PERSONAL IDENTIFIERS IF PRIVACY_LEVEL REQUIRES"
+      
+    field :observed_at, type: :datetime, required: true,
+      examples: ["2023-08-15T14:30:00Z", "2023-07-22T09:15:00Z"],
+      hints: "When this experience occurred - ISO datetime format"
+  end
   
   # Full-text search
   pg_search_scope :search_by_content,

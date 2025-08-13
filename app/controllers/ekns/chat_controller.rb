@@ -30,7 +30,8 @@ module Ekns
           model_name: OpenaiConfig::SettingsManager.model_for(:answer),
           temperature: 0.7,
           max_tokens: 2000,
-          use_mcp_tools: true  # ALWAYS ENABLE MCP TOOLS
+          use_mcp_tools: true,  # ALWAYS ENABLE MCP TOOLS
+          use_grounded_response: true  # ALWAYS USE GROUNDED ARCTIC NAVIGATOR
         }
       )
       
@@ -75,8 +76,14 @@ module Ekns
         Rails.logger.info "MCP tools not enabled for conversation #{@conversation.id}"
       end
       # Process AI response in background
-      # Use MCP-enabled job if configured
-      if @conversation.model_config&.dig('use_mcp_tools') || params[:use_mcp] == 'true'
+      # Use grounded Arctic Navigator response with QueryOrchestrator by default
+      if @conversation.model_config&.dig('use_grounded_response') != false
+        Rails.logger.info "Using ChatResponseGroundedJob (Arctic Navigator) for conversation #{@conversation.id}"
+        ChatResponseGroundedJob.perform_later(
+          conversation_id: @conversation.id,
+          message_id: @user_message.id
+        )
+      elsif @conversation.model_config&.dig('use_mcp_tools') || params[:use_mcp] == 'true'
         Rails.logger.info "Using ChatResponseWithMcpJob for conversation #{@conversation.id}"
         ChatResponseWithMcpJob.perform_later(
           conversation_id: @conversation.id,

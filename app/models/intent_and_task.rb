@@ -40,8 +40,7 @@
 #  index_intent_and_tasks_on_status                    (status)
 #
 class IntentAndTask < ApplicationRecord
-  include HasRights
-  include TimeTrackable
+  include EknPoolEntity
 
   # Enums
   enum :deliverable_type, {
@@ -72,6 +71,56 @@ class IntentAndTask < ApplicationRecord
     failed: 3,
     cancelled: 4
   }, prefix: true
+
+  # Model-driven extraction configuration
+  extraction_config do
+    canonical_name "IntentAndTask"
+    description "User goals, requirements, objectives, delivery preferences - intent recognition and task management"
+    
+    field :user_goal, type: :text, required: true,
+      examples: [
+        "Show me Arctic research findings from 2023",
+        "Create a timeline of climate policy changes",
+        "Find connections between sea ice data and wildlife observations",
+        "Export temperature measurements as a CSV file",
+        "Generate a map of research stations in Greenland"
+      ],
+      hints: "The user's primary objective or question - what they want to accomplish"
+      
+    field :deliverable_type, type: :enum,
+      values: -> { deliverable_types.keys },  # Live from model enum - 10 values!
+      default: 'answer',
+      hints: "answer: conversational response; webpage: interactive page; markdown: formatted text; pdf: document; table: structured data; map: spatial visualization; timeline: temporal sequence; outline: hierarchical structure; voice_script: spoken content; visualization: charts/graphs"
+      
+    field :modality, type: :enum,
+      values: -> { modalities.keys },  # Live from model enum - 4 values!
+      default: 'text',
+      hints: "text: written communication; voice: spoken interaction; gesture: motion-based; multimodal: combination of input types"
+      
+    field :query_text, type: :text, required: false,
+      examples: [
+        "What were the key findings about Arctic ice loss?",
+        "Show research from Dr. Johnson's team",
+        "Temperature data between 2020-2023",
+        "Stations within 50km of Svalbard"
+      ],
+      hints: "Specific query or search terms if different from user_goal"
+      
+    field :constraints, type: :json, required: false,
+      examples: [
+        {"time": {"start": "2020", "end": "2023"}, "spatial": {"region": "Arctic"}},
+        {"persona": {"style": "academic"}, "pools": ["Evidence", "Risk"]},
+        {"format": {"max_results": 10}, "rights": "public_only"}
+      ],
+      hints: "Constraints on scope, time, space, persona, format, or rights filtering"
+      
+    field :success_criteria, type: :json, required: false,
+      examples: [
+        {"completeness": "comprehensive", "accuracy": "high", "citations": "required"},
+        {"response_time": "under_30_seconds", "source_diversity": "multiple_institutions"}
+      ],
+      hints: "Criteria for determining if the task was completed successfully"
+  end
 
   # Associations
   belongs_to :user_session, optional: true, class_name: "Runtime::Session"

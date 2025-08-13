@@ -96,11 +96,18 @@ class QueryOrchestrator
     unless tool
       Rails.logger.warn "Tool '#{tool_name}' not found, using search"
       tool = @tools['search']
+      tool_name = 'search'
       tool_params = { query: routing_result[:query], top_k: 10 }
     end
     
     # Filter params based on what the tool accepts
     filtered_params = filter_params_for_tool(tool_name, tool_params)
+    
+    # Check if params were modified (fallback to search)
+    if filtered_params != filter_params_for_tool(tool_name, tool_params)
+      tool = @tools['search']
+      tool_name = 'search'
+    end
     
     Rails.logger.info "Executing tool: #{tool_name} with params: #{filtered_params.inspect}"
     
@@ -115,16 +122,41 @@ class QueryOrchestrator
     }
     
     result
+  rescue => e
+    Rails.logger.error "Tool execution failed: #{e.message}, falling back to search"
+    
+    # Fallback to search if tool execution fails
+    fallback_result = @tools['search'].execute(query: @query, top_k: 10)
+    fallback_result[:routing] = {
+      tool: 'search',
+      confidence: 0.5,
+      reasoning: "Fallback to search after #{tool_name} failed: #{e.message}"
+    }
+    fallback_result
   end
   
   def filter_params_for_tool(tool_name, params)
     case tool_name
     when 'search'
       # SimpleSearchTool accepts: query, top_k, pools, require_rights
-      params.slice(:query, :top_k, :pools, :require_rights)
+      filtered = params.slice(:query, :top_k, :pools, :require_rights)
+      
+      # Ensure query parameter is always present
+      filtered[:query] ||= @query if @query
+      filtered[:top_k] ||= 10
+      
+      filtered
     when 'fetch'
       # FetchTool would accept: id, include_relations, relation_depth, pools, as_of
-      params.slice(:id, :include_relations, :relation_depth, :pools, :as_of)
+      filtered = params.slice(:id, :include_relations, :relation_depth, :pools, :as_of)
+      
+      # If no valid id, fallback to search
+      if filtered[:id].blank?
+        Rails.logger.warn "Fetch tool selected but no ID provided, falling back to search"
+        return filter_params_for_tool('search', { query: @query, top_k: 10 })
+      end
+      
+      filtered
     when 'bridge'
       # BridgeTool would accept: a, b, top_k
       params.slice(:a, :b, :top_k)

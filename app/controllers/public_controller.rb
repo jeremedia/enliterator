@@ -19,4 +19,10 @@ class PublicController < ApplicationController
       "Knowledge Navigators (EKNs) for conversational exploration"
     ]
   end
+
+  def about
+    # Historic achievement and platform overview
+    @achievement_date = "August 13, 2025"
+    @arctic_navigator = Ekn.find_by(slug: "arctic-navigator")
+  end
 end

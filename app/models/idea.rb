@@ -29,9 +29,93 @@
 #  index_ideas_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
 #
 class Idea < ApplicationRecord
-  include HasRights
-  include TimeTrackable
+  include EknPoolEntity
   include PgSearch::Model
+  
+  # Enums for idea classification
+  enum :idea_type, {
+    theory: 0,           # Scientific theory or systematic explanation
+    principle: 1,        # Fundamental rule or guideline
+    concept: 2,          # Abstract notion or general idea
+    hypothesis: 3,       # Proposed explanation or prediction
+    framework: 4,        # Structured approach or methodology
+    paradigm: 5,         # Fundamental model or worldview
+    philosophy: 6,       # Fundamental beliefs or approach
+    methodology: 7,      # Systematic procedure or approach
+    heuristic: 8,        # Rule of thumb or mental shortcut
+    axiom: 9            # Self-evident truth or principle
+  }, prefix: true
+
+  enum :maturity_level, {
+    emerging: 0,         # New, experimental, unproven
+    developing: 1,       # Growing evidence, gaining acceptance
+    established: 2,      # Well-supported, widely accepted
+    foundational: 3,     # Core to field, fundamental
+    canonical: 4,        # Standard reference, authoritative
+    contested: 5,        # Disputed, controversial
+    deprecated: 6        # Outdated, superseded
+  }, prefix: true
+
+  enum :scope, {
+    local: 0,           # Limited to specific location/context
+    regional: 1,        # Applicable to broader region
+    national: 2,        # Country or nation-wide relevance
+    global: 3,          # Worldwide applicability
+    universal: 4,       # Applies everywhere, fundamental
+    domain_specific: 5, # Limited to specific field/discipline
+    interdisciplinary: 6 # Spans multiple fields/disciplines
+  }, prefix: true
+
+  # Model-driven extraction configuration
+  extraction_config do
+    canonical_name "Idea"
+    description "Principles, theories, concepts, abstract knowledge - intellectual and conceptual entities"
+    
+    field :label, type: :string, required: true,
+      examples: [
+        "Radical inclusion",
+        "Climate change adaptation",
+        "Participatory governance",
+        "Sustainable development",
+        "Resilience theory"
+      ],
+      hints: "The name or title of the idea, concept, or principle"
+      
+    field :abstract, type: :text, required: true,
+      examples: [
+        "The principle that all people should be welcomed and included regardless of background",
+        "Strategies for adjusting systems and practices to address climate change impacts",
+        "Democratic decision-making that involves citizens in governance processes"
+      ],
+      hints: "Comprehensive description of the idea, its meaning, and implications"
+      
+    field :idea_type, type: :enum,
+      values: -> { idea_types.keys },  # Live from model enum - 10 values!
+      default: 'concept',
+      hints: "theory: systematic explanation; principle: fundamental rule; concept: abstract notion; hypothesis: proposed explanation; framework: structured approach; paradigm: worldview; methodology: procedure; heuristic: rule of thumb"
+      
+    field :maturity_level, type: :enum,
+      values: -> { maturity_levels.keys },  # Live from model enum - 7 values!
+      default: 'developing',
+      hints: "emerging: new/experimental; developing: gaining acceptance; established: well-supported; foundational: core to field; canonical: authoritative; contested: disputed; deprecated: outdated"
+      
+    field :scope, type: :enum,
+      values: -> { scopes.keys },  # Live from model enum - 7 values!
+      default: 'domain_specific',
+      hints: "local: specific context; regional: broader area; national: country-wide; global: worldwide; universal: fundamental; domain_specific: single field; interdisciplinary: multiple fields"
+      
+    field :authorship, type: :string, required: false,
+      examples: ["Dr. Sarah Johnson", "Arctic Research Collective", "IPCC Working Group", "Anonymous"],
+      hints: "Who developed, authored, or is credited with this idea"
+      
+    field :principle_tags, type: :json, required: false,
+      examples: [
+        ["sustainability", "environmental"],
+        ["democracy", "participation", "governance"],
+        ["resilience", "adaptation", "systems"]
+      ],
+      hints: "Array of tags or keywords that classify the principle or idea"
+  end
   
   # Full-text search
   pg_search_scope :search_by_content,

@@ -32,8 +32,87 @@
 #  index_lexicon_and_ontologies_on_term                      (term) UNIQUE
 #
 class LexiconAndOntology < ApplicationRecord
-  include HasRights
-  include TimeTrackable
+  include EknPoolEntity
+
+  # Enums for term classification
+  enum :term_type, {
+    canonical: 0,        # Primary/preferred term
+    synonym: 1,          # Alternative term  
+    acronym: 2,          # Abbreviation
+    technical: 3,        # Domain-specific term
+    colloquial: 4,       # Common usage term
+    negative: 5,         # Term to avoid/exclude
+    deprecated: 6        # Previously used, now outdated
+  }, prefix: true
+
+  # Pool associations from Ten Pool Canon
+  enum :pool_association_type, {
+    idea: 'Idea',
+    manifest: 'Manifest', 
+    experience: 'Experience',
+    relational: 'Relational',
+    evolutionary: 'Evolutionary',
+    practical: 'Practical',
+    emanation: 'Emanation',
+    provenance_and_rights: 'ProvenanceAndRights',
+    lexicon_and_ontology: 'LexiconAndOntology',
+    intent_and_task: 'IntentAndTask',
+    actor_and_role: 'ActorAndRole',
+    spatial: 'Spatial',
+    evidence_and_observation: 'EvidenceAndObservation',
+    risk_and_governance: 'RiskAndGovernance',
+    method_and_model: 'MethodAndModel'
+  }, prefix: true
+
+  # Model-driven extraction configuration
+  extraction_config do
+    canonical_name "LexiconAndOntology"
+    description "Definitions, canonical terms, vocabulary systems - knowledge representation and terminology management"
+    
+    field :term, type: :string, required: true,
+      examples: [
+        "Arctic research",
+        "Sea ice extent", 
+        "Climate change mitigation",
+        "Data provenance",
+        "Spatial analysis"
+      ],
+      hints: "The primary term or phrase being defined in the vocabulary"
+      
+    field :definition, type: :text, required: true,
+      examples: [
+        "Scientific investigation conducted in Arctic regions to understand climate patterns",
+        "The area covered by sea ice in polar regions, measured by satellite observation",
+        "Actions taken to reduce or prevent greenhouse gas emissions"
+      ],
+      hints: "Clear, comprehensive definition of the term for disambiguation and understanding"
+      
+    field :term_type, type: :enum,
+      values: -> { term_types.keys },  # Live from model enum - 7 values!
+      default: 'canonical',
+      hints: "canonical: primary term; synonym: alternative; technical: domain-specific; colloquial: common usage; acronym: abbreviation; negative: avoid; deprecated: outdated"
+      
+    field :pool_association_type, type: :enum,
+      values: -> { pool_association_types.keys },  # Live from model enum - 15 values!
+      default: 'lexicon_and_ontology',
+      hints: "Which pool in the Ten Pool Canon this term primarily relates to - helps with extraction routing and semantic classification"
+      
+    field :surface_forms, type: :json, required: false,
+      examples: [
+        ["Arctic research", "polar research", "northern research"],
+        ["sea ice", "frozen seawater", "marine ice"],
+        ["climate mitigation", "emission reduction", "carbon reduction"]
+      ],
+      hints: "Array of alternative ways this term appears in text - synonyms, variations, common phrasings"
+      
+    field :canonical_description, type: :text, required: false,
+      examples: [
+        "Standardized definition used across all Arctic research documentation",
+        "Technical term as defined by IPCC climate reports",
+        "Canonical form established by research community consensus"
+      ],
+      hints: "Expanded description explaining why this definition is canonical and how it should be used"
+  end
 
   # Validations
   validates :term, presence: true, uniqueness: { scope: :valid_time_end }

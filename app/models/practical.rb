@@ -25,8 +25,120 @@
 #  index_practicals_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
 #
 class Practical < ApplicationRecord
-  include HasRights
-  include TimeTrackable
+  include EknPoolEntity
+
+  # Enums for procedural knowledge classification
+  enum :skill_level, {
+    beginner: 0,        # No prior experience required
+    intermediate: 1,    # Some basic knowledge assumed
+    advanced: 2,        # Significant expertise required
+    expert: 3,          # Deep domain knowledge needed
+    professional: 4     # Professional/certified level
+  }, prefix: true
+
+  enum :domain, {
+    research: 0,        # Scientific research methods
+    technical: 1,       # Engineering, technical procedures
+    administrative: 2,  # Management, bureaucratic processes
+    educational: 3,     # Teaching, training methodologies
+    safety: 4,          # Safety protocols, risk management
+    environmental: 5,   # Environmental procedures, conservation
+    social: 6,          # Community organizing, social practices
+    creative: 7         # Arts, design, creative processes
+  }, prefix: true
+
+  enum :instruction_type, {
+    step_by_step: 0,    # Sequential numbered steps
+    checklist: 1,       # Items to verify/complete
+    flowchart: 2,       # Decision-based process flow
+    narrative: 3,       # Story-like explanation
+    visual: 4,          # Diagram or image-based
+    interactive: 5,     # Hands-on, guided practice
+    template: 6,        # Fill-in-the-blank format
+    example: 7          # Learn through examples
+  }, prefix: true
+
+  enum :validation_method, {
+    self_check: 0,      # Individual verification
+    peer_review: 1,     # Colleague/partner check
+    automated_test: 2,  # System/tool validation
+    expert_validation: 3, # Professional verification
+    outcome_based: 4,   # Success measured by results
+    time_based: 5       # Completion within timeframe
+  }, prefix: true
+
+  enum :complexity_level, {
+    simple: 0,          # Single task, few dependencies
+    moderate: 1,        # Multiple steps, some coordination
+    complex: 2,         # Many variables, careful planning
+    very_complex: 3,    # High coordination, many dependencies
+    expert_only: 4      # Extreme complexity, specialist knowledge
+  }, prefix: true
+
+  # Model-driven extraction configuration
+  extraction_config do
+    canonical_name "Practical"
+    description "How-to knowledge, procedures, tacit knowledge - actionable procedural information"
+    
+    field :goal, type: :string, required: true,
+      examples: [
+        "Set up Arctic research weather station",
+        "Conduct community resilience assessment",
+        "Implement climate data collection protocol",
+        "Organize participatory planning workshop",
+        "Deploy remote sensing equipment safely"
+      ],
+      hints: "The objective or outcome that this procedure aims to achieve"
+      
+    field :skill_level, type: :enum,
+      values: -> { skill_levels.keys },  # Live from model enum - 5 values!
+      default: 'intermediate',
+      hints: "beginner: no experience required; intermediate: basic knowledge; advanced: significant expertise; expert: deep domain knowledge; professional: certified level"
+      
+    field :domain, type: :enum,
+      values: -> { domains.keys },  # Live from model enum - 8 values!
+      default: 'research',
+      hints: "research: scientific methods; technical: engineering; administrative: management; educational: teaching; safety: protocols; environmental: conservation; social: community; creative: arts/design"
+      
+    field :instruction_type, type: :enum,
+      values: -> { instruction_types.keys },  # Live from model enum - 8 values!
+      default: 'step_by_step',
+      hints: "step_by_step: sequential steps; checklist: verification items; flowchart: decision-based; narrative: story explanation; visual: diagram-based; interactive: hands-on; template: fill-in-blank; example: learn by examples"
+      
+    field :validation_method, type: :enum,
+      values: -> { validation_methods.keys },  # Live from model enum - 6 values!
+      default: 'outcome_based',
+      hints: "self_check: individual verification; peer_review: colleague check; automated_test: system validation; expert_validation: professional review; outcome_based: results-measured; time_based: completion timeframe"
+      
+    field :complexity_level, type: :enum,
+      values: -> { complexity_levels.keys },  # Live from model enum - 5 values!
+      default: 'moderate',
+      hints: "simple: single task; moderate: multiple steps; complex: many variables; very_complex: high coordination; expert_only: extreme complexity"
+      
+    field :steps, type: :json, required: false,
+      examples: [
+        ["Gather equipment list", "Check weather conditions", "Travel to site", "Install monitoring hardware", "Test data transmission"],
+        ["Review community demographics", "Prepare survey instruments", "Schedule focus groups", "Conduct interviews", "Analyze responses", "Present findings"],
+        ["Calibrate instruments", "Establish baseline measurements", "Document protocols", "Train field team", "Begin data collection"]
+      ],
+      hints: "Array of sequential steps or procedures to accomplish the goal"
+      
+    field :prerequisites, type: :json, required: false,
+      examples: [
+        ["Basic electronics knowledge", "Cold weather gear", "Transportation to remote sites"],
+        ["Survey design experience", "Community liaison contacts", "Data analysis software"],
+        ["Scientific instrumentation training", "Safety certification", "Research permits"]
+      ],
+      hints: "Array of required knowledge, skills, equipment, or conditions needed before starting"
+      
+    field :hazards, type: :json, required: false,
+      examples: [
+        ["Extreme cold exposure", "Equipment failure in remote location", "Wildlife encounters"],
+        ["Cultural sensitivity issues", "Data privacy concerns", "Participant bias"],
+        ["Instrument malfunction", "Weather delays", "Budget overruns"]
+      ],
+      hints: "Array of risks, dangers, or potential problems to be aware of during execution"
+  end
 
   # Associations through join tables
   has_many :idea_practicals, dependent: :destroy

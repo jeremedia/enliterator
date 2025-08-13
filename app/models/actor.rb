@@ -25,7 +25,15 @@
 #  index_actors_on_valid_time_start_and_valid_time_end  (valid_time_start,valid_time_end)
 #
 class Actor < ApplicationRecord
-  belongs_to :provenance_and_rights
+  include EknPoolEntity
+  
+  # Role enum with canonical values matching our extraction expectations
+  enum :role, {
+    individual: 0,
+    organization: 1, 
+    team: 2,
+    role_position: 3
+  }
   
   # Relationships to core pools
   has_many :actor_experiences, dependent: :destroy
@@ -34,10 +42,38 @@ class Actor < ApplicationRecord
   has_many :actor_manifests, dependent: :destroy
   has_many :manifests, through: :actor_manifests
   
-  # Validations
-  validates :name, presence: true
-  validates :repr_text, presence: true
-  validates :valid_time_start, presence: true
+  # Additional validations (EknPoolEntity provides common ones)
+  validates :name, presence: true, length: { maximum: 255 }
+  validates :description, length: { maximum: 1000 }
+  
+  # Model-driven extraction configuration
+  extraction_config do
+    canonical_name "ActorAndRole"
+    description "People and organizations with roles and permissions - entities that ACT"
+    
+    field :name, type: :string, required: true,
+      examples: [
+        "Dr. Sarah Johnson",
+        "Senator Murkowski", 
+        "Arctic Research Institute",
+        "Research Team",
+        "Community Elders"
+      ],
+      hints: "Look for individual names, organizations, titles like Dr./Professor, institutions acting as agents"
+      
+    field :role, type: :enum,
+      values: -> { roles.keys },  # Live from model enum!
+      default: 'individual',
+      hints: "individual: people with titles like Dr./Professor; organization: institutions/agencies; team: groups/collectives; role_position: specific roles like Elder/Leader"
+      
+    field :description, type: :text, required: false,
+      examples: [
+        "Climate researcher specializing in Arctic studies",
+        "Chairman of Energy and Natural Resources Committee",
+        "Leading Arctic research institution"
+      ],
+      hints: "Brief description of who they are, their role, or expertise"
+  end
   
   # Scopes
   scope :active_during, ->(time) { where('valid_time_start <= ? AND (valid_time_end IS NULL OR valid_time_end >= ?)', time, time) }
@@ -64,5 +100,17 @@ class Actor < ApplicationRecord
     self.repr_text = "Actor: #{name}" + (role.present? ? " (#{role})" : "") +
                      " - #{description || 'No description'}" +
                      " [Active: #{time_period}]"
+  end
+  
+  # Override display methods for better UX
+  def display_name
+    name
+  end
+  
+  def full_description
+    parts = [name]
+    parts << "(#{role.humanize})" if role.present?
+    parts << description if description.present?
+    parts.join(' ')
   end
 end

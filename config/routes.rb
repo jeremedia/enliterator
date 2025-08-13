@@ -24,6 +24,7 @@ Rails.application.routes.draw do
   # Public splash and deep overview
   get "/public", to: "public#index"
   get "/public/more", to: "public#more", as: :public_more
+  get "/about", to: "public#about", as: :about
   
   # EKN-scoped routes (top-level)
   scope "/ekn/:ekn_slug" do
