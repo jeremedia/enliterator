@@ -380,7 +380,7 @@ GEM
     oj (3.16.11)
       bigdecimal (>= 3.0)
       ostruct (>= 0.2)
-    openai (0.17.1)
+    openai (0.31.0)
       connection_pool
     orm_adapter (0.5.0)
     ostruct (0.6.3)
